@@ -25,17 +25,17 @@ lib/
   tests/	        # Unit tests for the above.
 
 sources/
-  README.md		        	# File describing the general process for importing source databases into iDISK.
-  NMCD/				    	# The name of the source database.
-    08_01_2018/				# The date (MM_DD_YYYY) when the source files were downloaded.
-      README.md				# Documentation for this download, including download URL, data version (if applicable), caveats, etc.
-      download/				# Contains the downloaded data files in their original format.
-      import/				# Contains the data files in a standard format for importing into iDISK.
-		preprocess/     	# Files containing any intermediary preprocessing moving from download/ to import/.
-		ingredients.jsonl       # The file containing ingredients to import into iDISK.
-        products.jsonl  	        # The file containing products to import into iDISK.
-		....jsonl		# Other files containing concepts as required.
-	  scripts/			# Scripts required to import this version of this data source.
+  README.md		  # File describing the general process for importing source databases into iDISK.
+  NMCD/			  # The name of the source database.
+    08_01_2018/		  # The date (MM_DD_YYYY) when the source files were downloaded.
+      README.md		  # Documentation for this download, including download URL, data version (if applicable), caveats, etc.
+      download/		  # Contains the downloaded data files in their original format.
+      import/		  # Contains the data files in a standard format for importing into iDISK.
+	preprocess/       # Files containing any intermediary preprocessing moving from download/ to import/.
+      ingredients.jsonl   # The file containing ingredients to import into iDISK.
+      products.jsonl  	  # The file containing products to import into iDISK.
+      ....jsonl		  # Other files containing concepts as required.
+      scripts/		  # Scripts required to import this version of this data source.
     12_01_2017/
       .../
   DSLD/
@@ -43,17 +43,17 @@ sources/
 
 versions/
   1.0.0/
-    CHANGELOG.md		# Changelog for this version of iDISK.
-    lib/ 			# Symbolic link to ${IDISK_HOME}/lib
-    scripts/			# Contains additional scripts required to build this specific version of iDISK.
-    build/			# Contains the intermediate files generated to build iDISK.
-      ingredients/		# Contains all files and scripts for processing and matching ingredient concepts.
-        manual_review/          # Contains all files and scripts related to the manual review of matched ingredients.
-      products/			# Contains all files and scripts for processing product concepts.
-      .../			# Directories for other concepts as required.
+    CHANGELOG.md	  # Changelog for this version of iDISK.
+    lib/ 		  # Symbolic link to ${IDISK_HOME}/lib
+    scripts/		  # Contains additional scripts required to build this specific version of iDISK.
+    build/		  # Contains the intermediate files generated to build iDISK.
+      ingredients/	  # Contains all files and scripts for processing and matching ingredient concepts.
+        manual_review/    # Contains all files and scripts related to the manual review of matched ingredients.
+      products/		  # Contains all files and scripts for processing product concepts.
+      .../		  # Directories for other concepts as required.
     tables/
       UMLS/
-        CMD.LOG			# Log of commands used to create the files in this directory.
+        CMD.LOG		  # Log of commands used to create the files in this directory.
         DSCONSO.RRF
         DSSTY.RRF
         DSSAT.RRF
