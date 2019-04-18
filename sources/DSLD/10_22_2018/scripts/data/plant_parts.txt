@@ -1,0 +1,199 @@
+anther
+balsam
+berry
+berries
+blade
+Blade and Stem
+bract
+bran
+branch
+branch terminal
+branch terminal leafy
+bulb
+cell
+cell wall
+clove
+corm
+Endosperm Liquid
+flower
+flower and leaf
+flower bud
+flower bud resin
+flower petal
+flower receptacle
+flower sepal
+flower stalk
+fruit
+fruit endocarp
+fruit exocarp
+fruit fibre
+fruit flesh
+fruit hull
+fruit juice
+fruit mesocarp
+fruit oleoresin
+fruit peel
+fruit peel inner
+fruit peel outer
+fruit pericarp
+fruit pith
+fruit resin
+fruit shell
+fruit skin
+fruit skin fibre
+fruit stalk
+fruit vascular tissue
+fruit wax
+fruit without juice
+fruiting body
+gall
+gum
+gum balsam
+gum oleoresin
+herb
+herb flowering
+herb flowering and fruiting
+herb fruiting
+herb top
+herb top flowering
+herb top flowering and fruiting
+herb top fruiting
+herb top young
+herb young
+holdfast
+husk
+hyphae
+hypocotyl
+latex
+leaf
+leaves
+leaf blade
+leaf bud
+leaf bud resin
+leaf cotyledon
+leaf fertile
+leaf inner
+leaf inner juice
+leaf outer
+leaf rachilla
+leaf rachis
+leaf radicle
+leaf resin
+leaf stalk
+leaf vascular tissue
+leaf wax
+leaf young
+mushroom
+mushroom cap
+mushroom stem
+node
+ovary
+petal
+plumule
+pollen
+pressed seed cake
+rhizome
+rhizome and stolon
+rhizome bark
+rhizome bark inner
+rhizome bark outer
+rhizome heartwood
+rhizome oleoresin
+rhizome peel
+rhizome sapwood
+rhizome skin
+rhizome wood
+root
+roots
+root aerial
+root and rhizome
+root and rhizome and stolon
+root and root nodule
+root and stolon
+root bark
+root bark inner
+root bark outer
+root fibre
+root heartwood
+root lateral
+root nodule
+root peel
+root pith
+root pith fibre
+root sapwood
+root skin
+root tap
+root vascular tissue
+root wood
+root wood kino
+sap
+sap balsam
+sap resin
+scape
+seed
+seed and fruit shell
+seed aril
+seed bran
+seed coat
+seed endosperm
+seed fibre
+seed germ
+seed husk
+seed mucilage
+seed skin
+sepal
+shoot
+shoot top
+spine
+spore
+sprout
+stamen
+stamen filament
+stem
+stems
+stem balsam
+stem bark
+stem bark fibre
+stem bark inner
+stem bark oleoresin
+stem bark outer
+stem bark resin
+stem fibre
+stem heartwood
+stem peel
+stem pith
+stem resin
+stem sapwood
+stem skin
+stem vascular tissue
+stem wood
+stem wood resin
+stigma
+stigma and style
+stipule
+stolon
+stoma
+stromata
+style
+thorn
+tuber
+twig
+twig bark
+twig bark inner
+twig bark outer
+twig dormant
+twig flowering
+twig flowering and fruiting
+twig flowering budding
+twig fruiting
+twig heartwood
+twig leafy
+twig leafy flowering
+twig leafy flowering and fruiting
+twig leafy fruiting
+twig leafy young
+twig peel
+twig sapwood
+twig skin
+twig wood
+whole plant

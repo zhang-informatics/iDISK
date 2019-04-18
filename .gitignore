@@ -1,0 +1,6 @@
+doc/src
+__pycache__
+NMCD
+playground
+sources/*/*/download
+sources/*/*/import
