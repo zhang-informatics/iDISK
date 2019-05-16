@@ -77,16 +77,20 @@ file (extension `.jsonl`) each line of which is in the following format:
  "synonyms": [{"term": str, 			      # Synonyms of this preferred_term.
                "src": str,
                "src_id": str,
-		       "term_type": str,
-		       "is_preferred": bool},         # Whether this term is the preferred term in the source.
-		      {...}],
- "attributes": {"key": value, [...]}		      # Any extra information about this term. E.g. supplement type, uses, etc.
+	       "term_type": str,
+	       "is_preferred": bool},         	      # Whether this term is the preferred term in the source.
+	      {...}],
+ "attributes": [{"atr_name": str,                     # Any extra information about this term. E.g. supplement type, uses, etc.
+		 "atr_value": str,
+		 "src": str},
+		...}		      
 # Relationships with this term as the subject. All objects will be mapped to an existing terminology, such as UMLS.
  "relationships": [{"rel_name": str,    	      # The name of this relationship 
-                    "rel_val": str,     	      # The value of the object of this relationship  
-				    "src": str,       # Name of the source database for this relationship. 
-                    "attributes": {"key": "value"}},  # Any attributes of this relationship.
-                   {...}]
+                    "rel_value": str,     	      # The value of the object of this relationship  
+		    "src": str,       		      # Name of the source database for this relationship. 
+                    "attributes": [{"atr_name": str,  # Any attributes of this relationship.
+				    "atr_value": str,
+				    "src": str}, {...}]
 }
 ```
 
