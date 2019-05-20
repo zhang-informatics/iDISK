@@ -70,6 +70,8 @@ file (extension `.jsonl`) each line of which is in the following format:
 
 ```
 {
+ "id": str,					      # A temporary unique identifier for this concept of the format {src}{int:07}. E.g. NMCD0000001
+ "concept_type": str, 				      # The iDISK type of this concept. E.g. 'SDSI'. See the iDISK schema for details.
  "preferred_term": str,				      # The term (e.g. ingredient name).
  "src": str,	       		  	              # Name of the source database for this preferred_term.
  "src_id": str,	        			      # The ID of this preferred_term in its source database.
