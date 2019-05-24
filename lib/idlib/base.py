@@ -42,7 +42,7 @@ class Atom(object):
             self.dsaui = self._dsaui_template.format(self._counter)
         else:
             self.dsaui = dsaui
-            self._counter = int(dsaui.replace("DA", ""))
+            self.init_counter(int(dsaui.replace("DA", "")))
 
     def __repr__(self):
         # Verbose representation.
@@ -52,6 +52,19 @@ class Atom(object):
 
     def __str__(self):
         return f"{self.term}"
+
+    def __eq__(self, other):
+        """
+        Test if this atom is equal to other.
+
+        :param Atom other: The atom to test equivalence to.
+        """
+        if not isinstance(other, Atom):
+            return False
+        return all([self.term.lower() == other.term.lower(),
+                    self.src == other.src,
+                    self.src_id == other.src_id,
+                    self.term_type == other.term_type])
 
     def _check_params(self, term, src, src_id, term_type, is_preferred, dsaui):
         assert isinstance(term, str)
@@ -155,7 +168,8 @@ class Concept(object):
                                                      self._counter)
         else:
             self.dscui = dscui
-            self._counter = int(dscui[-7:])
+            self.init_counter(int(dscui[-7:]))
+            self.set_ui_prefix(dscui[:-7])
         for atom in atoms:
             atom._dscui = self.dscui
         self._preferred_term = None
@@ -167,6 +181,15 @@ class Concept(object):
 
     def __str__(self):
         return f"{self.dscui}: {self.preferred_term}"
+
+    def __eq__(self, other):
+        """
+        Concept equivalence does not consider attributes or relationships.
+        """
+        if not isinstance(other, Concept):
+            return False
+        return all([self.concept_type == other.concept_type,
+                    self.atoms == other.atoms])
 
     def _check_params(self, concept_type, atoms, attributes,
                       relationships, dscui):
@@ -444,6 +467,14 @@ class Attribute(object):
     def __str__(self):
         return f"{self.subject} *{self.atr_name}* {self.atr_value}"
 
+    def __eq__(self, other):
+        if not isinstance(other, Attribute):
+            return False
+        return all([self.subject == other.subject,
+                    self.atr_name == other.atr_name,
+                    self.atr_value == other.atr_value,
+                    self.src == other.src])
+
     def _check_params(self, subject, atr_name, atr_value, src):
         assert isinstance(subject, (Concept, Relationship))
         assert isinstance(atr_name, str)
@@ -555,6 +586,17 @@ class Relationship(object):
 
     def __str__(self):
         return self.rui
+
+    def __eq__(self, other):
+        """
+        Equivalence does not consider relationship attributes.
+        """
+        if not isinstance(other, Relationship):
+            return False
+        return all([self.subject == other.subject,
+                    self.rel_name == other.rel_name,
+                    self.object == other.object,
+                    self.src == other.src])
 
     def _check_params(self, subject, rel_name, obj, src, attributes):
         assert isinstance(subject, Concept)
