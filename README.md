@@ -70,26 +70,27 @@ file (extension `.jsonl`) each line of which is in the following format:
 
 ```
 {
- "preferred_term": str,				      # The term (e.g. ingredient name).
- "src": str,	       		  	              # Name of the source database for this preferred_term.
- "src_id": str,	        			      # The ID of this preferred_term in its source database.
- "term_type": str,      			      # The term type (e.g. 'SY') for this term in its source.
+ "ui": str,					      # A unique identifier for this concept of the format {src}{int:07}. E.g. NMCD0000001
+ "concept_type": str, 				      # The iDISK type of this concept. E.g. 'SDSI'. See the iDISK schema for details.
  "synonyms": [{"term": str, 			      # Synonyms of this preferred_term.
                "src": str,
                "src_id": str,
-		       "term_type": str,
-		       "is_preferred": bool},         # Whether this term is the preferred term in the source.
-		      {...}],
- "attributes": {"key": value, [...]}		      # Any extra information about this term. E.g. supplement type, uses, etc.
+	       "term_type": str,
+	       "is_preferred": bool},         	      # Whether this term is the preferred term in the source.
+	      {...}],
+ "attributes": [{"atr_name": str,                     # Any extra information about this term. E.g. supplement type, uses, etc.
+		 "atr_value": str,
+		 "src": str},
+		...}		      
 # Relationships with this term as the subject. All objects will be mapped to an existing terminology, such as UMLS.
  "relationships": [{"rel_name": str,    	      # The name of this relationship 
-                    "rel_val": str,     	      # The value of the object of this relationship  
-				    "src": str,       # Name of the source database for this relationship. 
-                    "attributes": {"key": "value"}},  # Any attributes of this relationship.
-                   {...}]
+                    "object": str, 	    	      # The object of this relationship
+		    "src": str,       		      # Name of the source database for this relationship. 
+                    "attributes": [{"atr_name": str,  # Any attributes of this relationship.
+				    "atr_value": str,
+				    "src": str}, {...}]
 }
 ```
 
 ### Notes
- * `synonyms` does not include the `preferred_term`.
  * The script `union.py` scripts add synonyms from the non-preferred source to the `synonyms` field.

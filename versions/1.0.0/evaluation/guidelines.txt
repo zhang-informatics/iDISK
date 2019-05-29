@@ -1,0 +1,14 @@
+Evaluation consists of comparing each data element in iDISK to its source database and assinging it a binary label.
+These labels are:
+
+Correct: The data element exists in and is correctly extracted from the source database.
+Incorrect: The data element does not exist or is not correctly extracted from the source database.
+
+The data elements to be evaluated are:
+
+Concept synonyms
+Concept attributes
+Relationships
+Relationship attributes
+
+The annotation will be performed using Prodigy. 

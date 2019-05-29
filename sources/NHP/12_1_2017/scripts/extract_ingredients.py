@@ -4,6 +4,7 @@ import re
 import string
 import pandas as pd
 
+from idlib import Atom, Concept
 
 """
 Formats ingredient information from NHP into the iDISK JSON lines
@@ -25,64 +26,51 @@ def parse_args():
 
 def extract_ingredients(incsv, outjsonl):
     data = pd.read_csv(incsv, dtype=str)
-    lines = format_as_jsonl(data)
     with open(outjsonl, 'w') as outF:
-        for line in lines:
-            json.dump(line, outF)
+        for concept in to_concepts(data):
+            json.dump(concept.to_dict(), outF)
             outF.write('\n')
 
 
-def format_as_jsonl(dataframe):
+def to_concepts(dataframe):
+    Concept.set_ui_prefix("NHPID")
+
     dataframe = dataframe[["ingredient_id", "proper_name", "proper_name_f",
                            "common_name", "common_name_f"]].copy()
     dataframe.dropna(subset=["proper_name"], axis=0, inplace=True)
     dataframe.drop_duplicates(inplace=True)
     dataframe.fillna("", inplace=True)
-
     synonym_cols = ["proper_name_f", "common_name", "common_name_f"]
-    seen_terms = set()
+
+    seen = set()
     for row in dataframe.itertuples():
         row = row._asdict()
-        pref_name = row["proper_name"]
-        # Check if the ingredient name isn't nonsense.
-        # NHP contains names like '1000' and '%'.
-        if invalid_ingredient(pref_name):
-            print(f"Removing {pref_name}")
+        pref_term = row["proper_name"]
+        src_id = row["ingredient_id"]
+        if invalid_ingredient(pref_term):
+            print(f"Removing {pref_term}")
             continue
 
+        pref_atom = Atom(term=pref_term, src="NHPID", src_id=src_id,
+                         term_type="SN", is_preferred=True)
+        atoms = [pref_atom]
         # Extract the synonyms, removing any empty strings
         # or duplicate string-termtype pairs.
-        seen_terms.add((pref_name, "SN"))
-        synonyms = []
+        seen.add((pref_term, "SN"))
         for column in synonym_cols:
-            syn = get_synonym(row, column)
-            if syn is None:
+            term = row[column]
+            tty = "SN" if column == "proper_name_f" else "SY"
+            if not term:
                 continue
-            if (syn["term"], syn["term_type"]) in seen_terms:
+            if (term, tty) in seen:
                 continue
-            seen_terms.add((syn["term"], syn["term_type"]))
-            synonyms.append(syn)
+            seen.add((term, tty))
+            atom = Atom(term=term, src="NHPID", src_id=row["ingredient_id"],
+                        term_type=tty, is_preferred=False)
+            atoms.append(atom)
 
-        json_line = {"preferred_term": pref_name,
-                     "src": "NHPID",
-                     "src_id": row["ingredient_id"],
-                     "term_type": "SN",
-                     "synonyms": synonyms,
-                     "attributes": [],
-                     "relationships": []
-                     }
-        yield json_line
-
-
-def get_synonym(row, column):
-    term = row[column]
-    if not term:
-        return None
-    term_type = "SN" if column == "proper_name_f" else "SY"
-    synonym = {"term": term, "src": "NHPID",
-               "src_id": row["ingredient_id"],
-               "term_type": term_type, "is_preferred": False}
-    return synonym
+        concept = Concept.from_atoms(atoms, concept_type="SDSI")
+        yield concept
 
 
 def invalid_ingredient(name):

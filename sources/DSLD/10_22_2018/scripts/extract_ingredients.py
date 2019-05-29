@@ -5,6 +5,8 @@ import pandas as pd
 from collections import OrderedDict
 from nltk.corpus import stopwords
 
+from idlib import Atom, Concept
+
 """
 Obtains all the synonyms of the DSLD manual download
 and saves them as a JSON lines file.
@@ -67,8 +69,8 @@ def main():
 
     print(ingredients_split.shape[0])
     with open(args.outfile, 'w') as outF:
-        for line in format_as_jsonl(ingredients_split):
-            json.dump(line, outF)
+        for concept in to_concepts(ingredients_split):
+            json.dump(concept.to_dict(), outF)
             outF.write("\n")
 
 
@@ -227,52 +229,38 @@ def merge_groups(dataframe):
     return dataframe
 
 
-def format_as_jsonl(dataframe):
+def to_concepts(dataframe):
     """
-    Returns a generator over rows in the dataframe, transforming
-    them into the iDISK JSON lines format.
-    Acai, 12, [acai juice, euterpe oleracea]
-    becomes
-    {"preferred_term": "Acai",
-     "src": "DSLD",
-     "src_id": "12",
-     "term_type": "SY",
-     "synonyms": [{"term": "acai juice", "src": "DSLD",
-                   "src_id": 12, "term_type": "SY",
-                   "is_preferred": False},
-                  {"term": "euterpe oleracea", "src": "DSLD",
-                   "src_id": 12, "term_type": "SY",
-                   "is_preferred": False}],
-     "attributes": [],
-     "relationships": []
-    }
+    Each row in dataframe corresponds to an ingredient concept.
+    Create a Concept instance for each row.
+
+    :param pd.Dataframe dataframe: Table containing ingredients data.
+    :returns: Generator over SDSI concepts.
+    :rtype: generator
     """
+    Concept.set_ui_prefix("DSLD")
+    tty = "SY"  # All DSLD terms have term type SY
+    # Create a Concept instance for each row.
     for row in dataframe.itertuples():
-        pref_name = row.group_name
-        gid = row.group_id
-
-        syns = []
-        seen_terms = set((pref_name, "SY"))
+        pref_term = row.group_name
+        src_id = row.group_id
+        pref_atom = Atom(term=pref_term, src="DSLD", src_id=src_id,
+                         term_type=tty, is_preferred=True)
+        # The Atoms for this concept are its preferred term plus all synonyms.
+        atoms = [pref_atom]
+        seen = set([pref_term.lower()])
         for syn in row.synonyms:
-            if not syn:  # e.g. None, ""
+            if not syn:
                 continue
-            if (syn, "SY") in seen_terms:
+            if syn.lower() in seen:
                 continue
-            out = {"term": syn, "src": "DSLD",
-                   "src_id": gid, "term_type": "SY",
-                   "is_preferred": False}
-            syns.append(out)
-            seen_terms.add((syn, "SY"))
+            atom = Atom(term=syn, src="DSLD", src_id=src_id,
+                        term_type=tty, is_preferred=False)
+            atoms.append(atom)
+            seen.add(syn.lower())
 
-        outrow = {"preferred_term": pref_name,
-                  "src": "DSLD",
-                  "src_id": gid,
-                  "term_type": "SY",
-                  "synonyms": syns,
-                  "attributes": [],
-                  "relationships": []}
-
-        yield outrow
+        concept = Concept.from_atoms(atoms, concept_type="SDSI")
+        yield concept
 
 
 if __name__ == "__main__":

@@ -1,6 +1,12 @@
+.*.swp
 doc/src
 __pycache__
+data/
+download/
+import/
+manual_review/
+build/
+playground/
+
+umls.py
 NMCD
-playground
-sources/*/*/download
-sources/*/*/import
