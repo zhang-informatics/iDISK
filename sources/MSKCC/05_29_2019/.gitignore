@@ -1,0 +1,7 @@
+*.log
+geckodriver.log
+config.py
+ghostdriver.log
+util.py
+config.py
+__pycache__/*.*
