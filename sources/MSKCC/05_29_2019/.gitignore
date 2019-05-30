@@ -1,7 +1,8 @@
 *.log
-geckodriver.log
-config.py
-ghostdriver.log
-util.py
-config.py
-__pycache__/*.*
+scripts/geckodriver.log
+scripts/config.py
+scripts/ghostdriver.log
+scripts/util.py
+scripts/config.py
+scripts/__pycache__/*.*
+download/.DS_Store
