@@ -1,0 +1,28 @@
+DISO|Disorders|T020|Acquired Abnormality
+DISO|Disorders|T190|Anatomical Abnormality
+DISO|Disorders|T049|Cell or Molecular Dysfunction
+DISO|Disorders|T019|Congenital Abnormality
+DISO|Disorders|T047|Disease or Syndrome
+DISO|Disorders|T050|Experimental Model of Disease
+DISO|Disorders|T033|Finding
+DISO|Disorders|T037|Injury or Poisoning
+DISO|Disorders|T048|Mental or Behavioral Dysfunction
+DISO|Disorders|T191|Neoplastic Process
+DISO|Disorders|T046|Pathologic Function
+DISO|Disorders|T184|Sign or Symptom
+PHYS|Physiology|T043|Cell Function
+PHYS|Physiology|T201|Clinical Attribute
+PHYS|Physiology|T045|Genetic Function
+PHYS|Physiology|T041|Mental Process
+PHYS|Physiology|T044|Molecular Function
+PHYS|Physiology|T032|Organism Attribute
+PHYS|Physiology|T040|Organism Function
+PHYS|Physiology|T042|Organ or Tissue Function
+PHYS|Physiology|T039|Physiologic Function
+PROC|Procedures|T060|Diagnostic Procedure
+PROC|Procedures|T065|Educational Activity
+PROC|Procedures|T058|Health Care Activity
+PROC|Procedures|T059|Laboratory Procedure
+PROC|Procedures|T063|Molecular Biology Research Technique
+PROC|Procedures|T062|Research Activity
+PROC|Procedures|T061|Therapeutic or Preventive Procedure
