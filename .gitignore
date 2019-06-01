@@ -1,4 +1,5 @@
 .*.swp
+*.bak
 doc/src
 __pycache__
 data/
@@ -7,6 +8,5 @@ import/
 manual_review/
 build/
 playground/
-
 umls.py
 NMCD
