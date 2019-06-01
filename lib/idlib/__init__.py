@@ -1,1 +1,1 @@
-from .base import Atom, Concept, Attribute, Relationship
+from .base import Atom, Concept, Attribute, Relationship  # noqa

@@ -1,16 +1,10 @@
+# TODO: Write unittests
 import weakref
 import warnings
-
 import numpy as np
-
 from collections import OrderedDict, defaultdict
 
-# TODO: Write unittests
-
-# TODO: Move these into a config file
-# The source database names, in rank order.
-SOURCES = ["IDISK", "NMCD", "DSLD", "NHPID", "LNHPD", "UMLS", "MEDDRA"]
-TERM_TYPES = ["PN", "SN", "SY", "PT", "CN"]
+from .config import SOURCES, TERM_TYPES
 
 
 class Atom(object):
@@ -68,9 +62,9 @@ class Atom(object):
 
     def _check_params(self, term, src, src_id, term_type, is_preferred, dsaui):
         assert isinstance(term, str)
-        assert src in SOURCES
+        assert src.upper() in SOURCES
         assert isinstance(src_id, str)
-        assert term_type in TERM_TYPES
+        assert term_type.upper() in TERM_TYPES
         assert isinstance(is_preferred, bool)
         assert isinstance(dsaui, (type(None), str))
 
@@ -582,10 +576,10 @@ class Relationship(object):
         self.attributes = attributes
 
     def __repr__(self):
-        return f"{self.subject} **{self.rel_name}** {self.object}"
+        return self.rui
 
     def __str__(self):
-        return self.rui
+        return f"{self.subject} **{self.rel_name}** {self.object}"
 
     def __eq__(self, other):
         """
@@ -603,7 +597,7 @@ class Relationship(object):
         assert isinstance(rel_name, str)
         # Object can be a concept or a concept UI.
         assert isinstance(obj, (Concept, str))
-        assert src in SOURCES
+        assert src.upper() in SOURCES
         for atr in attributes:
             assert isinstance(atr, Attribute)
 
