@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 from collections import OrderedDict, defaultdict
 
-from .config import SOURCES, TERM_TYPES
+from config import SOURCES, TERM_TYPES
 
 
 class Atom(object):
