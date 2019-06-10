@@ -1,0 +1,245 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pall.config &mdash; idlib 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="idlib.base" href="base.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> idlib
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="base.html">idlib.base</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">pall.config</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#sources">SOURCES</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#term-types">TERM_TYPES</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#concept-types">CONCEPT_TYPES</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idlib</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>pall.config</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/source/config.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="pall-config">
+<h1>pall.config<a class="headerlink" href="#pall-config" title="Permalink to this headline">¶</a></h1>
+<p>This module defines the following variables:</p>
+<div class="section" id="sources">
+<h2>SOURCES<a class="headerlink" href="#sources" title="Permalink to this headline">¶</a></h2>
+<p>The valid source codes for building iDISK. These are</p>
+<ul class="simple">
+<li>IDISK: The Integrate Dietary Supplement Knowledge Base</li>
+<li>NMCD: Natural Medicines Comprehensive Database</li>
+<li>DSLD: Dietary Supplements Label Database</li>
+<li>NHPID: Natural Health Products Ingredient Database</li>
+<li>LNHPD: Licensed Natural Health Products Database</li>
+<li>MSKCC: Memorial Sloan Kettering Cancer Center herb database</li>
+<li>UMLS: the Unified Medical Language System metathesaurus</li>
+<li>MEDDRA: Medical Dictionary of Regulatory Activities</li>
+</ul>
+</div>
+<div class="section" id="term-types">
+<h2>TERM_TYPES<a class="headerlink" href="#term-types" title="Permalink to this headline">¶</a></h2>
+<p>The valid term types for Atoms in iDISK. These are</p>
+<ul class="simple">
+<li>PN: Preferred Name (deprecated, use PT instead)</li>
+<li>PT: Preferred Term (the preferred term for this concept in a given source)</li>
+<li>SN: Scientific Name (e.g. the full chemical name or the taxonomic name)</li>
+<li>CN: Common Name (how people normally refer to this concept)</li>
+<li>SY: Synonym (generic term type. covers the cases when SN and CN cannot be determined)</li>
+</ul>
+</div>
+<div class="section" id="concept-types">
+<h2>CONCEPT_TYPES<a class="headerlink" href="#concept-types" title="Permalink to this headline">¶</a></h2>
+<p>The valid Concept types in iDISK. These are</p>
+<ul class="simple">
+<li>SDSI: Semantic Dietary Supplement Ingredient</li>
+<li>DSP: Dietary Supplement Product</li>
+<li>SPD: Semantic Pharmacological Drug</li>
+<li>DIS: Disease</li>
+<li>TC: Therapeutic Class</li>
+<li>SOC: System Organ Class</li>
+<li>SS: Signs / Symptoms</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="base.html" class="btn btn-neutral float-left" title="idlib.base" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Jake Vasilakes
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

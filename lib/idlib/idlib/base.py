@@ -82,11 +82,14 @@ class Atom(object):
     def to_dict(self):
         """
         Return this atom as a JSON object. The output format is:
-        {"term": str,
-         "src": str,
-         "src_id": str,
-         "term_type": str,
-         "is_preferred": bool}
+
+        .. code-block:: json
+
+            {"term": str,
+             "src": str,
+             "src_id": str,
+             "term_type": str,
+             "is_preferred": bool}
         """
         data = {"term": self.term,
                 "src": self.src,
@@ -116,11 +119,14 @@ class Atom(object):
         """
         Create an Atom instance from a JSON string.
         The JSON must be formatted:
-        {"term": str,
-         "src": str,
-         "src_id": str,
-         "term_type": str,
-         "is_preferred": bool}
+
+        .. code-block:: json
+
+            {"term": str,
+             "src": str,
+             "src_id": str,
+             "term_type": str,
+             "is_preferred": bool}
 
         :param dict data: The JSON data to load.
         :returns: Atom instance of data.
@@ -283,23 +289,26 @@ class Concept(object):
     def to_dict(self):
         """
         Return this concept as an OrderedDict in the iDISK JSON format.
-        {"ui": str,
-         "concept_type": str,
-         "synonyms": [{"term": str,
-                       "src": str,
-                       "src_id": str,
-                       "term_type": str,
-                       "is_preferred": bool}, {...}]
-         "attributes": [{"atr_name": str,
-                         "atr_value": str,
-                         "src": str}, {...}]
-         "relationships": [{"rel_name": str,
-                            "object": str,
-                            "src": str,
-                            "attributes": [{"atr_name": str,
-                                            "atr_value": str,
-                                            "src": str}, {...}]
-        }
+
+        .. code-block:: json
+
+            {"ui": str,
+             "concept_type": str,
+             "synonyms": [{"term": str,
+                           "src": str,
+                           "src_id": str,
+                           "term_type": str,
+                           "is_preferred": bool}, {...}]
+             "attributes": [{"atr_name": str,
+                             "atr_value": str,
+                             "src": str}, {...}]
+             "relationships": [{"rel_name": str,
+                                "object": str,
+                                "src": str,
+                                "attributes": [{"atr_name": str,
+                                                "atr_value": str,
+                                                "src": str}, {...}]
+            }
 
         :returns: Dictionary in the iDISK JSON format.
         :rtype: OrderedDict
@@ -330,9 +339,9 @@ class Concept(object):
     @classmethod
     def set_ui_prefix(cls, prefix):
         """
-        Set the string to prepend to the U I of each concept.
+        Set the string to prepend to the UI of each concept.
 
-        :param str prefix
+        :param str prefix: The prefix to set.
         """
         cls._prefix = prefix
 
@@ -378,23 +387,26 @@ class Concept(object):
         """
         Creates a concept from a JSON object. The JSON object must have
         the format:
-        {"ui": str,
-         "concept_type": str,
-         "synonyms": [{"term": str,
-                       "src": str,
-                       "src_id": str,
-                       "term_type": str,
-                       "is_preferred": bool}, {...}]
-         "attributes": [{"atr_name": str,
-                         "atr_value": str,
-                         "src": str}, {...}]
-         "relationships": [{"rel_name": str,
-                            "object": str,
-                            "src": str,
-                            "attributes": [{"atr_name": str,
-                                            "atr_value": str,
-                                            "src": str}, {...}]
-        }
+
+        .. code-block:: json
+
+            {"ui": str,
+             "concept_type": str,
+             "synonyms": [{"term": str,
+                           "src": str,
+                           "src_id": str,
+                           "term_type": str,
+                           "is_preferred": bool}, {...}]
+             "attributes": [{"atr_name": str,
+                             "atr_value": str,
+                             "src": str}, {...}]
+             "relationships": [{"rel_name": str,
+                                "object": str,
+                                "src": str,
+                                "attributes": [{"atr_name": str,
+                                                "atr_value": str,
+                                                "src": str}, {...}]
+            }
 
         :param dict data: Input JSON data.
         :returns: Concept instance built from data.
@@ -443,7 +455,7 @@ class Attribute(object):
     """
     An attribute of a concept or relationship.
 
-    :param (Concept, Relationship) subject: The subject of this attribute.
+    :param Concept/Relationship subject: The subject of this attribute.
     :param str atr_name: The name of this attribute. E.g. "has_background".
     :param str atr_value: The value of this attribute.
     :param str src: The source code of where this attribute was found.
@@ -493,13 +505,16 @@ class Attribute(object):
         """
         Output this attribute as a dictionary, optionally with a subject.
         The subject is optional to accord with the iDISK JSON format.
-        {"atr_name": str,
-         "atr_value": str,
-         "src": str}
 
-        :param return_subject bool: If True, the returned dict contains
+        .. code-block:: json
+
+            {"atr_name": str,
+             "atr_value": str,
+             "src": str}
+
+        :param bool return_subject: If True, the returned dict contains
                                     a "subject" key.
-        :param verbose_subject bool: If True and return_subject is True,
+        :param bool verbose_subject: If True and return_subject is True,
                                      the value of the "subject" key includes
                                      the dscui, name, and source, instead of
                                      just the dscui.
@@ -539,12 +554,15 @@ class Attribute(object):
         """
         Create an Attribute instance from data.
         data must be a dict with the following format:
+
+        .. code-block:: json
+
         {"atr_name": str,
          "atr_value": str,
          "src": str}
 
         :param dict data: Input dictionary
-        :param (Concept, Relationship) subject: Subject of this attribute.
+        :param Concept/Relationship subject: Subject of this attribute.
         :returns: Attribute instance
         :rtype: Attribute
         """
@@ -561,8 +579,8 @@ class Relationship(object):
 
     :param Concept subject: The subject of this relationship.
     :param str rel_name: The relation. E.g. "ingredient_of".
-    :param (Concept, str) obj: The object of this relationship. Can be a
-                               Concept instance or a concept UI.
+    :param Concept/str obj: The object of this relationship. Can be a
+                                    Concept instance or a concept UI.
     :param str src: The source code of where this relationship was found.
     :param list(Attribute) attributes: Any attributes of this relationship.
     """
@@ -619,13 +637,16 @@ class Relationship(object):
         """
         Output this relationship as a dictionary, optionally with a subject.
         The subject is optional to accord with the iDISK JSON format.
-        {"rel_name": str,
-         "object": str,
-         "src": str}
 
-        :param return_subject bool: If True, the returned dict contains
+        .. code-block:: json
+
+            {"rel_name": str,
+             "object": str,
+             "src": str}
+
+        :param bool return_subject: If True, the returned dict contains
                                     a "subject" key.
-        :param verbose_subject bool: If True and return_subject is True,
+        :param bool verbose_subject: If True and return_subject is True,
                                      the value of the "subject" key includes
                                      the dscui, name, and source, instead of
                                      just the dscui.
@@ -692,13 +713,16 @@ class Relationship(object):
         """
         Create an Relationship instance from data.
         data must be a dict with the following format:
-        {"rel_name": str,
-         "object": str,
-         "src": str,
-         "attributes": [{"atr_name": str,
-                         "atr_value": str,
-                         "src": str}, {...}]
-        }
+
+        .. code-block:: json
+
+            {"rel_name": str,
+             "object": str,
+             "src": str,
+             "attributes": [{"atr_name": str,
+                             "atr_value": str,
+                             "src": str}, {...}]
+            }
 
         :param dict data: Input dictionary
         :param Concept subject: Subject of this relationship.
