@@ -2,6 +2,8 @@
 
 This library contains classes for building and working with iDISK.
 
+[Documentation](docs/_build/html/index.html)
+
 There are currently four classes representing the basic building blocks of iDISK:
 
 * Atom
