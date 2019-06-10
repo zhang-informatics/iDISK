@@ -7,7 +7,7 @@ The iDISK API Library (idlib)
 =================================
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Contents:
 
    source/base
