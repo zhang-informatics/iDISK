@@ -414,6 +414,8 @@ class Concept(object):
         concept.relationships = rels
         return concept
 
+    # TODO: Refactor this to deal with strings that are mapped to multiple
+    # concepts. E.g. "aspirin and ibuprofen" |--> "aspirin", "ibuprofen".
     @classmethod
     def resolve_relationships(cls):
         """

@@ -40,7 +40,7 @@ idlib: requirements
 
 ## Check all Python code
 lint:
-	flake8 src/
+	flake8 idlib/
 
 ## Set up python virtual environment
 create_environment:
