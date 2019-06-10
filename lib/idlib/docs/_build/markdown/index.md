@@ -1,29 +1,29 @@
-# The iDISK API (idlib)
+<!-- idlib documentation master file, created by
+sphinx-quickstart on Mon Jun 10 12:57:59 2019.
+You can adapt this file completely to your liking, but it should at least
+contain the root `toctree` directive. -->
+# The iDISK API Library (idlib)
 
-This library contains classes for building and working with iDISK.
+* idlib.base
 
-[Markdown Documentation](docs/_build/markdown/)
+  * Atom
 
-There are currently four classes representing the basic building blocks of iDISK:
+  * Concept
 
-* Atom
-* Concept
-* Attribute
-* Relationship
+  * Attribute
 
-The possible source databases, term types, and concept types are defined in `idisk.ini`. 
+  * Relationship
+
+* pall.config
+
+  * SOURCES
+
+  * TERM_TYPES
+
+  * CONCEPT_TYPES
 
 
-### Installation
-
-Make sure you have the following prerequisites:
-
-* Max OS X or Linux
-* Python3
-* GNU Make
-
-The run the following commands to create the iDISK build environment, install
-requirements, and finally install idlib.
+## Installation
 
 ```
 make create_environment
@@ -32,7 +32,7 @@ make requirements
 make idlib
 ```
 
-### Example usage
+## Example Usage
 
 ```python
 >>> from idlib import Atom, Concept, Attribute, Relationship
@@ -40,15 +40,15 @@ make idlib
 >>> terms = ["vitamin c", "ascorbic acid", "vitC"]
 >>> atoms = []
 >>> for (i, term) in enumerate(terms):
-...	pref = True if term == "ascorbic acid" else False
-...	atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
-...	atoms.append(atom)
+...    pref = True if term == "ascorbic acid" else False
+...    atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
+...    atoms.append(atom)
 >>> concept = Concept.from_atoms(atoms, concept_type="SDSI")
 >>> print(concept)
 DC0000001: ascorbic acid
 >>> # Give this concept an attribute.
 >>> atr = Attribute(concept, atr_name="information",
-...		    atr_value="Found in oranges!", src="NMCD")
+...            atr_value="Found in oranges!", src="NMCD")
 >>> print(atr)
 DC0000001: ascorbic acid *info* Found in oranges
 >>> concept.attributes.append(atr)
@@ -67,3 +67,7 @@ DC0000001: ascorbic acid *found_in* Orange
 >>> rel_atr = Attribute(rel, atr_name="confidence", atr_value="Good", src="NMCD")
 >>> rel_str.attributes.append(rel_atr)
 ```
+
+# Indices and tables
+
+* Index
