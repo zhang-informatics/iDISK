@@ -1,5 +1,6 @@
 .*.swp
 *.bak
+.DS_Store
 doc/src
 __pycache__
 data/

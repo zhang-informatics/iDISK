@@ -4,7 +4,7 @@ import copy
 
 from collections import defaultdict
 
-from base import Concept
+from idlib import Concept
 
 
 def parse_args():

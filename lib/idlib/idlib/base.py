@@ -4,7 +4,7 @@ import warnings
 import numpy as np
 from collections import OrderedDict, defaultdict
 
-from .config import SOURCES, TERM_TYPES
+from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES
 
 
 class Atom(object):
@@ -65,6 +65,9 @@ class Atom(object):
         assert src.upper() in SOURCES
         assert isinstance(src_id, str)
         assert term_type.upper() in TERM_TYPES
+        if term_type.upper() == "PN":
+            msg = "Term type PN (preferred name) is deprecated. Use PT (preferred term) instead."  # noqa
+            warnings.warn(msg, DeprecationWarning)
         assert isinstance(is_preferred, bool)
         assert isinstance(dsaui, (type(None), str))
 
@@ -188,6 +191,7 @@ class Concept(object):
     def _check_params(self, concept_type, atoms, attributes,
                       relationships, dscui):
         assert isinstance(concept_type, str)
+        assert concept_type in CONCEPT_TYPES
         assert isinstance(atoms, list)
         assert all([isinstance(atom, Atom) for atom in atoms])
         assert all([isinstance(atr, Attribute) for atr in attributes])
