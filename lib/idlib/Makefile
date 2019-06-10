@@ -35,8 +35,12 @@ requirements:
 	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
 
 ## Install idlib
-idlib: requirements
+install: requirements
 	$(PYTHON_INTERPRETER) setup.py develop
+
+## Uninstall idlib
+uninstall:
+	$(PYTHON_INTERPRETER) setup.py develop --uninstall
 
 ## Check all Python code
 lint:

@@ -29,8 +29,10 @@ requirements, and finally install idlib.
 make create_environment
 source activate idisk
 make requirements
-make idlib
+make install
 ```
+
+To uninstall idlib just run `make uninstall`.
 
 ### Example usage
 
