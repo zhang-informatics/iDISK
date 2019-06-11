@@ -6,10 +6,10 @@ This library contains classes for building and working with iDISK.
 
 There are currently four classes representing the basic building blocks of iDISK:
 
-* Atom
-* Concept
-* Attribute
-* Relationship
+* `Atom`
+* `Concept`
+* `Attribute`
+* `Relationship`
 
 The possible source databases, term types, and concept types are defined in `idisk.ini`. 
 
@@ -22,8 +22,8 @@ Make sure you have the following prerequisites:
 * Python3
 * GNU Make
 
-The run the following commands to create the iDISK build environment, install
-requirements, and finally install idlib.
+Then run the following commands to create the iDISK build environment, install
+requirements, and finally install `idlib`.
 
 ```
 make create_environment
