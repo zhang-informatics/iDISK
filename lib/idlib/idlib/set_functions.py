@@ -1,8 +1,7 @@
 import argparse
 import json
+import csv
 import copy
-
-from collections import defaultdict
 
 from idlib import Concept
 
@@ -12,21 +11,49 @@ def parse_args():
     parser.add_argument("set_function", type=str,
                         choices=["intersection", "union", "difference"],
                         help="The set function to perform.")
-    parser.add_argument("ingredients1", type=str,
-                        help="File containing the first list of ingredients.")
-    parser.add_argument("ingredients2", type=str,
-                        help="File containing the second list of ingredients.")
-    parser.add_argument("outfile", type=str, help="Where to save the result.")
+    parser.add_argument("--infiles", type=str, nargs='+', required=True,
+                        help="""JSON lines files containing
+                                the lists of concepts.""")
+    parser.add_argument("--outfile", type=str, required=True,
+                        help="Where to save the result.")
+    parser.add_argument("--connections_file", type=str, default=None,
+                        help="""CSV file containing pairs of indices of
+                                connected concepts in the input, one pair
+                                per line. Assumes that the concepts have
+                                already been concatenated and thus there
+                                is only one infile.""")
     args = parser.parse_args()
     return args
 
 
-def perform_set_function(func, file1, file2, outfile):
-    iter1 = [json.loads(line) for line in open(file1, 'r')]
-    iter2 = [json.loads(line) for line in open(file2, 'r')]
-    concepts1 = [Concept.from_dict(d) for d in iter1]
-    concepts2 = [Concept.from_dict(d) for d in iter2]
-    result = func(concepts1, concepts2)
+def read_connections_file(infile):
+    """
+    Reads a two-column CSV file of integers into a list of tuples
+    corresponding to indices of connected concepts.
+
+    :param str infile: Path to the CSV file.
+    :returns: List of int tuples of connections.
+    :rtype: list
+    """
+    connections = []
+    with open(infile, 'r', newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',')
+        for row in reader:
+            assert(len(row) == 2)
+            row = [int(i) for i in row]
+            connections.append(tuple(row))
+    return connections
+
+
+def perform_set_function(func, outfile, *infiles, connections=None):
+    all_concepts = []
+    for fpath in infiles:
+        data = [json.loads(line) for line in open(fpath, 'r')]
+        concepts = [Concept.from_dict(d) for d in data]
+        all_concepts.extend(concepts)
+    print(f"Number of starting concepts: {len(all_concepts)}")
+    result = func(all_concepts, connections=connections).result
+    print(f"Number of resulting concepts: {len(result)}")
     with open(outfile, 'w') as outF:
         for concept in result:
             json.dump(concept.to_dict(), outF)
@@ -54,150 +81,218 @@ def _get_prefix(concept1, concept2):
     return merged_prefix
 
 
-def intersection(concepts1, concepts2):
+class Union(object):
     """
-    Given two lists of Concepts, computes their intersection,
-    matching on their atoms. Concepts that match are merged.
+    An implementation of the union-find datastructure specific for
+    iDISK Concepts.
 
-    :param list(Concept) concepts1: First list of concepts.
-    :param list(Concept) concepts2: Second list of concepts.
-    :returns: List of merged concepts common to both lists.
-    :rtype: list(Concept)
+    The routine starts by finding connections between pairs of concepts
+    in the input. It then merges the connected concepts, always mergin the
+    concept with fewer number of atoms into the concept with the greater.
+
+    This class can be used to generate a list of candidate connections,
+    which can then be filtered, by passing ``run_union=False`` and then
+    getting the ``connections`` attribute. Once filtered, they can be passed
+    back in as the ``connections`` argument with ``run_union=True``.
+
+    See the idlib README for example usage.
+
+    :param list concepts: One or more lists of Concept instances.
+    :param list connections: A list of int tuples specifying connections
+                             between pairs of concepts, where each int
+                             in a given tuple is the index of the concept
+                             in the concepts argument. Optional. If not
+                             provided, pairs of concepts are connected if
+                             they share one or more atom terms.
+    :param bool run_union: If True (default) run union-find on the input.
+                           Otherwise, just run find_connections.
     """
-    # Set the prefix for any merged concepts.
-    prefix = _get_prefix(concepts1[0], concepts2[0])
-    Concept.set_ui_prefix(prefix)
 
-    matched = defaultdict(bool)  # default False
-    intersection_concepts = []
+    def __init__(self, concepts, connections=[], run_union=True):
+        self._check_params(concepts, connections)
+        self.concepts = concepts
+        self.concepts_map = dict(enumerate(self.concepts))
+        self.parents_map = dict(enumerate(range(len(self.concepts))))
+        if connections == []:
+            print(f"Finding connections...")
+            self.connections = self.find_connections()
+        else:
+            self.connections = connections
+        print(f"Number of connections: {len(self.connections)}")
+        if run_union is True:
+            self.union_find()
+            self.result = [self.concepts_map[i]
+                           for i in set(self.parents_map.values())]
 
-    for c1 in concepts1:
-        c_new = copy.deepcopy(c1)
-        for c2 in concepts2:
-            overlap = match(c1, c2)
-            if len(overlap) > 0:
-                matched[c1.ui] = True
-                c_new = merge(c_new, c2)
-        if matched[c1.ui] is True:
-            intersection_concepts.append(c_new)
-    return intersection_concepts
+    def _check_params(self, concepts, connections):
+        assert(all([isinstance(c, Concept) for c in concepts]))
+        assert(isinstance(connections, list))
+        if len(connections) > 0:
+            assert(all([isinstance(elem, tuple) for elem in connections]))
+            assert(all([isinstance(i, int) for elem in connections
+                        for i in elem]))
+
+    def _connected(self, i, j):
+        """
+        Two concepts are connected if they share one or more atoms.
+
+        :param int i: The index of the first concept.
+        :param int j: The index of the second concept.
+        :returns: Whether concepts i and j are connected.
+        :rtype: bool
+        """
+        ci = self.concepts_map[i]
+        cj = self.concepts_map[j]
+        ci_terms = [a.term for a in ci.get_atoms()]
+        cj_terms = [a.term for a in cj.get_atoms()]
+        overlap = set(ci_terms).intersection(set(cj_terms))
+        return len(overlap) > 0
+
+    def find_connections(self):
+        """
+        Finds all pairs of concepts that share one or more atom
+        terms. Returns connections as a list of int tuples.
+
+        :returns: connections
+        :rtype: list
+        """
+        connections = []
+        for i in range(len(self.concepts_map)):
+            print(f"{i}/{len(self.concepts_map)}\r", end='')
+            for j in range(i+1, len(self.concepts_map)):
+                if self._connected(i, j):
+                    connections.append((i, j))
+        return connections
+
+    def _merge(self, concept_i, concept_j):
+        """
+        Merges the second Concepts into the first by merging their Atoms,
+        Attributes, and Relationships.
+
+        :param Concept concept_i: The first concept.
+        :param Concept concept_j: The second concept.
+        :returns: Merged concept.
+        :rtype: Concept
+        """
+        merged = copy.deepcopy(concept_i)
+        # Merge atoms, removing duplicates.
+        for atom in concept_j.get_atoms():
+            if atom not in merged.atoms:
+                merged.atoms.append(atom)
+
+        # Merge attributes, removing duplicates and changing the subject.
+        for atr in concept_j.get_attributes():
+            if atr not in merged.attributes:
+                atr.subject = merged
+                merged.attributes.append(atr)
+
+        # Merge relationships, removing duplicates and changing the subject.
+        for rel in concept_j.get_relationships():
+            if rel not in merged.relationships:
+                rel.subject = merged
+                for a in rel.attributes:
+                    a.subject = merged
+                merged.relationships.append(rel)
+        return merged
+
+    def _find(self, i):
+        """
+        The find operation of union-find with path compression.
+
+        :param int i: The index of the concept whose root to find.
+        :returns: The root of concept i
+        :rtype: int
+        """
+        if i != self.parents_map[i]:  # If this is not a root node
+            self.parents_map[i] = self._find(self.parents_map[i])
+        return self.parents_map[i]
+
+    def _union(self, i, j):
+        """
+        The union operation of union-find. Merges concepts with fewer
+        atoms into those with more.
+
+        :param int i: The index of the first concept to merge.
+        :param int j: The index of the second concept to merge.
+        """
+        pi = self._find(i)
+        pj = self._find(j)
+        if pi == pj:
+            return
+        concept_i = self.concepts_map[pi]
+        concept_j = self.concepts_map[pj]
+        # Merge the smaller concept into the bigger.
+        if len(concept_i.atoms) < len(concept_j.atoms):
+            pi, pj = pj, pi
+            concept_i, concept_j = concept_j, concept_i
+        # Merge concept_j into concept_i
+        self.concepts_map[pi] = self._merge(concept_i, concept_j)
+        self.parents_map[pj] = pi
+
+    def union_find(self):
+        """
+        The union-find routine. Given a list of connections, merges them.
+        """
+        counter = 0
+        for (i, j) in self.connections:
+            self._union(i, j)
+            counter += 1
+            print(f"{counter}/{len(self.connections)}\r", end='')
 
 
-def union(concepts1, concepts2):
+class Intersection(Union):
     """
-    Given two lists of Concepts computes their union, matching on their atoms.
-    Concepts that match are merged.
+    The intersection of a list of concepts is the set of all those concepts
+    that are matched to one or more other concepts.
 
-    :param list(Concept) concepts1: First list of concepts.
-    :param list(Concept) concepts2: Second list of concepts.
-    :returns: The union.
-    :rtype: list(Concept)
+    :param list concepts: One or more lists of Concept instances.
+    :param list connections: A list of int tuples specifying connections
+                             between pairs of concepts, where each int
+                             in a given tuple is the index of the concept
+                             in the concepts argument. Optional. If not
+                             provided, pairs of concepts are connected if
+                             they share one or more atom terms.
     """
-    # Set the prefix for any merged concepts.
-    prefix = _get_prefix(concepts1[0], concepts2[0])
-    Concept.set_ui_prefix(prefix)
 
-    matched_pairs = []
-    matched_c2 = defaultdict(bool)
-    union_concepts = []
-    for c1 in concepts1:
-        c_new = None
-        for c2 in concepts2:
-            if c1 == c2:
-                continue
-            if set([c1.ui, c2.ui]) in matched_pairs:
-                continue
-            overlap = match(c1, c2)
-            if len(overlap) > 0:
-                matched_c2[c2.ui] = True
-                matched_pairs.append(set([c1.ui, c2.ui]))
-                if c_new is None:
-                    # Create a new concept with the merged prefix.
-                    c_new = Concept(c1.concept_type, atoms=c1.atoms,
-                                    attributes=c1.attributes,
-                                    relationships=c1.relationships)
-                c_new = merge(c_new, c2)
-        if c_new is not None:
-            union_concepts.append(c_new)
-    print(len(union_concepts))
-    unmatched_concepts = [c for c in concepts2 if matched_c2[c.ui] is False]
-    union_concepts += unmatched_concepts
-    return union_concepts
+    def __init__(self, concepts, connections=[]):
+        super().__init__(concepts, connections, run_union=True)
+        parent_idxs = [v for (k, v) in self.parents_map.items() if k != v]
+        self.result = [self.concepts_map[i] for i in set(parent_idxs)]
 
 
-def difference(concepts1, concepts2):
+class Difference(Union):
     """
-    Given two lists of Concepts, compute their difference,
-    matching on their atoms.
+    The difference of a list of concepts is the set of all those concepts
+    that could not be matched to at least one other concept.
 
-    :param list(Concept) concepts1: First list of concepts.
-    :param list(Concept) concepts2: Second list of concepts.
-    :returns: List of concepts that were found in concepts1 and concepts2,
-              but not both.
-    :rtype: list(Concept)
+    :param list concepts: One or more lists of Concept instances.
+    :param list connections: A list of int tuples specifying connections
+                             between pairs of concepts, where each int
+                             in a given tuple is the index of the concept
+                             in the concepts argument. Optional. If not
+                             provided, pairs of concepts are connected if
+                             they share one or more atom terms.
     """
-    matched = defaultdict(bool)
-    for c1 in concepts1:
-        for c2 in concepts2:
-            overlap = match(c1, c2)
-            if len(overlap) > 0:
-                matched[c1.ui] = True
-                matched[c2.ui] = True
-    all_concepts = concepts1 + concepts2
-    diff_terms = [c for c in all_concepts if matched[c.ui] is False]
-    return diff_terms
 
-
-def match(concept1, concept2):
-    """
-    Finds the atom overlap between two concepts.
-
-    :param Concept concept1: The first concept.
-    :param Concept concept2: The second concept.
-    :returns: set of atoms that were found in both concepts.
-    :rtype: set(Atom)
-    """
-    c1_terms = [a.term for a in concept1.get_atoms()]
-    c2_terms = [a.term for a in concept2.get_atoms()]
-    overlap = set(c1_terms).intersection(set(c2_terms))
-    return overlap
-
-
-def merge(concept1, concept2):
-    """
-    Merges the second ingredient into the first by merging their atoms,
-    attributes, and relationships.
-
-    :param Concept concept1: The first concept.
-    :param Concept concept2: The second concept.
-    :returns: A single concept resulting from merging the two input concepts.
-    :rtype: Concept
-    """
-    merged = copy.deepcopy(concept1)
-
-    # Merge atoms, removing duplicates.
-    for atom in concept2.get_atoms():
-        if atom not in merged.atoms:
-            merged.atoms.append(atom)
-
-    # Merge attributes, removing duplicates.
-    for atr in concept2.get_attributes():
-        if atr not in merged.attributes:
-            merged.attributes.append(atr)
-
-    # Merge relationships, removing duplicates.
-    for rel in concept2.get_relationships():
-        if rel not in merged.relationships:
-            merged.relationships.append(rel)
-
-    return merged
+    def __init__(self, concepts, connections=[]):
+        super().__init__(concepts, connections, run_union=True)
+        # The unmatched concepts correspond to those indices that only occur
+        # once in parents_map
+        from collections import Counter
+        idx_counts = Counter(self.parents_map.values())
+        parent_idxs = [k for (k, v) in idx_counts.items() if v == 1]
+        # and which have no parent
+        parent_idxs = [k for k in parent_idxs if k == self.parents_map[k]]
+        self.result = [self.concepts_map[i] for i in parent_idxs]
 
 
 if __name__ == "__main__":
-    func_table = {"intersection": intersection,
-                  "union": union,
-                  "difference": difference}
+    func_table = {"union": Union,
+                  "intersection": Intersection,
+                  "difference": Difference}
     args = parse_args()
-    perform_set_function(func_table[args.set_function],
-                         args.ingredients1, args.ingredients2,
-                         args.outfile)
+    func = func_table[args.set_function]
+    cnxs = []
+    if args.connections_file is not None:
+        cnxs = read_connections_file(args.connections_file)
+    perform_set_function(func, args.outfile, *args.infiles, connections=cnxs)

@@ -480,10 +480,16 @@ class Attribute(object):
         return f"{self.subject} *{self.atr_name}* {self.atr_value}"
 
     def __eq__(self, other):
+        """
+        Two Attribute instances are equal if their name, value, and source
+        are the same. Their subject is NOT taken into account.
+
+        :param Attribute other: The attribute to compare.
+        :rtype: bool
+        """
         if not isinstance(other, Attribute):
             return False
-        return all([self.subject == other.subject,
-                    self.atr_name == other.atr_name,
+        return all([self.atr_name == other.atr_name,
                     self.atr_value == other.atr_value,
                     self.src == other.src])
 
@@ -557,9 +563,9 @@ class Attribute(object):
 
         .. code-block:: json
 
-        {"atr_name": str,
-         "atr_value": str,
-         "src": str}
+            {"atr_name": str,
+             "atr_value": str,
+             "src": str}
 
         :param dict data: Input dictionary
         :param Concept/Relationship subject: Subject of this attribute.
@@ -607,12 +613,16 @@ class Relationship(object):
 
     def __eq__(self, other):
         """
+        Like Attribute, two Relationship instances are the same if the have
+        the same name, object, and source. The subject is NOT considered.
         Equivalence does not consider relationship attributes.
+
+        :param Relationship other: The Relationship to compare.
+        :rtype: bool
         """
         if not isinstance(other, Relationship):
             return False
-        return all([self.subject == other.subject,
-                    self.rel_name == other.rel_name,
+        return all([self.rel_name == other.rel_name,
                     self.object == other.object,
                     self.src == other.src])
 
