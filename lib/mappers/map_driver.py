@@ -71,33 +71,14 @@ class driver(object):
 				herb = json.loads(line)
 				name = herb["name"]
 				data["name"] = name
-				if name in self.overlap_herbs:
-					print("-----------------")
-					print(name)
-					'''
-					# get annotations
-					hdi_content = herb["herb-drug_interactions"]
-					data["HDI"] = hdi_content
-					data["annotated_HDI"] = mm.process(name, hdi_content, "HDI")
-					pu_content = herb["purported_uses"]
-					data["PU"] = pu_content
-					data["annotated_PU"] = mm.process(name, pu_content, "PU")
-					print("annotated hdi: ")
-					pprint(data["annotated_HDI"])
-					print("\n")
-					print("annotated pu: ")
-					pprint(data["annotated_PU"])
-					print("-----------------")
-					self.write(data, "test.jsonl")
-					'''
-					adr_content = herb["adverse_reactions"]
-					data["ADR"] = adr_content
-					data["annotated_ADR"] = meddra.main(adr_content)
-					self.write(data, "test.jsonl")
-					print("-----------------")
+				print("-----------------")
+				print(name)
+				mm.process(name, herb["herb-drug_interactions"], "HDI")
+				print("-----------------")
+				break
 	
 if __name__ == "__main__":
     x = driver("/Users/Changye/Documents/workspace/public_mm")
-    x.run()
+    x.test()
 
 

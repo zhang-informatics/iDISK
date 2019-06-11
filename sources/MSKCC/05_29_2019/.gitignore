@@ -6,3 +6,4 @@ scripts/util.py
 scripts/config.py
 scripts/__pycache__/*.*
 download/.DS_Store
+download/*.*

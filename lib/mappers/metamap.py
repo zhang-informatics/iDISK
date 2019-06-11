@@ -1,169 +1,180 @@
 import os
 import subprocess
+from operator import itemgetter
 import re
+import pandas as pd
 import json
+# get UMLS annotation for HDI, contradictions and purposed uses
 
 
-class MetaMapDriver(object):
-    """
-    Class to start and use a MetaMap instance from within Python.
+class umlsAnn(object):
+    def __init__(self, location, path):
+        # MetaMap location
+        #self.location = "/Users/Changye/Documents/workspace/public_mm"
+        self.location = location
+        # get this python script location
+        self.path = path
+    # start MM server
 
-    :param str mm_bin: path to MetaMap bin/ directory.
-    :param str data_year: corresponds to the -V option. E.g. '2018AA'
-    :param str data_version: corresponds to the -Z option. E.g. 'Base'
-    """
+    def start(self):
+        os.chdir(self.location)
+        output = subprocess.check_output(["./bin/skrmedpostctl", "start"])
+        print(output.decode("utf8"))
+    # get MM command
+    # @value: content to be annotated
+    # @additional: additional command to be added
+    # @relax: true if use relax model for term processing
+    # return MM commands
+    # TODO: add more supported commands
 
-    def __init__(self, mm_bin, data_year="2018AB", data_version="Base"):
-        self.mm_bin = mm_bin
-        self.metamap = os.path.join(self.mm_bin, "metamap16")
-        self.data_year = data_year
-        self.data_version = data_version
-        self._start()
+    def getComm(self, value, additional="", relax=True):
+        if relax:
+            command = "echo " + value + " | " + "./bin/metamap16" + " -I " + "-Z 2018AB -V Base --relaxed_model " + \
+                "--silent " + "--ignore_word_order" + " " + additional +  "--term_processing " + "--JSONn"
+            return command
+        else:
+            command = "echo " + value + " | " + "./bin/metamap16" + " -I " + "-Z 2018AB -V Base " + \
+                "--silent " + "--ignore_word_order" + " " + additional +  "--term_processing " + "--JSONn"
+            return command
 
-    def _start(self):
-        """
-        Start the MetaMap servers.
-        """
-        print("Starting tagger server.")
-        tagger_server = os.path.join(self.mm_bin, "skrmedpostctl")
-        tagger_out = subprocess.check_output([tagger_server, "start"])
-        print(tagger_out.decode("utf-8"))
-        print("You may want to start the WSD server before continuing.")
-        print(f"  Run {self.mm_bin}/wsdserverctl start")
+    # get annotated terms using UMLS without output format
+    # @command: full command from @getComm function
+    # return MM output
 
-    def _clean_data(self, data):
-        """
-        Remove all non-ASCII characters in the content and
-        remove content inside of ().
-
-        :param data list(str): A list of strings to clean.
-        """
-        cleaned = []
-        for d in data:
-            d = re.sub(r'[^\x00-\x7F]+', " ", d)
-            d = re.sub(r" ?\([^)]+\)", "", d)
-            cleaned.append(d)
-        return cleaned
-
-    def _get_call(self, inputs, options=None, relaxed=True):
-        """
-        Build the command line call to MetaMap.
-
-        :param inputs str: newline delimited list of terms to map.
-        :param options str: any additional arguments to pass to MetaMap
-                            (default None).
-        :param relaxed bool: If True, use the --relaxed_model (default True).
-        :returns: MetaMap call
-        :rtype: str
-        """
-        id_match = re.match(r'.+\|.+', inputs.split('\n')[0])
-        if id_match is None:
-            msg = "input does not seem to contain IDs. \
-                   Should be of the form 'ID|STRING'."
-            warnings.warn(msg)
-        args = [f"-Z {self.data_year}",
-                f"-V {self.data_version}",
-                "--silent",  # Don't show logging/version info
-                "--term_processing",  # Process term by term
-                "--ignore_word_order",
-                "--sldiID",  # Single line delimited input with IDs
-                "--JSONn"]  # Output unformatted JSON
-        if relaxed is True:
-            args.append("--relaxed_model")
-        if options is not None:
-            args.append(options)
-        args_str = ' '.join(args)
-
-        call = f"echo '{inputs}' | {self.metamap} {args_str}"
-        return call
-
-    def _run_call(self, call):
-        """
-        Run the MetaMap call.
-
-        :param call str: MetaMap call. Output of self.get_call()
-        :returns: The call and the output of the call.
-        :rtype: tuple(str, str)
-        """
-
-        res = subprocess.Popen(call, shell=True, stdout=subprocess.PIPE)
-        output = res.stdout.read().decode("utf-8")
-        output = json.loads(output.split('\n', maxsplit=1)[1])
+    def getAnn(self, command):
+        # echo lung cancer | ./bin/metamap16 -I
+        # check if value is valid
+        output = subprocess.Popen(
+            command, shell=True, stdout=subprocess.PIPE).stdout.read()
         return output
 
-    def _process_output(self, output, keep_semtypes={}):
-        """
-        Format the JSON output by MetaMap into something a bit
-        more accessible. Outputs a dictionary of {term: candidate_mapping}.
+    # remove all non-ASCII characters in the content
+    # remove contents inside of ()
+    # @value: the content needs to be cleaned
 
-        :param output dict: JSON formatted output from self.run_call()
-        :param keep_semtypes list: dictionary of the form
-                                   {input_term: [semtypes, [...]]} for each
-                                   input term. If an input term is missing,
-                                   does not filter the concepts for that term.
-        :returns: dictionary of best candidate mappings, one for each line.
-        :rtype: dict
-        """
-        all_mappings = {}
-        docs = output["AllDocuments"]
-        for doc in docs:
-            utt = doc["Document"]["Utterances"][0]
-            intext = utt["UttText"]
-            mappings = [m for p in utt["Phrases"] for m in p["Mappings"]]
-            candidates = [c for m in mappings for c in m["MappingCandidates"]]
-            # Filter candidates on semantic types
-            if intext in keep_semtypes:
-                types = set(keep_semtypes[intext])
-                candidates = [c for c in candidates
-                              if len(types & set(c["SemTypes"])) > 0]
-            all_mappings[intext] = candidates
-        return all_mappings
+    def remove(self, value):
+        if isinstance(value, list):
+            value = [re.sub(r'[^\x00-\x7F]+', " ", each) for each in value]
+            value = [re.sub(r" \([^)]*\)", "", each) for each in value]
+            return value
+        else:
+            value = re.sub(r'[^\x00-\x7F]+', " ", value)
+            value = re.sub(r" \([^)]*\)", "", value)
+        return value
 
-    def map(self, input_strings, keep_semtypes={}):
-        """
-        Map an input string or list of strings to UMLS concepts.
+    # get content before ":"
+    # @content: content need to be split
+    # return a list of contents that are before ":"
 
-        :param input_strings list: list of strings to input to MetaMap
-        :param keep_semtypes list: list of strings of semantic types to keep.
-        :returns: mapping from input to UMLS concepts
-        :rtype: dict
-        """
-        if type(keep_semtypes) is not dict:
-            raise ValueError("keep_semtypes must be a dict")
-        if type(input_strings) == str:
-            input_strings = [input_strings]
+    def getBefore(self, content):
+        if isinstance(content, list):
+            value = [each.split(":")[0] for each in content]
+            return value
+        else:
+            value = content.split("\n")
+            value = [each.split(":")[0] for each in value]
+        return value
 
-        clean = self._clean_data(input_strings)
-        indata = '\n'.join(clean)
-        call = self._get_call(indata)
-        output = self._run_call(call)
-        mappings = self._process_output(output, keep_semtypes)
-        return mappings
+    # split HDI content with "/" or ","
+    # @content: herb["herb-drug_interacitons"]
+    # return separate HDI content as list
 
-    def get_best_mappings(self, mappings, min_score=800):
-        """
-        Returns the candidate mapping with the highest score
-        for each input term.
-        Warning! If two or more concepts are tied, one will
-        be returned at random.
+    def SplitContent(self, content):
+        if isinstance(content, list):
+            split_content = []
+            for each in content:
+                if "/" in each:
+                    items = each.split("/")
+                    split_content.extend(items)
+                elif "," in each:
+                    items = each.split(",")
+                    split_content.extend(items)
+                else:
+                    split_content.append(each)
+            return split_content
+        else:
+            return content
 
-        :param mappings dict: dict of candidate mappings. Output of self.map.
-        :param min_score int: minimum candidate mapping score to accept.
-        :returns: The best candidate mapping for each input term.
-        :rtype: dict
-        """
-        if type(mappings) is not dict:
-            raise ValueError(f"Unsupported input type '{type(mappings)}.")
+    # read MM type file
+    # @fun: annotation section names, i.e. PU, HDI
+    # each section will return a list of MM types
 
-        all_concepts = {}
-        for (term, candidates) in mappings.items():
-            best_score = float("-inf")
-            best_candidate = None
-            for c in candidates:
-                score = abs(int(c["CandidateScore"]))
-                if score > best_score:
-                    best_score = score
-                    best_candidate = c
-            if best_score >= min_score:
-                all_concepts[term] = best_candidate
-        return all_concepts
+    def readTypes(self, fun):
+        full_types = pd.read_csv(os.path.join(self.path, "mmtypes.txt"),
+                                 sep="|", header=None, index_col=False)
+        full_types.columns = ["abbrev", "name", "tui", "types"]
+        if fun.upper() not in ["HDI", "PU"]:
+            raise ValueError("Currently only supports HDI and PU")
+        else:
+            # hdi mm types
+            if fun.upper() == "HDI":
+                hdi_types = pd.read_csv(
+                    os.path.join(self.path, "hdi_types.txt"),
+                    sep="|", header=None, index_col=False)
+                hdi_types.columns = ["group", "group_name", "tui", "types"]
+                hdi_types = hdi_types["tui"].values.tolist()
+                hdi = full_types.loc[full_types["tui"].isin(hdi_types)]
+                return hdi["types"].values.tolist()
+            # pu mm types
+            if fun.upper() == "PU":
+                pu_types = pd.read_csv(
+                    os.path.join(self.path, "pu_types.txt"),
+                    sep="|", header=None, index_col=False)
+                pu_types.columns = ["group", "group_name", "tui", "types"]
+                pu_types = pu_types["tui"].values.tolist()
+                pu = full_types.loc[full_types["tui"].isin(pu_types)]
+        return pu["types"].values.tolist()
+
+    # select qualified items from MM output
+    # @mp: single MM mapping output, in dict format
+    # types: a list of sematic types
+
+    # subprocess function for HDI and PU
+    # @item: the term needs to be processed
+    # @types: a list of semantic types
+    def subProcess(self, item):
+        comm = self.getComm(item)
+        ann = self.getAnn(comm).decode("utf8")
+        ## remove MetaMap command
+        ann = ann.split("\n")[1]
+        ann = json.loads(ann)
+        print(item)
+        ann = ann["AllDocuments"]
+        for each in ann:
+            doc = each["Document"]
+            # find the mapping phrase
+            mapping = doc["Utterances"][0]["Phrases"][0]["Mappings"]
+            # only one or no mapping
+            if len(mapping) == 1 or len(mapping) == 0:
+                pass
+            else:
+                # multiple mappings
+                for mp in mapping:
+                    print(mp["MappingCandidates"][0])
+
+    # a new process function for HDI and PU
+    # @name: herb name
+    # @content: section content
+    # @fun: a string to decide which content is to be processed, i.e. "HDI" or "PU"
+    def process(self, name, content, fun):
+        if fun.upper() not in ["HDI", "PU"]:
+            raise ValueError("Currently only supports HDI and PU")
+        else:
+            ## HDI process
+            if fun.upper() == "HDI":
+                content = self.remove(self.getBefore(content))
+                content = self.SplitContent(content)
+                hdi_types = self.readTypes("HDI")
+                hdi_types = [x.lower() for x in hdi_types]
+                if not content:
+                    return " "
+                else:
+                    if isinstance(content, list):
+                        for each in content:
+                            self.subProcess(each)
+                    else:
+                        self.subProcess(content)
+
+            ## PU process
+            else:
+                pass

@@ -6,9 +6,6 @@ import config
 import os
 import subprocess
 import re
-import csv
-import pickle
-from collections import Counter
 
 
 class meddraAnn(object):
@@ -24,18 +21,20 @@ class meddraAnn(object):
         opener.addheaders = [('Authorization', 'apikey token=' + self.API_KEY)]
         return json.loads(opener.open(url).read())
     # get prefLabel from annotation
-    # @ annotations: the annotated document from BioPortal
+    # @annotations: the annotated document from BioPortal
+    # @ar: herb["adverse_reactions"] content
 
-    def getLabel(self, annotations, get_class=True):
+    def getLabel(self, annotations, ar, get_class=True):
         labels = []
         for result in annotations:
             class_details = result["annotatedClass"]
+            offset = result["annotations"][0]
             if get_class:
                 try:
                     class_details = self.auth(
                         result["annotatedClass"]["links"]["self"])
-                    id = class_details["links"]["self"].split("%")[-1][2:]
-                    d = {"term": class_details["prefLabel"].lower(), "id": id, "source_db": "meddra", "original_string": class_details["prefLabel"]}
+                    ids = class_details["links"]["self"].split("%")[-1][2:]
+                    d = {"term": class_details["prefLabel"], "id": ids, "source_db": "meddra", "original_string": offset["text"]}
                     labels.append(d)
                 except urllib.error.HTTPError:
                     print(f"Error retrieving {result['annotatedClass']['@id']}")
@@ -67,37 +66,60 @@ class meddraAnn(object):
             return value
 
     # adverse reactions pre-process
-    # @ar: datac["adverse_reactions"]
+    # @ar: data["adverse_reactions"]
     # return annotated terms
 
     def adrProcess(self, ar):
-        # check if exists adverse_reactions section
-        if ar:
-            ar_annotations = self.auth(
-                self.REST_URL + self.meddra + urllib.parse.quote(ar) + self.conf)
-            labels = self.getLabel(ar_annotations)
-            return labels
+        if isinstance(ar, list):
+            anno = []
+            for each in ar:
+                ar_annotations = self.auth(self.REST_URL + self.meddra + urllib.parse.quote(each) + self.conf)
+                labels = self.getLabel(ar_annotations, each)
+                if isinstance(labels, list):
+                    anno.extend(labels)
+                else:
+                    anno.append(labels)
+            return anno
         else:
-            return " "
+            ar_annotations = self.auth(self.REST_URL + self.meddra + urllib.parse.quote(ar) + self.conf)
+            labels = self.getLabel(ar_annotations, ar)
+            return labels
+    
+    # check if content is none or empty
+    # @content: herb["adverse_reactions"]
+    # return true if content is either none or empty
+    # otherwise return false
+    def isBlank(self, content):
+        if isinstance(content, list):
+            content = list(filter(None, content))
+            content = [each for each in content if each != " "]
+            if not content:
+                return False
+            else:
+                return True
+        else:
+            if content and content.strip():
+                # content is not None AND content is not empty or blank
+                return False
+            # content is None OR content is empty or blank
+            return True
 
     # AR annotation process main function
     # get AR content annotated using MEDDRA
-    # @name: herb name
     # @ar: AR content
-    # @meddra: MEDDRA constructor
-    # @output_file: the local file name to write
 
     def main(self, ar):
-        data = {}
-        ar = self.remove(self.concate(ar, " "))
-        # if ar is empty
-        if not ar:
-            d = [{"term": " ", "id": " ", "source_db": "meddra", "original_string": " "}]
-            return d
+        ar = self.remove(ar)
+        if self.isBlank(ar):
+            return " "
         else:
+            anno = []
             res = self.adrProcess(ar)
-            if not res:
-                d = [{"term": " ", "id": " ", "source_db": "meddra", "original_string": " "}]
-                return d
+            if isinstance(res, list):
+                anno.extend(res)
             else:
-                return res
+                anno.append(res)
+            # remove duplicate items
+            final_anno = [value for index , value in enumerate(anno) if value not in anno[index+1:]]
+            return final_anno
+        
