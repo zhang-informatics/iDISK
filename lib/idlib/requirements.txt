@@ -1,0 +1,6 @@
+flake8
+numpy
+pandas
+Sphinx
+sphinx_rtd_theme
+sphinx_markdown_builder

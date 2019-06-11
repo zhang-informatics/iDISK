@@ -1,40 +1,46 @@
-# The iDISK API (idlib)
+<!-- idlib documentation master file, created by
+sphinx-quickstart on Mon Jun 10 12:57:59 2019.
+You can adapt this file completely to your liking, but it should at least
+contain the root `toctree` directive. -->
+# The iDISK API Library (idlib)
 
-This library contains classes for building and working with iDISK.
+* idlib.base
 
-[Markdown Documentation](docs/_build/markdown/)
+  * Atom
 
-There are currently four classes representing the basic building blocks of iDISK:
+  * Concept
 
-* `Atom`
-* `Concept`
-* `Attribute`
-* `Relationship`
+  * Attribute
 
-The possible source databases, term types, and concept types are defined in `idisk.ini`. 
+  * Relationship
+
+* idlib.set_functions
+
+  * Union
+
+  * Intersection
+
+  * Difference
+
+* pall.config
+
+  * SOURCES
+
+  * TERM_TYPES
+
+  * CONCEPT_TYPES
 
 
-### Installation
-
-Make sure you have the following prerequisites:
-
-* Max OS X or Linux
-* Python3
-* GNU Make
-
-Then run the following commands to create the iDISK build environment, install
-requirements, and finally install `idlib`.
+## Installation
 
 ```
 make create_environment
 source activate idisk
 make requirements
-make install
+make idlib
 ```
 
-To uninstall idlib just run `make uninstall`.
-
-### Example usage
+## Example Usage
 
 ```python
 >>> from idlib import Atom, Concept, Attribute, Relationship
@@ -42,15 +48,15 @@ To uninstall idlib just run `make uninstall`.
 >>> terms = ["vitamin c", "ascorbic acid", "vitC"]
 >>> atoms = []
 >>> for (i, term) in enumerate(terms):
-...	pref = True if term == "ascorbic acid" else False
-...	atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
-...	atoms.append(atom)
+...    pref = True if term == "ascorbic acid" else False
+...    atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
+...    atoms.append(atom)
 >>> concept = Concept.from_atoms(atoms, concept_type="SDSI")
 >>> print(concept)
 DC0000001: ascorbic acid
 >>> # Give this concept an attribute.
 >>> atr = Attribute(concept, atr_name="information",
-...		    atr_value="Found in oranges!", src="NMCD")
+...            atr_value="Found in oranges!", src="NMCD")
 >>> print(atr)
 DC0000001: ascorbic acid *info* Found in oranges
 >>> concept.attributes.append(atr)
@@ -81,16 +87,16 @@ the union of some lists of concepts. For example:
 >>> terms1 = ["vitamin c", "ascorbic acid", "vitC"]
 >>> atoms1 = []
 >>> for (i, term) in enumerate(terms1):
-...	pref = True if term == "vitC" else False
-...	atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
-...	atoms1.append(atom)
+...     pref = True if term == "vitC" else False
+...     atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
+...     atoms1.append(atom)
 >>> concept1 = Concept.from_atoms(atoms1, concept_type="SDSI")
 >>> terms2 = ["vitamin c", "C", "vitC", "Orange Juice"]
 >>> atoms2 = []
 >>> for (i, term) in enumerate(terms2):
-...	pref = True if term == "vitC" else False
-...	atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
-...	atoms2.append(atom)
+...     pref = True if term == "vitC" else False
+...     atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
+...     atoms2.append(atom)
 >>> concept2 = Concept.from_atoms(atoms2, concept_type="SDSI")
 >>> print(concept1.atoms)
 [('DA0000001' 'vitamin c' 'SY' 'NMCD' '0' 'False'),
@@ -114,3 +120,7 @@ the union of some lists of concepts. For example:
  ('DA0000011' 'Orange Juice' 'SY' 'NMCD' '3' 'False'),
  ('DA0000002' 'ascorbic acid' 'SY' 'NMCD' '1' 'False')]
 ```
+
+# Indices and tables
+
+* Index

@@ -1,0 +1,813 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>idlib.base &mdash; idlib 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="pall.config" href="config.html" />
+    <link rel="prev" title="The iDISK API Library (idlib)" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> idlib
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">idlib.base</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#atom">Atom</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#concept">Concept</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#attribute">Attribute</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#relationship">Relationship</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">pall.config</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idlib</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>idlib.base</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/source/base.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="idlib-base">
+<h1>idlib.base<a class="headerlink" href="#idlib-base" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="atom">
+<h2>Atom<a class="headerlink" href="#atom" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="idlib.base.Atom">
+<em class="property">class </em><code class="descclassname">idlib.base.</code><code class="descname">Atom</code><span class="sig-paren">(</span><em>term</em>, <em>src</em>, <em>src_id</em>, <em>term_type</em>, <em>is_preferred</em>, <em>dsaui=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Atom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Atom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An atom is an instance of a concept with a unique string, source,
+source ID, and term type.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>term</strong> (<em>str</em>) – The string of this atom.</li>
+<li><strong>src</strong> (<em>str</em>) – The source code of where this atom was found.</li>
+<li><strong>src_id</strong> (<em>str</em>) – The ID of this atom in its source.</li>
+<li><strong>term_type</strong> (<em>str</em>) – The type of term. E.g. “SY” for synonym.</li>
+<li><strong>is_preferred</strong> (<em>bool</em>) – Whether this string is the preferred name
+in its source.</li>
+<li><strong>dsaui</strong> (<em>str</em>) – The iDISK unique identifier of this atom. Optional.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="idlib.base.Atom.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Atom.from_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Atom.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Atom instance from a JSON string.
+The JSON must be formatted:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;term&quot;: str,
+ &quot;src&quot;: str,
+ &quot;src_id&quot;: str,
+ &quot;term_type&quot;: str,
+ &quot;is_preferred&quot;: bool}
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> (<em>dict</em>) – The JSON data to load.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Atom instance of data.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#idlib.base.Atom" title="idlib.base.Atom">Atom</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="idlib.base.Atom.init_counter">
+<em class="property">classmethod </em><code class="descname">init_counter</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Atom.init_counter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Atom.init_counter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the unique identifier counter with the given number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num</strong> (<em>int</em>) – The number to initialize with.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.base.Atom.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Atom.to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Atom.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return this atom as a JSON object. The output format is:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;term&quot;: str,
+ &quot;src&quot;: str,
+ &quot;src_id&quot;: str,
+ &quot;term_type&quot;: str,
+ &quot;is_preferred&quot;: bool}
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="idlib.base.Atom.ui">
+<code class="descname">ui</code><a class="headerlink" href="#idlib.base.Atom.ui" title="Permalink to this definition">¶</a></dt>
+<dd><p>This property offers a consistent mode of access to unique identifiers
+whatever the class of the object.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="concept">
+<h2>Concept<a class="headerlink" href="#concept" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="idlib.base.Concept">
+<em class="property">class </em><code class="descclassname">idlib.base.</code><code class="descname">Concept</code><span class="sig-paren">(</span><em>concept_type</em>, <em>atoms=[]</em>, <em>attributes=[]</em>, <em>relationships=[]</em>, <em>dscui=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An iDISK concept.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>concept_type</strong> (<em>str</em>) – The iDISK type of this concept.
+E.g. “SDSI”.</li>
+<li><strong>atoms</strong> (<em>list</em>) – List of synonyms for this concept. Each member
+must be an instance of Atom. Optional.</li>
+<li><strong>dscui</strong> (<em>str</em>) – the iDISK CUI for this concept. Optional.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="idlib.base.Concept.from_atoms">
+<em class="property">classmethod </em><code class="descname">from_atoms</code><span class="sig-paren">(</span><em>atoms</em>, <em>concept_type</em>, <em>attributes=[]</em>, <em>relationships=[]</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.from_atoms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.from_atoms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Concept instance from a collection of Atom instances.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>atoms</strong> (<em>list</em><em>(</em><a class="reference internal" href="#idlib.base.Atom" title="idlib.base.Atom"><em>Atom</em></a><em>)</em>) – Atom instances that comprise this concept.</li>
+<li><strong>concept_type</strong> (<em>str</em>) – The iDISK type of this concept. E.g. ‘SDSI’.</li>
+<li><strong>attributes</strong> (<em>list</em><em>(</em><a class="reference internal" href="#idlib.base.Attribute" title="idlib.base.Attribute"><em>Attribute</em></a><em>)</em>) – Attributes of this concept.
+Optional.</li>
+<li><strong>relationships</strong> (<em>list</em><em>(</em><a class="reference internal" href="#idlib.base.Relationship" title="idlib.base.Relationship"><em>Relationship</em></a><em>)</em>) – Relationships of this concept.
+Optional.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Concept made up of the specified atoms.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#idlib.base.Concept" title="idlib.base.Concept">Concept</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="idlib.base.Concept.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>data</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.from_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a concept from a JSON object. The JSON object must have
+the format:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;ui&quot;: str,
+ &quot;concept_type&quot;: str,
+ &quot;synonyms&quot;: [{&quot;term&quot;: str,
+               &quot;src&quot;: str,
+               &quot;src_id&quot;: str,
+               &quot;term_type&quot;: str,
+               &quot;is_preferred&quot;: bool}, {...}]
+ &quot;attributes&quot;: [{&quot;atr_name&quot;: str,
+                 &quot;atr_value&quot;: str,
+                 &quot;src&quot;: str}, {...}]
+ &quot;relationships&quot;: [{&quot;rel_name&quot;: str,
+                    &quot;object&quot;: str,
+                    &quot;src&quot;: str,
+                    &quot;attributes&quot;: [{&quot;atr_name&quot;: str,
+                                    &quot;atr_value&quot;: str,
+                                    &quot;src&quot;: str}, {...}]
+}
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> (<em>dict</em>) – Input JSON data.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Concept instance built from data.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#idlib.base.Concept" title="idlib.base.Concept">Concept</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.base.Concept.get_atoms">
+<code class="descname">get_atoms</code><span class="sig-paren">(</span><em>r_type='object'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.get_atoms"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.get_atoms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a generator over the atoms of this concept.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>r_type</strong> (<em>str</em>) – How to yield each atom. Possible values
+are [“object”, “dict”]. If “object”, yields
+Atom instances. If “dict”, yields dicts from
+the Atom.to_dict() method.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">generator over atoms</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">generator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.base.Concept.get_attributes">
+<code class="descname">get_attributes</code><span class="sig-paren">(</span><em>r_type='object'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.get_attributes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.get_attributes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a generator over the attributes of this concept.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>r_type</strong> (<em>str</em>) – How to yield each attribute. Possible values
+are [“object”, “dict”]. If “object”, yields
+Attribute instances. If “dict”, yields dicts
+from the Attribute.to_dict() method.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">generator over attributes</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">generator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="idlib.base.Concept.get_instances">
+<em class="property">classmethod </em><code class="descname">get_instances</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.get_instances"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.get_instances" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all instances of the Concept class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Generator over Concept instances.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">generator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.base.Concept.get_relationships">
+<code class="descname">get_relationships</code><span class="sig-paren">(</span><em>r_type='object'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.get_relationships"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.get_relationships" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a generator over the relationships of this concept.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>r_type</strong> (<em>str</em>) – How to yield each relationship. Possible values
+are [“object”, “dict”]. If “object”, yields
+Relationship instances. If “dict”, yields dicts
+from the Relationship.to_dict() method.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">generator over relationships</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">generator</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="idlib.base.Concept.init_counter">
+<em class="property">classmethod </em><code class="descname">init_counter</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.init_counter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.init_counter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the unique identifier counter with the given number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num</strong> (<em>int</em>) – The number to initialize with.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="idlib.base.Concept.preferred_term">
+<code class="descname">preferred_term</code><a class="headerlink" href="#idlib.base.Concept.preferred_term" title="Permalink to this definition">¶</a></dt>
+<dd><p>The preferred term for this concept is the preferred term
+from the highest ranking source. That is, the atom such that
+atom[“src”] is the closest to the top of the SOURCES list
+and atom[“is_preferred”] is True.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="idlib.base.Concept.resolve_relationships">
+<em class="property">classmethod </em><code class="descname">resolve_relationships</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.resolve_relationships"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.resolve_relationships" title="Permalink to this definition">¶</a></dt>
+<dd><p>When multiple Concept instances are created from a JSON lines file
+and contain relationships that reference each other, we have to wait
+until all concepts are created before the objects of the relationships
+resolved into Relationship instances from their UIs. When this is the
+case, this method should be run after creating all concept instances.</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="idlib.base.Concept.set_ui_prefix">
+<em class="property">classmethod </em><code class="descname">set_ui_prefix</code><span class="sig-paren">(</span><em>prefix</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.set_ui_prefix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.set_ui_prefix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the string to prepend to the UI of each concept.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>prefix</strong> (<em>str</em>) – The prefix to set.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.base.Concept.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept.to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return this concept as an OrderedDict in the iDISK JSON format.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;ui&quot;: str,
+ &quot;concept_type&quot;: str,
+ &quot;synonyms&quot;: [{&quot;term&quot;: str,
+               &quot;src&quot;: str,
+               &quot;src_id&quot;: str,
+               &quot;term_type&quot;: str,
+               &quot;is_preferred&quot;: bool}, {...}]
+ &quot;attributes&quot;: [{&quot;atr_name&quot;: str,
+                 &quot;atr_value&quot;: str,
+                 &quot;src&quot;: str}, {...}]
+ &quot;relationships&quot;: [{&quot;rel_name&quot;: str,
+                    &quot;object&quot;: str,
+                    &quot;src&quot;: str,
+                    &quot;attributes&quot;: [{&quot;atr_name&quot;: str,
+                                    &quot;atr_value&quot;: str,
+                                    &quot;src&quot;: str}, {...}]
+}
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Dictionary in the iDISK JSON format.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">OrderedDict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="idlib.base.Concept.ui">
+<code class="descname">ui</code><a class="headerlink" href="#idlib.base.Concept.ui" title="Permalink to this definition">¶</a></dt>
+<dd><p>This property offers a consistent mode of access to unique identifiers
+whatever the class of the object.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="attribute">
+<h2>Attribute<a class="headerlink" href="#attribute" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="idlib.base.Attribute">
+<em class="property">class </em><code class="descclassname">idlib.base.</code><code class="descname">Attribute</code><span class="sig-paren">(</span><em>subject</em>, <em>atr_name</em>, <em>atr_value</em>, <em>src</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Attribute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An attribute of a concept or relationship.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>subject</strong> (<em>Concept/Relationship</em>) – The subject of this attribute.</li>
+<li><strong>atr_name</strong> (<em>str</em>) – The name of this attribute. E.g. “has_background”.</li>
+<li><strong>atr_value</strong> (<em>str</em>) – The value of this attribute.</li>
+<li><strong>src</strong> (<em>str</em>) – The source code of where this attribute was found.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="idlib.base.Attribute.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>data</em>, <em>subject</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Attribute.from_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Attribute.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Attribute instance from data.
+data must be a dict with the following format:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;atr_name&quot;: str,
+ &quot;atr_value&quot;: str,
+ &quot;src&quot;: str}
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>dict</em>) – Input dictionary</li>
+<li><strong>subject</strong> (<em>Concept/Relationship</em>) – Subject of this attribute.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Attribute instance</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#idlib.base.Attribute" title="idlib.base.Attribute">Attribute</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="idlib.base.Attribute.init_counter">
+<em class="property">classmethod </em><code class="descname">init_counter</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Attribute.init_counter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Attribute.init_counter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the unique identifier counter with the given number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num</strong> (<em>int</em>) – The number to initialize with.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.base.Attribute.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>return_subject=False</em>, <em>verbose_subject=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Attribute.to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Attribute.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Output this attribute as a dictionary, optionally with a subject.
+The subject is optional to accord with the iDISK JSON format.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;atr_name&quot;: str,
+ &quot;atr_value&quot;: str,
+ &quot;src&quot;: str}
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>return_subject</strong> (<em>bool</em>) – If True, the returned dict contains
+a “subject” key.</li>
+<li><strong>verbose_subject</strong> (<em>bool</em>) – If True and return_subject is True,
+the value of the “subject” key includes
+the dscui, name, and source, instead of
+just the dscui.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">dictionary representation of this attribute.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="idlib.base.Attribute.ui">
+<code class="descname">ui</code><a class="headerlink" href="#idlib.base.Attribute.ui" title="Permalink to this definition">¶</a></dt>
+<dd><p>This property offers a consistent mode of access to unique identifiers
+whatever the class of the object.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="relationship">
+<h2>Relationship<a class="headerlink" href="#relationship" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="idlib.base.Relationship">
+<em class="property">class </em><code class="descclassname">idlib.base.</code><code class="descname">Relationship</code><span class="sig-paren">(</span><em>subject</em>, <em>rel_name</em>, <em>obj</em>, <em>src</em>, <em>attributes=[]</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Relationship"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Relationship" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A relationship between two concepts.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>subject</strong> (<a class="reference internal" href="#idlib.base.Concept" title="idlib.base.Concept"><em>Concept</em></a>) – The subject of this relationship.</li>
+<li><strong>rel_name</strong> (<em>str</em>) – The relation. E.g. “ingredient_of”.</li>
+<li><strong>obj</strong> (<em>Concept/str</em>) – The object of this relationship. Can be a
+Concept instance or a concept UI.</li>
+<li><strong>src</strong> (<em>str</em>) – The source code of where this relationship was found.</li>
+<li><strong>attributes</strong> (<em>list</em><em>(</em><a class="reference internal" href="#idlib.base.Attribute" title="idlib.base.Attribute"><em>Attribute</em></a><em>)</em>) – Any attributes of this relationship.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="classmethod">
+<dt id="idlib.base.Relationship.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>data</em>, <em>subject</em>, <em>concept_mapping=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Relationship.from_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Relationship.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an Relationship instance from data.
+data must be a dict with the following format:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;rel_name&quot;: str,
+ &quot;object&quot;: str,
+ &quot;src&quot;: str,
+ &quot;attributes&quot;: [{&quot;atr_name&quot;: str,
+                 &quot;atr_value&quot;: str,
+                 &quot;src&quot;: str}, {...}]
+}
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> (<em>dict</em>) – Input dictionary</li>
+<li><strong>subject</strong> (<a class="reference internal" href="#idlib.base.Concept" title="idlib.base.Concept"><em>Concept</em></a>) – Subject of this relationship.</li>
+<li><strong>concept_mapping</strong> (<em>dict</em>) – Mapping from strings to concepts as
+{string: Concept}, where string
+is equal to data[“object”]. Optional.
+If None, the object UI is used instead
+of a Concept instance.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Relationship instance</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#idlib.base.Relationship" title="idlib.base.Relationship">Relationship</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.base.Relationship.get_attributes">
+<code class="descname">get_attributes</code><span class="sig-paren">(</span><em>r_type='object'</em>, <em>return_subject=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Relationship.get_attributes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Relationship.get_attributes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a generator over attributes of this relationship.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>str</strong> (<em>r_type</em>) – The type of what to yield. Possible values
+are [“object”, “dict”] If “object”, yields
+Attribute objects. If “dict”, yields dicts.</li>
+<li><strong>bool</strong> (<em>return_subject</em>) – If True, the returned dict contains
+a “subject” key.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Generator over attributes</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">generator</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="idlib.base.Relationship.init_counter">
+<em class="property">classmethod </em><code class="descname">init_counter</code><span class="sig-paren">(</span><em>num</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Relationship.init_counter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Relationship.init_counter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the unique identifier counter with the given number.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>num</strong> (<em>int</em>) – The number to initialize with.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.base.Relationship.to_dict">
+<code class="descname">to_dict</code><span class="sig-paren">(</span><em>return_subject=False</em>, <em>verbose=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Relationship.to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Relationship.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Output this relationship as a dictionary, optionally with a subject.
+The subject is optional to accord with the iDISK JSON format.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;rel_name&quot;: str,
+ &quot;object&quot;: str,
+ &quot;src&quot;: str}
+</pre></div>
+</div>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>return_subject</strong> (<em>bool</em>) – If True, the returned dict contains
+a “subject” key.</li>
+<li><strong>verbose_subject</strong> (<em>bool</em>) – If True and return_subject is True,
+the value of the “subject” key includes
+the dscui, name, and source, instead of
+just the dscui.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">dictionary representation of this attribute.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="idlib.base.Relationship.ui">
+<code class="descname">ui</code><a class="headerlink" href="#idlib.base.Relationship.ui" title="Permalink to this definition">¶</a></dt>
+<dd><p>This property offers a consistent mode of access to unique identifiers
+whatever the class of the object.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="config.html" class="btn btn-neutral float-right" title="pall.config" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral float-left" title="The iDISK API Library (idlib)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Jake Vasilakes
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

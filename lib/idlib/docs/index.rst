@@ -1,56 +1,50 @@
-# The iDISK API (idlib)
+.. idlib documentation master file, created by
+   sphinx-quickstart on Mon Jun 10 12:57:59 2019.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
 
-This library contains classes for building and working with iDISK.
+The iDISK API Library (idlib)
+=================================
 
-[Markdown Documentation](docs/_build/markdown/)
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
 
-There are currently four classes representing the basic building blocks of iDISK:
-
-* `Atom`
-* `Concept`
-* `Attribute`
-* `Relationship`
-
-The possible source databases, term types, and concept types are defined in `idisk.ini`. 
+   source/base
+   source/set_functions
+   source/config
 
 
-### Installation
+------------
+Installation
+------------
 
-Make sure you have the following prerequisites:
+.. code-block:: bash
 
-* Max OS X or Linux
-* Python3
-* GNU Make
+   make create_environment
+   source activate idisk
+   make requirements
+   make idlib
 
-Then run the following commands to create the iDISK build environment, install
-requirements, and finally install `idlib`.
 
-```
-make create_environment
-source activate idisk
-make requirements
-make install
-```
+-------------
+Example Usage
+-------------
 
-To uninstall idlib just run `make uninstall`.
-
-### Example usage
-
-```python
 >>> from idlib import Atom, Concept, Attribute, Relationship
 >>> # Create the atoms that will make up this concept.
 >>> terms = ["vitamin c", "ascorbic acid", "vitC"]
 >>> atoms = []
 >>> for (i, term) in enumerate(terms):
-...	pref = True if term == "ascorbic acid" else False
-...	atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
-...	atoms.append(atom)
+...    pref = True if term == "ascorbic acid" else False
+...    atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
+...    atoms.append(atom)
 >>> concept = Concept.from_atoms(atoms, concept_type="SDSI")
 >>> print(concept)
 DC0000001: ascorbic acid
 >>> # Give this concept an attribute.
 >>> atr = Attribute(concept, atr_name="information",
-...		    atr_value="Found in oranges!", src="NMCD")
+...            atr_value="Found in oranges!", src="NMCD")
 >>> print(atr)
 DC0000001: ascorbic acid *info* Found in oranges
 >>> concept.attributes.append(atr)
@@ -68,13 +62,11 @@ DC0000001: ascorbic acid *found_in* Orange
 >>> # Relationships can also have attributes
 >>> rel_atr = Attribute(rel, atr_name="confidence", atr_value="Good", src="NMCD")
 >>> rel_str.attributes.append(rel_atr)
-```
 
 It is often the case that there are synonymous concepts, i.e. two or more concepts
-that have overlapping atom terms. The `set_functions` module can be used to compute
+that have overlapping atom terms. The ``set_functions`` module can be used to compute
 the union of some lists of concepts. For example:
 
-```python
 >>> from idlib import Atom, Concept, Attribute, Relationship
 >>> from idlib.set_functions import Union
 >>> # Let's create some unifiable concepts.
@@ -113,4 +105,9 @@ the union of some lists of concepts. For example:
  ('DA0000010' 'vitC' 'SY' 'NMCD' '2' 'True'),
  ('DA0000011' 'Orange Juice' 'SY' 'NMCD' '3' 'False'),
  ('DA0000002' 'ascorbic acid' 'SY' 'NMCD' '1' 'False')]
-```
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
