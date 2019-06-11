@@ -529,14 +529,11 @@ whatever the class of the object.</p>
 <em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>data</em>, <em>subject</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Attribute.from_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Attribute.from_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create an Attribute instance from data.
 data must be a dict with the following format:</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;atr_name&quot;: str,
+ &quot;atr_value&quot;: str,
+ &quot;src&quot;: str}
 </pre></div>
 </div>
-<dl class="docutils">
-<dt>{“atr_name”: str,</dt>
-<dd>“atr_value”: str,
-“src”: str}</dd>
-</dl>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />

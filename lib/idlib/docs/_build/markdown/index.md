@@ -14,6 +14,14 @@ contain the root `toctree` directive. -->
 
   * Relationship
 
+* idlib.set_functions
+
+  * Union
+
+  * Intersection
+
+  * Difference
+
 * pall.config
 
   * SOURCES
@@ -66,6 +74,51 @@ DC0000001: ascorbic acid *found_in* Orange
 >>> # Relationships can also have attributes
 >>> rel_atr = Attribute(rel, atr_name="confidence", atr_value="Good", src="NMCD")
 >>> rel_str.attributes.append(rel_atr)
+```
+
+It is often the case that there are synonymous concepts, i.e. two or more concepts
+that have overlapping atom terms. The `set_functions` module can be used to compute
+the union of some lists of concepts. For example:
+
+```python
+>>> from idlib import Atom, Concept, Attribute, Relationship
+>>> from idlib.set_functions import Union
+>>> # Let's create some unifiable concepts.
+>>> terms1 = ["vitamin c", "ascorbic acid", "vitC"]
+>>> atoms1 = []
+>>> for (i, term) in enumerate(terms1):
+...     pref = True if term == "vitC" else False
+...     atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
+...     atoms1.append(atom)
+>>> concept1 = Concept.from_atoms(atoms1, concept_type="SDSI")
+>>> terms2 = ["vitamin c", "C", "vitC", "Orange Juice"]
+>>> atoms2 = []
+>>> for (i, term) in enumerate(terms2):
+...     pref = True if term == "vitC" else False
+...     atom = Atom(term, src="NMCD", src_id=str(i), term_type="SY", is_preferred=pref)
+...     atoms2.append(atom)
+>>> concept2 = Concept.from_atoms(atoms2, concept_type="SDSI")
+>>> print(concept1.atoms)
+[('DA0000001' 'vitamin c' 'SY' 'NMCD' '0' 'False'),
+ ('DA0000002' 'ascorbic acid' 'SY' 'NMCD' '1' 'False'),
+ ('DA0000003' 'vitC' 'SY' 'NMCD' '2' 'True')]
+>>> print(concept2.atoms)
+[('DA0000001' 'vitamin c' 'SY' 'NMCD' '0' 'False'),
+ ('DA0000002' 'C' 'SY' 'NMCD' '1' 'False'),
+ ('DA0000003' 'vitC' 'SY' 'NMCD' '2' 'True'),
+ ('DA0000002' 'Orange Juice' 'SY' 'NMCD' '3' 'False')]
+>>> # Compute the union of these two concepts.
+>>> # Since the concepts share atoms, this should result in a single concept.
+>>> # Note that if two concepts match (share one or more atom terms), they are merged.
+>>> u = Union([concepts1, concepts2])
+>>> print(len(u.result))
+1
+>>> print(u.result[0].atoms)
+[('DA0000008' 'vitamin C' 'SY' 'NMCD' '0' 'False'),
+ ('DA0000009' 'C' 'SY' 'NMCD' '1' 'False'),
+ ('DA0000010' 'vitC' 'SY' 'NMCD' '2' 'True'),
+ ('DA0000011' 'Orange Juice' 'SY' 'NMCD' '3' 'False'),
+ ('DA0000002' 'ascorbic acid' 'SY' 'NMCD' '1' 'False')]
 ```
 
 # Indices and tables

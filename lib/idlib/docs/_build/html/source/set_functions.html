@@ -1,0 +1,332 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>idlib.set_functions &mdash; idlib 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="pall.config" href="config.html" />
+    <link rel="prev" title="idlib.base" href="base.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> idlib
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="base.html">idlib.base</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">idlib.set_functions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#union">Union</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#intersection">Intersection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#difference">Difference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">pall.config</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">idlib</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>idlib.set_functions</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/source/set_functions.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="idlib-set-functions">
+<h1>idlib.set_functions<a class="headerlink" href="#idlib-set-functions" title="Permalink to this headline">¶</a></h1>
+<p>When compiling concepts from multiple sources, it often happens that concepts from different
+sources are synonymous. I.e, in iDISK terms, they share one or more atom terms. It is
+therefore necessary to merge these concepts. The classes <code class="docutils literal notranslate"><span class="pre">Union</span></code> and <code class="docutils literal notranslate"><span class="pre">Intersection</span></code> perform
+this merging.</p>
+<p>It may also be necessary to determine which concepts are singletons. <code class="docutils literal notranslate"><span class="pre">Difference</span></code> performs this.</p>
+<div class="section" id="union">
+<h2>Union<a class="headerlink" href="#union" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="idlib.set_functions.Union">
+<em class="property">class </em><code class="descclassname">idlib.set_functions.</code><code class="descname">Union</code><span class="sig-paren">(</span><em>concepts</em>, <em>connections=[]</em>, <em>run_union=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/set_functions.html#Union"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.set_functions.Union" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An implementation of the union-find datastructure specific for
+iDISK Concepts.</p>
+<p>The routine starts by finding connections between pairs of concepts
+in the input. It then merges the connected concepts, always mergin the
+concept with fewer number of atoms into the concept with the greater.</p>
+<p>This class can be used to generate a list of candidate connections,
+which can then be filtered, by passing <code class="docutils literal notranslate"><span class="pre">run_union=False</span></code> and then
+getting the <code class="docutils literal notranslate"><span class="pre">connections</span></code> attribute. Once filtered, they can be passed
+back in as the <code class="docutils literal notranslate"><span class="pre">connections</span></code> argument with <code class="docutils literal notranslate"><span class="pre">run_union=True</span></code>.</p>
+<p>See the idlib README for example usage.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>concepts</strong> (<em>list</em>) – One or more lists of Concept instances.</li>
+<li><strong>connections</strong> (<em>list</em>) – A list of int tuples specifying connections
+between pairs of concepts, where each int
+in a given tuple is the index of the concept
+in the concepts argument. Optional. If not
+provided, pairs of concepts are connected if
+they share one or more atom terms.</li>
+<li><strong>run_union</strong> (<em>bool</em>) – If True (default) run union-find on the input.
+Otherwise, just run find_connections.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="idlib.set_functions.Union.find_connections">
+<code class="descname">find_connections</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/set_functions.html#Union.find_connections"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.set_functions.Union.find_connections" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds all pairs of concepts that share one or more atom
+terms. Returns connections as a list of int tuples.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">connections</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.set_functions.Union.union_find">
+<code class="descname">union_find</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/set_functions.html#Union.union_find"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.set_functions.Union.union_find" title="Permalink to this definition">¶</a></dt>
+<dd><p>The union-find routine. Given a list of connections, merges them.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="intersection">
+<h2>Intersection<a class="headerlink" href="#intersection" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="idlib.set_functions.Intersection">
+<em class="property">class </em><code class="descclassname">idlib.set_functions.</code><code class="descname">Intersection</code><span class="sig-paren">(</span><em>concepts</em>, <em>connections=[]</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/set_functions.html#Intersection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.set_functions.Intersection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#idlib.set_functions.Union" title="idlib.set_functions.Union"><code class="xref py py-class docutils literal notranslate"><span class="pre">idlib.set_functions.Union</span></code></a></p>
+<p>The intersection of a list of concepts is the set of all those concepts
+that are matched to one or more other concepts.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>concepts</strong> (<em>list</em>) – One or more lists of Concept instances.</li>
+<li><strong>connections</strong> (<em>list</em>) – A list of int tuples specifying connections
+between pairs of concepts, where each int
+in a given tuple is the index of the concept
+in the concepts argument. Optional. If not
+provided, pairs of concepts are connected if
+they share one or more atom terms.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="difference">
+<h2>Difference<a class="headerlink" href="#difference" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="idlib.set_functions.Difference">
+<em class="property">class </em><code class="descclassname">idlib.set_functions.</code><code class="descname">Difference</code><span class="sig-paren">(</span><em>concepts</em>, <em>connections=[]</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/set_functions.html#Difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.set_functions.Difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#idlib.set_functions.Union" title="idlib.set_functions.Union"><code class="xref py py-class docutils literal notranslate"><span class="pre">idlib.set_functions.Union</span></code></a></p>
+<p>The difference of a list of concepts is the set of all those concepts
+that could not be matched to at least one other concept.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>concepts</strong> (<em>list</em>) – One or more lists of Concept instances.</li>
+<li><strong>connections</strong> (<em>list</em>) – A list of int tuples specifying connections
+between pairs of concepts, where each int
+in a given tuple is the index of the concept
+in the concepts argument. Optional. If not
+provided, pairs of concepts are connected if
+they share one or more atom terms.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="config.html" class="btn btn-neutral float-right" title="pall.config" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="base.html" class="btn btn-neutral float-left" title="idlib.base" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Jake Vasilakes
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

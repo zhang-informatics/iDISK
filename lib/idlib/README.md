@@ -105,9 +105,9 @@ the union of some lists of concepts. For example:
 >>> # Since the concepts share atoms, this should result in a single concept.
 >>> # Note that if two concepts match (share one or more atom terms), they are merged.
 >>> u = Union([concepts1, concepts2])
->>> print(len(u.union_concepts))
+>>> print(len(u.result))
 1
->>> print(u.union_concepts[0].atoms)
+>>> print(u.result[0].atoms)
 [('DA0000008' 'vitamin C' 'SY' 'NMCD' '0' 'False'),
  ('DA0000009' 'C' 'SY' 'NMCD' '1' 'False'),
  ('DA0000010' 'vitC' 'SY' 'NMCD' '2' 'True'),

@@ -81,6 +81,7 @@
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../source/base.html">idlib.base</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/set_functions.html">idlib.set_functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../source/config.html">pall.config</a></li>
 </ul>
 
@@ -627,10 +628,16 @@
         <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.subject}</span><span class="s2"> *</span><span class="si">{self.atr_name}</span><span class="s2">* </span><span class="si">{self.atr_value}</span><span class="s2">&quot;</span>
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Two Attribute instances are equal if their name, value, and source</span>
+<span class="sd">        are the same. Their subject is NOT taken into account.</span>
+
+<span class="sd">        :param Attribute other: The attribute to compare.</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">return</span> <span class="nb">all</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">atr_name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">atr_name</span><span class="p">,</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">atr_name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">atr_name</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">atr_value</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">atr_value</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">src</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">src</span><span class="p">])</span>
 
@@ -704,9 +711,9 @@
 
 <span class="sd">        .. code-block:: json</span>
 
-<span class="sd">        {&quot;atr_name&quot;: str,</span>
-<span class="sd">         &quot;atr_value&quot;: str,</span>
-<span class="sd">         &quot;src&quot;: str}</span>
+<span class="sd">            {&quot;atr_name&quot;: str,</span>
+<span class="sd">             &quot;atr_value&quot;: str,</span>
+<span class="sd">             &quot;src&quot;: str}</span>
 
 <span class="sd">        :param dict data: Input dictionary</span>
 <span class="sd">        :param Concept/Relationship subject: Subject of this attribute.</span>
@@ -754,12 +761,16 @@
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Like Attribute, two Relationship instances are the same if the have</span>
+<span class="sd">        the same name, object, and source. The subject is NOT considered.</span>
 <span class="sd">        Equivalence does not consider relationship attributes.</span>
+
+<span class="sd">        :param Relationship other: The Relationship to compare.</span>
+<span class="sd">        :rtype: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
-        <span class="k">return</span> <span class="nb">all</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">rel_name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">rel_name</span><span class="p">,</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">rel_name</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">object</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">object</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">src</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">src</span><span class="p">])</span>
 

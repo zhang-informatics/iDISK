@@ -1,0 +1,488 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>idlib.set_functions &mdash; idlib 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> idlib
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../source/base.html">idlib.base</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/set_functions.html">idlib.set_functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/config.html">pall.config</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">idlib</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>idlib.set_functions</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for idlib.set_functions</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="kn">from</span> <span class="nn">idlib</span> <span class="k">import</span> <span class="n">Concept</span>
+
+
+<span class="k">def</span> <span class="nf">parse_args</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;set_function&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                        <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;intersection&quot;</span><span class="p">,</span> <span class="s2">&quot;union&quot;</span><span class="p">,</span> <span class="s2">&quot;difference&quot;</span><span class="p">],</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;The set function to perform.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--infiles&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;JSON lines files containing</span>
+<span class="s2">                                the lists of concepts.&quot;&quot;&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--outfile&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Where to save the result.&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;--connections_file&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;CSV file containing pairs of indices of</span>
+<span class="s2">                                connected concepts in the input, one pair</span>
+<span class="s2">                                per line. Assumes that the concepts have</span>
+<span class="s2">                                already been concatenated and thus there</span>
+<span class="s2">                                is only one infile.&quot;&quot;&quot;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">args</span>
+
+
+<span class="k">def</span> <span class="nf">read_connections_file</span><span class="p">(</span><span class="n">infile</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Reads a two-column CSV file of integers into a list of tuples</span>
+<span class="sd">    corresponding to indices of connected concepts.</span>
+
+<span class="sd">    :param str infile: Path to the CSV file.</span>
+<span class="sd">    :returns: List of int tuples of connections.</span>
+<span class="sd">    :rtype: list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connections</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">infile</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csvfile</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csvfile</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">row</span><span class="p">]</span>
+            <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="n">row</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">connections</span>
+
+
+<span class="k">def</span> <span class="nf">perform_set_function</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span class="o">*</span><span class="n">infiles</span><span class="p">,</span> <span class="n">connections</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">all_concepts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fpath</span> <span class="ow">in</span> <span class="n">infiles</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">open</span><span class="p">(</span><span class="n">fpath</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)]</span>
+        <span class="n">concepts</span> <span class="o">=</span> <span class="p">[</span><span class="n">Concept</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">]</span>
+        <span class="n">all_concepts</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">concepts</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Number of starting concepts: {len(all_concepts)}&quot;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">all_concepts</span><span class="p">,</span> <span class="n">connections</span><span class="o">=</span><span class="n">connections</span><span class="p">)</span><span class="o">.</span><span class="n">result</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Number of resulting concepts: {len(result)}&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outF</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">concept</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">concept</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span> <span class="n">outF</span><span class="p">)</span>
+            <span class="n">outF</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_prefix</span><span class="p">(</span><span class="n">concept1</span><span class="p">,</span> <span class="n">concept2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build a  Concept UI prefix as the combination of the</span>
+<span class="sd">    UI prefixes of two concepts.</span>
+
+<span class="sd">    :param Concept concept1: The first concept.</span>
+<span class="sd">    :param Concept concept2: The second concept.</span>
+<span class="sd">    :returns: New prefix</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># [&quot;NMCD_NMCD&quot;, &quot;DSLD_NHP&quot;]</span>
+    <span class="n">prefixes</span> <span class="o">=</span> <span class="p">[</span><span class="n">concept1</span><span class="o">.</span><span class="n">_prefix</span><span class="p">,</span> <span class="n">concept2</span><span class="o">.</span><span class="n">_prefix</span><span class="p">]</span>
+    <span class="c1"># &quot;NMCD_NMCD_DSLD_NHP&quot;</span>
+    <span class="n">prefixes</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">prefixes</span><span class="p">)</span>
+    <span class="c1"># {&quot;NMCD&quot;, &quot;DSLD&quot;, &quot;NHP&quot;}</span>
+    <span class="n">srcs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">src</span> <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">prefixes</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)])</span>
+    <span class="c1"># &quot;NMCD_DSLD_NHP&quot;</span>
+    <span class="n">merged_prefix</span> <span class="o">=</span> <span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">srcs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">merged_prefix</span>
+
+
+<div class="viewcode-block" id="Union"><a class="viewcode-back" href="../../source/set_functions.html#idlib.set_functions.Union">[docs]</a><span class="k">class</span> <span class="nc">Union</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An implementation of the union-find datastructure specific for</span>
+<span class="sd">    iDISK Concepts.</span>
+
+<span class="sd">    The routine starts by finding connections between pairs of concepts</span>
+<span class="sd">    in the input. It then merges the connected concepts, always mergin the</span>
+<span class="sd">    concept with fewer number of atoms into the concept with the greater.</span>
+
+<span class="sd">    This class can be used to generate a list of candidate connections,</span>
+<span class="sd">    which can then be filtered, by passing ``run_union=False`` and then</span>
+<span class="sd">    getting the ``connections`` attribute. Once filtered, they can be passed</span>
+<span class="sd">    back in as the ``connections`` argument with ``run_union=True``.</span>
+
+<span class="sd">    See the idlib README for example usage.</span>
+
+<span class="sd">    :param list concepts: One or more lists of Concept instances.</span>
+<span class="sd">    :param list connections: A list of int tuples specifying connections</span>
+<span class="sd">                             between pairs of concepts, where each int</span>
+<span class="sd">                             in a given tuple is the index of the concept</span>
+<span class="sd">                             in the concepts argument. Optional. If not</span>
+<span class="sd">                             provided, pairs of concepts are connected if</span>
+<span class="sd">                             they share one or more atom terms.</span>
+<span class="sd">    :param bool run_union: If True (default) run union-find on the input.</span>
+<span class="sd">                           Otherwise, just run find_connections.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="o">=</span><span class="p">[],</span> <span class="n">run_union</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">(</span><span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">concepts</span> <span class="o">=</span> <span class="n">concepts</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">))))</span>
+        <span class="k">if</span> <span class="n">connections</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Finding connections...&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_connections</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">connections</span> <span class="o">=</span> <span class="n">connections</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Number of connections: {len(self.connections)}&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">run_union</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">union_find</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span><span class="o">.</span><span class="n">values</span><span class="p">())]</span>
+
+    <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="p">):</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">Concept</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">concepts</span><span class="p">]))</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">connections</span><span class="p">,</span> <span class="nb">list</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">connections</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">assert</span><span class="p">(</span><span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">connections</span><span class="p">]))</span>
+            <span class="k">assert</span><span class="p">(</span><span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">connections</span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">elem</span><span class="p">]))</span>
+
+    <span class="k">def</span> <span class="nf">_connected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Two concepts are connected if they share one or more atoms.</span>
+
+<span class="sd">        :param int i: The index of the first concept.</span>
+<span class="sd">        :param int j: The index of the second concept.</span>
+<span class="sd">        :returns: Whether concepts i and j are connected.</span>
+<span class="sd">        :rtype: bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ci</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">cj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+        <span class="n">ci_terms</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">term</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">ci</span><span class="o">.</span><span class="n">get_atoms</span><span class="p">()]</span>
+        <span class="n">cj_terms</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">term</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">cj</span><span class="o">.</span><span class="n">get_atoms</span><span class="p">()]</span>
+        <span class="n">overlap</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">ci_terms</span><span class="p">)</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">cj_terms</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">overlap</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="Union.find_connections"><a class="viewcode-back" href="../../source/set_functions.html#idlib.set_functions.Union.find_connections">[docs]</a>    <span class="k">def</span> <span class="nf">find_connections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Finds all pairs of concepts that share one or more atom</span>
+<span class="sd">        terms. Returns connections as a list of int tuples.</span>
+
+<span class="sd">        :returns: connections</span>
+<span class="sd">        :rtype: list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">connections</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">)):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{i}</span><span class="s2">/{len(self.concepts_map)}</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_connected</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+                    <span class="n">connections</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">connections</span></div>
+
+    <span class="k">def</span> <span class="nf">_merge</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concept_i</span><span class="p">,</span> <span class="n">concept_j</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Merges the second Concepts into the first by merging their Atoms,</span>
+<span class="sd">        Attributes, and Relationships.</span>
+
+<span class="sd">        :param Concept concept_i: The first concept.</span>
+<span class="sd">        :param Concept concept_j: The second concept.</span>
+<span class="sd">        :returns: Merged concept.</span>
+<span class="sd">        :rtype: Concept</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">merged</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">concept_i</span><span class="p">)</span>
+        <span class="c1"># Merge atoms, removing duplicates.</span>
+        <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">concept_j</span><span class="o">.</span><span class="n">get_atoms</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">atom</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">atoms</span><span class="p">:</span>
+                <span class="n">merged</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+
+        <span class="c1"># Merge attributes, removing duplicates and changing the subject.</span>
+        <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">concept_j</span><span class="o">.</span><span class="n">get_attributes</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">atr</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">attributes</span><span class="p">:</span>
+                <span class="n">atr</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">merged</span>
+                <span class="n">merged</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atr</span><span class="p">)</span>
+
+        <span class="c1"># Merge relationships, removing duplicates and changing the subject.</span>
+        <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">concept_j</span><span class="o">.</span><span class="n">get_relationships</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">rel</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">relationships</span><span class="p">:</span>
+                <span class="n">rel</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">merged</span>
+                <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">rel</span><span class="o">.</span><span class="n">attributes</span><span class="p">:</span>
+                    <span class="n">a</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">merged</span>
+                <span class="n">merged</span><span class="o">.</span><span class="n">relationships</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rel</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">merged</span>
+
+    <span class="k">def</span> <span class="nf">_find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The find operation of union-find with path compression.</span>
+
+<span class="sd">        :param int i: The index of the concept whose root to find.</span>
+<span class="sd">        :returns: The root of concept i</span>
+<span class="sd">        :rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>  <span class="c1"># If this is not a root node</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_union</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The union operation of union-find. Merges concepts with fewer</span>
+<span class="sd">        atoms into those with more.</span>
+
+<span class="sd">        :param int i: The index of the first concept to merge.</span>
+<span class="sd">        :param int j: The index of the second concept to merge.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">pj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">pi</span> <span class="o">==</span> <span class="n">pj</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">concept_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span>
+        <span class="n">concept_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">pj</span><span class="p">]</span>
+        <span class="c1"># Merge the smaller concept into the bigger.</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">concept_i</span><span class="o">.</span><span class="n">atoms</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">concept_j</span><span class="o">.</span><span class="n">atoms</span><span class="p">):</span>
+            <span class="n">pi</span><span class="p">,</span> <span class="n">pj</span> <span class="o">=</span> <span class="n">pj</span><span class="p">,</span> <span class="n">pi</span>
+            <span class="n">concept_i</span><span class="p">,</span> <span class="n">concept_j</span> <span class="o">=</span> <span class="n">concept_j</span><span class="p">,</span> <span class="n">concept_i</span>
+        <span class="c1"># Merge concept_j into concept_i</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_merge</span><span class="p">(</span><span class="n">concept_i</span><span class="p">,</span> <span class="n">concept_j</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span><span class="p">[</span><span class="n">pj</span><span class="p">]</span> <span class="o">=</span> <span class="n">pi</span>
+
+<div class="viewcode-block" id="Union.union_find"><a class="viewcode-back" href="../../source/set_functions.html#idlib.set_functions.Union.union_find">[docs]</a>    <span class="k">def</span> <span class="nf">union_find</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The union-find routine. Given a list of connections, merges them.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_union</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+            <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{counter}</span><span class="s2">/{len(self.connections)}</span><span class="se">\r</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="Intersection"><a class="viewcode-back" href="../../source/set_functions.html#idlib.set_functions.Intersection">[docs]</a><span class="k">class</span> <span class="nc">Intersection</span><span class="p">(</span><span class="n">Union</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The intersection of a list of concepts is the set of all those concepts</span>
+<span class="sd">    that are matched to one or more other concepts.</span>
+
+<span class="sd">    :param list concepts: One or more lists of Concept instances.</span>
+<span class="sd">    :param list connections: A list of int tuples specifying connections</span>
+<span class="sd">                             between pairs of concepts, where each int</span>
+<span class="sd">                             in a given tuple is the index of the concept</span>
+<span class="sd">                             in the concepts argument. Optional. If not</span>
+<span class="sd">                             provided, pairs of concepts are connected if</span>
+<span class="sd">                             they share one or more atom terms.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="p">,</span> <span class="n">run_union</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">parent_idxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="n">v</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">parent_idxs</span><span class="p">)]</span></div>
+
+
+<div class="viewcode-block" id="Difference"><a class="viewcode-back" href="../../source/set_functions.html#idlib.set_functions.Difference">[docs]</a><span class="k">class</span> <span class="nc">Difference</span><span class="p">(</span><span class="n">Union</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The difference of a list of concepts is the set of all those concepts</span>
+<span class="sd">    that could not be matched to at least one other concept.</span>
+
+<span class="sd">    :param list concepts: One or more lists of Concept instances.</span>
+<span class="sd">    :param list connections: A list of int tuples specifying connections</span>
+<span class="sd">                             between pairs of concepts, where each int</span>
+<span class="sd">                             in a given tuple is the index of the concept</span>
+<span class="sd">                             in the concepts argument. Optional. If not</span>
+<span class="sd">                             provided, pairs of concepts are connected if</span>
+<span class="sd">                             they share one or more atom terms.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="p">,</span> <span class="n">run_union</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># The unmatched concepts correspond to those indices that only occur</span>
+        <span class="c1"># once in parents_map</span>
+        <span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">Counter</span>
+        <span class="n">idx_counts</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        <span class="n">parent_idxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">idx_counts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="c1"># and which have no parent</span>
+        <span class="n">parent_idxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">parent_idxs</span> <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">parents_map</span><span class="p">[</span><span class="n">k</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">parent_idxs</span><span class="p">]</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">func_table</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;union&quot;</span><span class="p">:</span> <span class="n">Union</span><span class="p">,</span>
+                  <span class="s2">&quot;intersection&quot;</span><span class="p">:</span> <span class="n">Intersection</span><span class="p">,</span>
+                  <span class="s2">&quot;difference&quot;</span><span class="p">:</span> <span class="n">Difference</span><span class="p">}</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parse_args</span><span class="p">()</span>
+    <span class="n">func</span> <span class="o">=</span> <span class="n">func_table</span><span class="p">[</span><span class="n">args</span><span class="o">.</span><span class="n">set_function</span><span class="p">]</span>
+    <span class="n">cnxs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">connections_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cnxs</span> <span class="o">=</span> <span class="n">read_connections_file</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">connections_file</span><span class="p">)</span>
+    <span class="n">perform_set_function</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">outfile</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="o">.</span><span class="n">infiles</span><span class="p">,</span> <span class="n">connections</span><span class="o">=</span><span class="n">cnxs</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, Jake Vasilakes
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
