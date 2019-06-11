@@ -60,6 +60,7 @@ def perform_set_function(func, outfile, *infiles, connections=None):
             outF.write('\n')
 
 
+# TODO: Implement this so merged concepts have merged prefixes.
 def _get_prefix(concept1, concept2):
     """
     Build a  Concept UI prefix as the combination of the
@@ -175,6 +176,9 @@ class Union(object):
         :rtype: Concept
         """
         merged = copy.deepcopy(concept_i)
+        # Replace the prefix
+        new_prefix = _get_prefix(concept_i, concept_j)
+        merged._prefix = new_prefix
         # Merge atoms, removing duplicates.
         for atom in concept_j.get_atoms():
             if atom not in merged.atoms:
