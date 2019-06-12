@@ -106,6 +106,7 @@ class Atom(object):
         """
         cls._counter += 1
 
+    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data):
         """
@@ -163,14 +164,14 @@ class Concept(object):
         else:
             self.ui = ui
             self.init_counter(int(ui[-7:]))
-        self._preferred_term = None
+        self._preferred_atom = None
         self.__refs__[self.__class__].append(weakref.ref(self))
 
     def __repr__(self):
-        return f"{self.preferred_term} ({self.ui} {self.concept_type})"
+        return f"{self.preferred_atom} ({self.ui} {self.concept_type})"
 
     def __str__(self):
-        return f"{self.ui}: {self.preferred_term}"
+        return f"{self.ui}: {self.preferred_atom}"
 
     def __eq__(self, other):
         """
@@ -215,21 +216,23 @@ class Concept(object):
         self._prefix = value[:-7]
 
     @property
-    def preferred_term(self):
+    def preferred_atom(self):
         """
         The preferred term for this concept is the preferred term
         from the highest ranking source. That is, the atom such that
         atom["src"] is the closest to the top of the SOURCES list
         and atom["is_preferred"] is True.
+
+        :rtype: Atom
         """
         if self.atoms == []:
             return None
-        if self._preferred_term is None:
+        if self._preferred_atom is None:
             atoms = [atom for atom in self.atoms if atom.is_preferred is True]
             atom_rank = [self._source_rank.index(atom.src) for atom in atoms]
             pref = atoms[np.argmin(atom_rank)]
-            self._preferred_term = pref
-        return self._preferred_term
+            self._preferred_atom = pref
+        return self._preferred_atom
 
     def get_atoms(self, r_type="object"):
         """
@@ -384,6 +387,7 @@ class Concept(object):
                    atoms=atoms, attributes=attributes,
                    relationships=relationships)
 
+    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data):
         """
@@ -549,6 +553,7 @@ class Attribute(object):
         """
         cls._counter = num
 
+    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data, subject):
         """
@@ -704,6 +709,7 @@ class Relationship(object):
         """
         cls._counter += 1
 
+    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data, subject, concept_mapping=None):
         """
