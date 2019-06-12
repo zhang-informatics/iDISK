@@ -1,4 +1,4 @@
-.PHONY: clean data requirements create_environment signal_detection
+.PHONY: clean lint install uninstall data requirements create_environment
 
 #################################################################################
 # PROJECT CONFIGURATION (You can change these)                                  #
