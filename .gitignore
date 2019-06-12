@@ -11,3 +11,6 @@ build/
 playground/
 umls.py
 NMCD
+*.jsonl
+*.csv
+
