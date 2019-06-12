@@ -32,7 +32,7 @@ endif
 ## Install Python dependencies and idisk
 requirements:
 	$(PYTHON_INTERPRETER) -m pip install -U pip setuptools wheel
-	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt
+	$(PYTHON_INTERPRETER) -m pip install -r requirements.txt --ignore-installed
 
 ## Install idlib
 install: requirements
