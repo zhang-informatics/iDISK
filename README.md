@@ -116,7 +116,17 @@ source activate idisk
 make connections
 ```
 
-These connections can either be used directly, but it is advisable to filter them. 
+These connections can either be used directly, but it is advisable to filter them. Two methods of
+filtering connections are implemented: The first removes connections based on some simple rules; the
+second removes connections using human annotations.
+
+To run the first method:
+
+```
+make filter_annotations
+```
+
+To run the second method, follow these instructions:
 iDISK implements the Prodigy annotation tool for classifying connected pairs as one of the following labels:
 
 * Equal
@@ -134,7 +144,7 @@ make run_annotation
 Once the annotation is complete, filter the connections according to the annotations with
 
 ```
-make filter_connections
+make filter_connections_ann
 ```
 
 Finally, now that we're confident in our connected concepts, we can merge them.

@@ -1,4 +1,4 @@
-.PHONY: clean version connections run_annotation filter_connections merge
+.PHONY: clean version connections run_annotation filter_connections filter_connections_ann merge
 
 #################################################################################
 # PROJECT CONFIGURATION (You can change these)                                  #
@@ -32,10 +32,19 @@ BUILD_DIR := $(IDISK_HOME)/versions/$(IDISK_VERSION)/
 clean:
 	rm -r $(BUILD_DIR)
 
+
+## Remove all annotation files and Prodigy datasets.
+clean_annotation:
+	rm -r $(BUILD_DIR)/ingredients/manual_review/indata
+	rm $(BUILD_DIR)/ingredients/manual_review/prodigy.json  # symlink
+	prodigy drop concept_matching
+
+
 ## Create the directories for this version.
 version:
 	mkdir -p $(BUILD_DIR)/{ingredients,products}/
 	cd $(BUILD_DIR) && ln -s $(IDISK_HOME)/lib .
+
 
 ## Find candidate connections between concepts. This requires idlib to be installed.
 ## This can take a few hours for a large number of inputs.
@@ -46,6 +55,7 @@ connections:
 		find_connections \
 		--infiles $(SOURCE_FILES) \
 		--outfile $(BUILD_DIR)/ingredients/connections.csv
+
 
 ## Run annotation using Prodigy
 run_annotation:
@@ -66,15 +76,31 @@ run_annotation:
 		$(IDISK_HOME)/lib/annotation/prodigy_resources/template.html \
 		-F $(IDISK_HOME)/lib/annotation/prodigy_resources/recipe.py
 
-## Filter connections according to annotations.
+
+## Filter connections based on simple heuristics
 filter_connections:
+	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/filter_connections_basic.py \
+		--connections_file $(BUILD_DIR)/ingredients/connections.csv \
+		--concepts_file $(BUILD_DIR)/ingredients/all_ingredients.jsonl \
+		--outfile $(BUILD_DIR)/ingredients/connections_new.csv
+	@mv $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections_orig.csv
+	@mv $(BUILD_DIR)/ingredients/connections_new.csv $(BUILD_DIR)/ingredients/connections.csv
+	@echo "New connections written to \n\t $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections.csv"
+	@echo "Original connections at \n\t $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections_orig.csv"
+
+
+## Filter connections according to annotations.
+filter_connections_ann:
 	# Save annotations to a file
 	prodigy db-out concept_matching $(BUILD_DIR)/ingredients/manual_review/annotations
-	mv $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections_orig.csv
-	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/annotation/filter_connections.py \
-		--connections_file $(BUILD_DIR)/ingredients/connections_orig.csv \
+	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/annotation/filter_connections_ann.py \
+		--connections_file $(BUILD_DIR)/ingredients/connections.csv \
 		--annotations_file $(BUILD_DIR)/ingredients/manual_review/annotations/concept_matching.jsonl \
-		--outfile $(BUILD_DIR)/ingredients/connections.csv
+		--outfile $(BUILD_DIR)/ingredients/connections_new.csv
+	@mv $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections_orig.csv
+	@mv $(BUILD_DIR)/ingredients/connections_new.csv $(BUILD_DIR)/ingredients/connections.csv
+	@echo "New connections written to \n\t $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections.csv"
+	@echo "Original connections at \n\t $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections_orig.csv"
 
 ## Merge matched concepts.
 merge:
@@ -82,7 +108,7 @@ merge:
 		--infiles $(BUILD_DIR)/ingredients/all_ingredients.jsonl \
 		--connections $(BUILD_DIR)/ingredients/connections.csv \
 		--outfile $(BUILD_DIR)/ingredients/merged_ingredients.jsonl
-						
+
 
 
 #################################################################################
