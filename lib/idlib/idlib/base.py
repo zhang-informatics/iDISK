@@ -1,4 +1,4 @@
-# TODO: Write unittests
+import re
 import weakref
 import warnings
 import numpy as np
@@ -18,30 +18,30 @@ class Atom(object):
     :param str term_type: The type of term. E.g. "SY" for synonym.
     :param bool is_preferred: Whether this string is the preferred name
                               in its source.
-    :param str dsaui: The iDISK unique identifier of this atom. Optional.
+    :param str ui: The iDISK unique identifier of this atom. Optional.
     """
 
     _counter = 0
-    _dsaui_template = "DA{0:07}"
+    _ui_template = "DA{0:07}"
 
-    def __init__(self, term, src, src_id, term_type, is_preferred, dsaui=None):
-        self._check_params(term, src, src_id, term_type, is_preferred, dsaui)
+    def __init__(self, term, src, src_id, term_type, is_preferred, ui=None):
+        self._check_params(term, src, src_id, term_type, is_preferred, ui)
         self.term = term  # 5-HTP
         self.src = src  # NMCD
         self.src_id = src_id  # 1234
         self.term_type = term_type  # SN
         self.is_preferred = is_preferred  # True
-        if dsaui is None:
+        if ui is None:
             self._increment()
-            self.dsaui = self._dsaui_template.format(self._counter)
+            self.ui = self._ui_template.format(self._counter)
         else:
-            self.dsaui = dsaui
-            self.init_counter(int(dsaui.replace("DA", "")))
+            self.ui = ui
+            self.init_counter(int(ui.replace("DA", "")))
 
     def __repr__(self):
         # Verbose representation.
         template = "('{}' '{}' '{}' '{}' '{}' '{}')"
-        return template.format(self.dsaui, self.term, self.term_type,
+        return template.format(self.ui, self.term, self.term_type,
                                self.src, self.src_id, self.is_preferred)
 
     def __str__(self):
@@ -60,7 +60,7 @@ class Atom(object):
                     self.src_id == other.src_id,
                     self.term_type == other.term_type])
 
-    def _check_params(self, term, src, src_id, term_type, is_preferred, dsaui):
+    def _check_params(self, term, src, src_id, term_type, is_preferred, ui):
         assert isinstance(term, str)
         assert src.upper() in SOURCES
         assert isinstance(src_id, str)
@@ -69,15 +69,7 @@ class Atom(object):
             msg = "Term type PN (preferred name) is deprecated. Use PT (preferred term) instead."  # noqa
             warnings.warn(msg, DeprecationWarning)
         assert isinstance(is_preferred, bool)
-        assert isinstance(dsaui, (type(None), str))
-
-    @property
-    def ui(self):
-        """
-        This property offers a consistent mode of access to unique identifiers
-        whatever the class of the object.
-        """
-        return self.dsaui
+        assert isinstance(ui, (type(None), str))
 
     def to_dict(self):
         """
@@ -114,6 +106,7 @@ class Atom(object):
         """
         cls._counter += 1
 
+    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data):
         """
@@ -147,43 +140,38 @@ class Concept(object):
                              E.g. "SDSI".
     :param list atoms: List of synonyms for this concept. Each member
                        must be an instance of Atom. Optional.
-    :param str dscui: the iDISK CUI for this concept. Optional.
+    :param str ui: the iDISK CUI for this concept. Optional.
     """
 
     __refs__ = defaultdict(list)  # Holds all instances of this class
     _counter = 0
-    _prefix = "DC"
-    _dscui_template = "{0}{1:07}"
+    _prefix = "DC"  # The default prefix. Can be changed for each instance.
+    _ui_template = "{0}{1:07}"  # Prefix, number
     _source_rank = SOURCES
 
     def __init__(self, concept_type, atoms=[],
-                 attributes=[], relationships=[], dscui=None):
+                 attributes=[], relationships=[], ui=None):
         self._check_params(concept_type, atoms, attributes,
-                           relationships, dscui)
+                           relationships, ui)
         self.concept_type = concept_type
         self.atoms = atoms
         self.attributes = attributes
         self.relationships = relationships
-        # Set the DSCUI for this concept
-        if dscui is None:
+        # Set the UI for this concept
+        if ui is None:
             self._increment()
-            self.dscui = self._dscui_template.format(self._prefix,
-                                                     self._counter)
+            self.ui = self._ui_template.format(self._prefix, self._counter)
         else:
-            self.dscui = dscui
-            self.init_counter(int(dscui[-7:]))
-            self.set_ui_prefix(dscui[:-7])
-        for atom in atoms:
-            atom._dscui = self.dscui
-        self._preferred_term = None
+            self.ui = ui
+            self.init_counter(int(ui[-7:]))
+        self._preferred_atom = None
         self.__refs__[self.__class__].append(weakref.ref(self))
 
     def __repr__(self):
-        # Verbose representation.
-        return f"{self.preferred_term} ({self.dscui} {self.concept_type})"
+        return f"{self.preferred_atom} ({self.ui} {self.concept_type})"
 
     def __str__(self):
-        return f"{self.dscui}: {self.preferred_term}"
+        return f"{self.ui}: {self.preferred_atom}"
 
     def __eq__(self, other):
         """
@@ -195,39 +183,56 @@ class Concept(object):
                     self.atoms == other.atoms])
 
     def _check_params(self, concept_type, atoms, attributes,
-                      relationships, dscui):
+                      relationships, ui):
         assert isinstance(concept_type, str)
         assert concept_type in CONCEPT_TYPES
         assert isinstance(atoms, list)
         assert all([isinstance(atom, Atom) for atom in atoms])
         assert all([isinstance(atr, Attribute) for atr in attributes])
         assert all([isinstance(rel, Relationship) for rel in relationships])
-        assert isinstance(dscui, (type(None), str))
+        assert isinstance(ui, (type(None), str))
 
     @property
     def ui(self):
         """
-        This property offers a consistent mode of access to unique identifiers
-        whatever the class of the object.
+        The unique identifier is always dynamically determined by the 
+        values of self._prefix and self._num.
         """
-        return self.dscui
+        return self._ui_template.format(self._prefix, self._num)
+
+    @ui.setter
+    def ui(self, value):
+        """
+        The unique identifier is always dynamically determined by the 
+        values of self._prefix and self._num. However, the values of these
+        hidden variables can be modified by using the UI setter.
+
+        :param str value: The new unique identifier.
+        """
+        if not re.match(r'.+[0-9]{7}', value):
+            msg = "UI must match the regex '.+[0-9]{7}'. E.g. DC0000001."
+            raise ValueError(msg)
+        self._num = int(value[-7:])
+        self._prefix = value[:-7]
 
     @property
-    def preferred_term(self):
+    def preferred_atom(self):
         """
         The preferred term for this concept is the preferred term
         from the highest ranking source. That is, the atom such that
         atom["src"] is the closest to the top of the SOURCES list
         and atom["is_preferred"] is True.
+
+        :rtype: Atom
         """
         if self.atoms == []:
             return None
-        if self._preferred_term is None:
+        if self._preferred_atom is None:
             atoms = [atom for atom in self.atoms if atom.is_preferred is True]
             atom_rank = [self._source_rank.index(atom.src) for atom in atoms]
             pref = atoms[np.argmin(atom_rank)]
-            self._preferred_term = pref
-        return self._preferred_term
+            self._preferred_atom = pref
+        return self._preferred_atom
 
     def get_atoms(self, r_type="object"):
         """
@@ -316,7 +321,7 @@ class Concept(object):
         atoms = list(self.get_atoms(r_type="dict"))
         atrs = list(self.get_attributes(r_type="dict"))
         rels = list(self.get_relationships(r_type="dict"))
-        d = OrderedDict({"ui": self.dscui,
+        d = OrderedDict({"ui": self.ui,
                          "concept_type": self.concept_type,
                          "synonyms": atoms,
                          "attributes": atrs,
@@ -382,6 +387,7 @@ class Concept(object):
                    atoms=atoms, attributes=attributes,
                    relationships=relationships)
 
+    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data):
         """
@@ -412,7 +418,7 @@ class Concept(object):
         :returns: Concept instance built from data.
         :rtype: Concept
         """
-        concept = cls(concept_type=data["concept_type"], dscui=data["ui"])
+        concept = cls(concept_type=data["concept_type"], ui=data["ui"])
         atoms = [Atom.from_dict(syn) for syn in data["synonyms"]]
         concept.atoms = atoms
         atrs = [Attribute.from_dict(atr, subject=concept)
@@ -462,12 +468,12 @@ class Attribute(object):
     """
 
     _counter = 0
-    _atui_template = "DAT{0:07}"
+    _ui_template = "DAT{0:07}"
 
     def __init__(self, subject, atr_name, atr_value, src):
         self._check_params(subject, atr_name, atr_value, src)
         self._increment()
-        self.atui = self._atui_template.format(self._counter)
+        self.ui = self._ui_template.format(self._counter)
         self.subject = subject
         self.atr_name = atr_name
         self.atr_value = atr_value
@@ -499,14 +505,6 @@ class Attribute(object):
         assert isinstance(atr_value, str)
         assert isinstance(src, str)
 
-    @property
-    def ui(self):
-        """
-        This property offers a consistent mode of access to unique identifiers
-        whatever the class of the object.
-        """
-        return self.atui
-
     def to_dict(self, return_subject=False, verbose_subject=False):
         """
         Output this attribute as a dictionary, optionally with a subject.
@@ -522,8 +520,8 @@ class Attribute(object):
                                     a "subject" key.
         :param bool verbose_subject: If True and return_subject is True,
                                      the value of the "subject" key includes
-                                     the dscui, name, and source, instead of
-                                     just the dscui.
+                                     the ui, name, and source, instead of
+                                     just the ui.
         :returns: dictionary representation of this attribute.
         :rtype: dict
         """
@@ -555,6 +553,7 @@ class Attribute(object):
         """
         cls._counter = num
 
+    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data, subject):
         """
@@ -592,12 +591,12 @@ class Relationship(object):
     """
 
     _counter = 0
-    _rui_template = "DR{0:07}"
+    _ui_template = "DR{0:07}"
 
     def __init__(self, subject, rel_name, obj, src, attributes=[]):
         self._check_params(subject, rel_name, obj, src, attributes)
         self._increment()
-        self.rui = self._rui_template.format(self._counter)
+        self.ui = self._ui_template.format(self._counter)
         self.subject = subject
         self.rel_name = rel_name
         self.object = obj
@@ -606,7 +605,7 @@ class Relationship(object):
         self.attributes = attributes
 
     def __repr__(self):
-        return self.rui
+        return self.ui
 
     def __str__(self):
         return f"{self.subject} **{self.rel_name}** {self.object}"
@@ -635,14 +634,6 @@ class Relationship(object):
         for atr in attributes:
             assert isinstance(atr, Attribute)
 
-    @property
-    def ui(self):
-        """
-        This property offers a consistent mode of access to unique identifiers
-        whatever the class of the object.
-        """
-        return self.rui
-
     def to_dict(self, return_subject=False, verbose=False):
         """
         Output this relationship as a dictionary, optionally with a subject.
@@ -658,8 +649,8 @@ class Relationship(object):
                                     a "subject" key.
         :param bool verbose_subject: If True and return_subject is True,
                                      the value of the "subject" key includes
-                                     the dscui, name, and source, instead of
-                                     just the dscui.
+                                     the ui, name, and source, instead of
+                                     just the ui.
         :returns: dictionary representation of this attribute.
         :rtype: dict
         """
@@ -718,6 +709,7 @@ class Relationship(object):
         """
         cls._counter += 1
 
+    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data, subject, concept_mapping=None):
         """

@@ -1,0 +1,11 @@
+{
+    "theme": "basic",
+    "custom_theme": {},
+    "show_stats": true,
+    "show_flag": true,
+    "hide_meta": false,
+    "auto_create": false,
+    "batch_size": 1,
+    "host": "localhost",
+    "db": "sqlite",
+}

@@ -11,6 +11,10 @@ build/
 playground/
 umls.py
 NMCD
+<<<<<<< HEAD
 *.jsonl
 *.csv
 *.log
+=======
+versions
+>>>>>>> 587464510207aa78175a6da0f778305dc900ee0e

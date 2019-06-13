@@ -24,10 +24,44 @@ def parse_args():
     return args
 
 
+def merge_duplicate_concepts(concepts):
+    """
+    NHP has many duplicate ingredients in the raw data. During
+    data preprocessing each unique ingredient string is assigned a unique
+    ID, so duplicate ingredient entries will have the same ID. This
+    function merges those entries into a single concept.
+
+    :param list concepts: List of Concept instances
+    """
+
+    def _merge(concept1, concept2):
+        """
+        Merges the atoms of concept2 into concept1, removing duplicates.
+        This merge is performed in place.
+        Luckily NHP concepts don't have attributes or relationships yet.
+        so we don't have to merge those.
+        """
+        for atom in concept2.get_atoms():
+            if atom not in concept1.get_atoms():
+                concept1.atoms.append(atom)
+        return concept1
+
+    seen = {}  # {src_id: Concept}
+    for concept in concepts:
+        src_id = concept.preferred_atom.src_id
+        if src_id not in seen:
+            seen[src_id] = concept
+        else:
+            _merge(seen[src_id], concept)  # Changes seen[src_id] in place
+    return seen.values()
+
+
 def extract_ingredients(incsv, outjsonl):
     data = pd.read_csv(incsv, dtype=str)
+    concepts = to_concepts(data)
+    merged_concepts = merge_duplicate_concepts(concepts)
     with open(outjsonl, 'w') as outF:
-        for concept in to_concepts(data):
+        for concept in merged_concepts:
             json.dump(concept.to_dict(), outF)
             outF.write('\n')
 
