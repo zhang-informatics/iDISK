@@ -7,12 +7,14 @@
 # Your preferred Python.
 PYTHON_INTERPRETER = python3
 # Where iDISK is located.
-IDISK_HOME = /Users/vasil024/Projects/InProgressProjects/dietary_supplements_refactor/iDISK
+IDISK_HOME = /home/zhan1386/vasil024/Projects/dietary_supplements/iDISK
 # The version of iDISK to build.
-IDISK_VERSION = test
+IDISK_VERSION = 1.0.0
 # Paths to the source ingredient concept files.
-SOURCE_FILES := $(IDISK_HOME)/sources/NMCD/11_30_2018/import/tst.jsonl \
-	        $(IDISK_HOME)/sources/DSLD/10_22_2018/import/tst.jsonl
+SOURCE_FILES := $(IDISK_HOME)/sources/NMCD/11_30_2018/import/ingredients.jsonl \
+	        $(IDISK_HOME)/sources/DSLD/10_22_2018/import/ingredients.jsonl \
+		$(IDISK_HOME)/sources/NHP/12_1_2017/import/ingredients.jsonl
+
 
 #################################################################################
 # GLOBALS (DON'T CHANGE THESE)                                                  #
@@ -40,10 +42,12 @@ version:
 connections:
 	@echo "cat $(SOURCE_FILES) > $(BUILD_DIR)/ingredients/all_ingredients.jsonl" > $(BUILD_DIR)/ingredients/LOG
 	@cat $(SOURCE_FILES) > $(BUILD_DIR)/ingredients/all_ingredients.jsonl
+	@echo "Finding connections" >> $(BUILD_DIR)/ingredients/LOG
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/set_functions.py \
 		find_connections \
 		--infiles $(SOURCE_FILES) \
 		--outfile $(BUILD_DIR)/ingredients/connections.csv
+	@echo "Saved connections to $(BUILD_DIR)/ingredients/connections.csv" >> $(BUILD_DIR)/ingredients/LOG
 
 ## Run annotation using Prodigy
 run_annotation:
