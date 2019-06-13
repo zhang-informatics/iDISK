@@ -93,6 +93,8 @@ class CancerUrl(object):
         Return the full URL
 
         :param str link: the extracted herb's URL, from self.extract_url
+        :return: full herb URL
+        :rtype: str
         """
         if link.startswith("https://www.mskcc.org/cancer-care"):
             return link
@@ -143,7 +145,7 @@ class CancerUrl(object):
 
     def run(self):
         """
-        main function for CancerUrl class
+        Main function for CancerUrl class
         """
         # find alphabetic listing url
         self.load_keyword(self.file_al)

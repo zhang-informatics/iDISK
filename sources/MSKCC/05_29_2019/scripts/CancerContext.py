@@ -28,6 +28,9 @@ class CancerContext(object):
         """
         Get each herb's common name
         Return a list that has all common names for the herb
+
+        :return: a list that has all common names for the herb
+        :rtype: list
         """
         context = self.driver.find_element_by_id("block-mskcc-content")
         # check if the herb has common names
@@ -46,6 +49,9 @@ class CancerContext(object):
         """
         Extract all subsections under For Healthcare Professionals
         Return sections, a dict that stores all required extracted info
+
+        :return: a dict that stores all required extracted info
+        :rtype: dict
         """
         context = self.driver.find_elements_by_css_selector("div.mskcc__article:nth-child(5)")  # noqa
         for each in context:
@@ -68,6 +74,8 @@ class CancerContext(object):
 
         :param WebDriver headers: blocks of herb's info
         :param dict sections:
+        :return: a dict that contains all pre-defined sections and contents
+        :rtype: dict
         """
         # dict to save required sections
         sections = {}
@@ -92,12 +100,19 @@ class CancerContext(object):
                     sections[section_name] = bullets
                 except NoSuchElementException:
                     sections[section_name] = section_content.text.strip()
+        # check if there is any missing headers
+        res = set(self.common_header) - set(sections.keys())
+        for each in res:
+            sections[each] = ""
         return sections
 
     def get_last_update(self):
         """
         Find the date the the herb is last updated
         Return date
+
+        :return: latest update date
+        :rtype: str
         """
         section = self.driver.find_element_by_xpath('//*[@id="field-shared-last-updated"]')  # noqa
         date = section.find_element_by_class_name("datetime")
