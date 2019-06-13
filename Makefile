@@ -9,10 +9,12 @@ PYTHON_INTERPRETER = python3
 # Where iDISK is located.
 IDISK_HOME = /Users/vasil024/Projects/InProgressProjects/dietary_supplements_refactor/iDISK
 # The version of iDISK to build.
-IDISK_VERSION = test
+IDISK_VERSION = 1.0.0
 # Paths to the source ingredient concept files.
-SOURCE_FILES := $(IDISK_HOME)/sources/NMCD/11_30_2018/import/tst.jsonl \
-	        $(IDISK_HOME)/sources/DSLD/10_22_2018/import/tst.jsonl
+SOURCE_FILES := $(IDISK_HOME)/sources/NMCD/11_30_2018/import/ingredients.jsonl \
+	        $(IDISK_HOME)/sources/DSLD/10_22_2018/import/ingredients.jsonl \
+	        $(IDISK_HOME)/sources/NHP/12_1_2017/import/ingredients.jsonl
+
 
 #################################################################################
 # GLOBALS (DON'T CHANGE THESE)                                                  #

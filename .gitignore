@@ -11,4 +11,4 @@ build/
 playground/
 umls.py
 NMCD
-versions/test
+versions
