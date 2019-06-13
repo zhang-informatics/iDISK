@@ -92,5 +92,53 @@ file (extension `.jsonl`) each line of which is in the following format:
 }
 ```
 
-### Notes
- * The script `union.py` scripts add synonyms from the non-preferred source to the `synonyms` field.
+## Initial setup
+
+After cloning this repository, install `idlib`, the iDISK API library.
+`idlib` is bundled with iDISK: go to `lib/idlib` and follow the instructions in the README.
+
+The rest of this guide assumes you have *properly* populated the `sources/` directory.
+A guide for doing this is coming soon.
+
+Edit the variables in the PROJECT CONFIGURATION section of the `Makefile` as necessary. Then run,
+
+```
+make version
+```
+
+The next step is to generate candidate connections between the concepts in the source files.
+Note that for large numbers of concepts this can take a very long time,
+so it is advisable that you run it in an environment in which you can set it and forget it,
+such as MSI.
+
+```
+source activate idisk
+make connections
+```
+
+These connections can either be used directly, but it is advisable to filter them. 
+iDISK implements the Prodigy annotation tool for classifying connected pairs as one of the following labels:
+
+* Equal
+* Not Equal
+* Parent-Child (i.e. the first concept is a hypernym of the second)
+* Child-Parent (i.e. the first concept is a hyponym of the second)
+
+If you are qualified to use Prodigy (it's not free) and have it installed (in the `idisk` environment),
+you can run the annotation task with:
+
+```
+make run_annotation
+```
+
+Once the annotation is complete, filter the connections according to the annotations with
+
+```
+make filter_connections
+```
+
+Finally, now that we're confident in our connected concepts, we can merge them.
+
+```
+make merge
+```

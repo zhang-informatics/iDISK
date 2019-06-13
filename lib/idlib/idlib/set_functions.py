@@ -8,8 +8,9 @@ from idlib import Concept
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("set_function", type=str,
-                        choices=["intersection", "union", "difference"],
+    parser.add_argument("function", type=str,
+                        choices=["intersection", "union", "difference",
+                                 "find_connections"],
                         help="The set function to perform.")
     parser.add_argument("--infiles", type=str, nargs='+', required=True,
                         help="""JSON lines files containing
@@ -45,7 +46,36 @@ def read_connections_file(infile):
     return connections
 
 
+def perform_find_connections(outfile, *infiles):
+    """
+    Run find_connections without the set function and write the result
+    outfile.
+
+    :param str outfile: The path to the outfile.
+    :param list infiles: A list of paths to the concept files.
+    """
+    all_concepts = []
+    for fpath in infiles:
+        data = [json.loads(line) for line in open(fpath, 'r')]
+        concepts = [Concept.from_dict(d) for d in data]
+        all_concepts.extend(concepts)
+    print(f"Number of starting concepts: {len(all_concepts)}")
+    cnxs = Union(all_concepts, run_union=False).connections
+    with open(outfile, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerows(cnxs)
+
+
 def perform_set_function(func, outfile, *infiles, connections=None):
+    """
+    Run find_connections without the set function and write the result
+    outfile.
+
+    :param Union outfile: The set function to run.
+    :param str outfile: The path to the outfile.
+    :param list infiles: A list of paths to the concept files.
+    :param list connections: List of int tuples specifying connections.
+    """
     all_concepts = []
     for fpath in infiles:
         data = [json.loads(line) for line in open(fpath, 'r')]
@@ -60,6 +90,7 @@ def perform_set_function(func, outfile, *infiles, connections=None):
             outF.write('\n')
 
 
+# TODO: Implement this so merged concepts have merged prefixes.
 def _get_prefix(concept1, concept2):
     """
     Build a  Concept UI prefix as the combination of the
@@ -107,7 +138,6 @@ class Union(object):
     :param bool run_union: If True (default) run union-find on the input.
                            Otherwise, just run find_connections.
     """
-
     def __init__(self, concepts, connections=[], run_union=True):
         self._check_params(concepts, connections)
         self.concepts = concepts
@@ -175,6 +205,9 @@ class Union(object):
         :rtype: Concept
         """
         merged = copy.deepcopy(concept_i)
+        # Replace the prefix
+        new_prefix = _get_prefix(concept_i, concept_j)
+        merged._prefix = new_prefix
         # Merge atoms, removing duplicates.
         for atom in concept_j.get_atoms():
             if atom not in merged.atoms:
@@ -253,7 +286,6 @@ class Intersection(Union):
                              provided, pairs of concepts are connected if
                              they share one or more atom terms.
     """
-
     def __init__(self, concepts, connections=[]):
         super().__init__(concepts, connections, run_union=True)
         parent_idxs = [v for (k, v) in self.parents_map.items() if k != v]
@@ -273,7 +305,6 @@ class Difference(Union):
                              provided, pairs of concepts are connected if
                              they share one or more atom terms.
     """
-
     def __init__(self, concepts, connections=[]):
         super().__init__(concepts, connections, run_union=True)
         # The unmatched concepts correspond to those indices that only occur
@@ -291,8 +322,15 @@ if __name__ == "__main__":
                   "intersection": Intersection,
                   "difference": Difference}
     args = parse_args()
-    func = func_table[args.set_function]
     cnxs = []
+
     if args.connections_file is not None:
         cnxs = read_connections_file(args.connections_file)
-    perform_set_function(func, args.outfile, *args.infiles, connections=cnxs)
+
+    if args.function == "find_connections":
+        # Just find connections, don't compute the union.
+        perform_find_connections(args.outfile, *args.infiles)
+    else:
+        func = func_table[args.function]
+        perform_set_function(func, args.outfile, *args.infiles,
+                             connections=cnxs)
