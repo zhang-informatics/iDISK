@@ -1,38 +1,92 @@
 import os
-from cancer_url import cancer_url
-from cancer_context import cancer_context
+import argparse
+from CancerUrl import CancerUrl
+from CancerContext import CancerContext
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
-# driver function for extracting cancer site data
-# extracted headers are pre-determined using cancer_context.py
-# if you need to change the required headers, please run cancer_url.py and cancer_header.py separately and manually change
-class extract_driver(object):
+
+
+class ExtractDriver(object):
+    """
+    The driver for extracting herb url and pre-defined headers
+    """
+
     def __init__(self):
-        # get this python script location
+        # get downloaded file location
         self.path = os.path.dirname(os.getcwd())
         self.path = os.path.join(self.path, "download")
-    #setup selenium webdriver
-    def driverSetup(self):
+
+    def setup_driver(self):
+        """
+        Set up selenium driver
+        """
         options = Options()
-        # do not open firefox 
+        # do not open firefox
         options.add_argument("--headless")
-        driver = webdriver.Firefox(executable_path = "/usr/local/bin/geckodriver", options = options)
+        driver = webdriver.Firefox(executable_path="/usr/local/bin/geckodriver",  # noqa
+                                   options=options)
         driver.implicitly_wait(1)
         return driver
-    # get all ingredients from cancer site as their alphabetic listing
-    # generate cancer_herb_url.csv
-    def getURL(self, driver):
-        urlGetter = cancer_url(driver, self.path)
-        urlGetter.run()
-    # get section contents for each ingredient
-    def getContent(self, driver):
-        contGetter = cancer_context(driver, self.path)
-        contGetter.run()
-    # main function for extraction driver
-    def run(self):
-        driver = self.driverSetup()
-        self.getURL(driver)
-        self.getContent(driver)
+
+    def parse_arg(self):
+        """
+        Set up arguments
+        """
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--file_al", type=str,
+                            required=True,
+                            help="JSONL file to store alphabetic listing URL.")
+        parser.add_argument("--file_hl", type=str,
+                            required=True,
+                            help="csv file to store all MSKCC herb's URLs.")
+        parser.add_argument("--file_con", type=str,
+                            required=True,
+                            help="JSONL file to store herb and its content.")
+        args = parser.parse_args()
+        return args
+
+    def get_herb_url(self, driver, path, file_al, file_hl):
+        """
+        Get URL for each MSKCC herb
+
+        :param WebDriver driver: selenium driver
+        :param str path: local file to store extracted info
+        :param str file_al: csv file to store alphabetic listing
+        :param str fiel_hl: csv file to store all MSKCC herb's URLs
+        """
+        url_getter = CancerUrl(driver, path, file_al, file_hl)
+        url_getter.run()
+
+    def get_herb_content(self, driver, path, file_hl, file_con):
+        """
+        Get contents for each MSKCC herb
+
+        :param WebDriver driver: selenium driver
+        :param str path: local file to store extracted info
+        :param str fiel_hl: csv file to store all MSKCC herb's URLs
+        :param str file_con: JSONL file to store all extracted contents
+        """
+        content_getter = CancerContext(driver, path, file_hl, file_con)
+        content_getter.process_file()
+
+    def extract_process(self):
+        """
+        Main function for ExtractDriver
+        """
+        # set up arguments
+        args = self.parse_arg()
+        # set up driver
+        driver = self.setup_driver()
+        '''
+        # extract herb url
+        self.get_herb_url(driver, self.path,
+                          args.file_al, args.file_hl)
+        '''
+        # extract herb content
+        self.get_herb_content(driver, self.path,
+                              args.file_hl, args.file_con)
+
+
 if __name__ == "__main__":
-    x = extract_driver()
-    x.run()
+    x = ExtractDriver()
+    x.extract_process()

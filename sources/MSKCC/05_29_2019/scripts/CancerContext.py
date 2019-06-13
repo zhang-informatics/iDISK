@@ -1,132 +1,150 @@
-import csv, json, os
-from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
+import csv
+import json
+import os
 from selenium.common.exceptions import NoSuchElementException
-# extract section content for each ingredient
-# before running this script, please run cancer_url.py first to get the csv file
-class cancer_context(object):
-	def __init__(self, driver, path):
-		self.urls = "cancer_herb_url.csv"
-		## common headers
-		self.common = ["scientific_name", "clinical_summary", "purported_uses",
-						"food_sources", "mechanism_of_action", "warnings", "contraindications",
-						"adverse_reactions", "herb-drug_interactions"]
-		## unwanted headers
-		self.uncomon = ["herb_lab_interactions", "brand_name", "references","dosage_(onemsk_only)"]
-		self.driver = driver
-		self.path = path
-	## get content under common names
-	def getCommon(self):
-		context = self.driver.find_element_by_id("block-mskcc-content")
-		## if the herb has common names
-		try:
-			print("extracting common names")
-			value = context.find_element_by_class_name("list-bullets")
-			items = value.find_elements_by_tag_name("li")
-			names = []
-			for each in items:
-				names.append(each.text.strip())
-			return names
-		except NoSuchElementException:
-			print("No common names")
-			return ""
-	## check if it's under correct section
-	def correctSection(self, context):
-		for each in context:
-			try:
-				forPro = each.find_elements_by_xpath('//*[@id="msk_professional"]')
-				print("under For Healthcare Professionals")
-				## find all sections under For Healthcare Professionals
-				headers = each.find_elements_by_class_name("accordion ")
-				return self.getContent(headers)
-			except NoSuchElementException:
-				print("ignore For Patients & Caregivers")
-				pass
-	## get content for each accordion__headeline
-	def getContent(self, headers):
-		print("extracting sections and contents")
-		## dict to save every section information
-		sections = {}
-		## iterate each section
-		for each in headers:
-			## find section name: accordion__headline
-			section_name = each.find_element_by_class_name("accordion__headline").get_attribute("data-listname").strip()
-			section_name = section_name.lower().split(" ")
-			section_name = "_".join(section_name)
-			## ignore not-wanted sections
-			if section_name in self.uncomon:
-				pass
-			else:
-				## extracting wanted headers
-				if section_name in self.common:
-				## find section context: field-item
-					section_content = each.find_element_by_class_name("field-item")
-					## if current section has bullet-list
-					try:
-						value = section_content.find_element_by_class_name("bullet-list")
-						items = value.find_elements_by_tag_name("li")
-						bullets = []
-						for each in items:
-							bullets.append(each.text.strip())
-						sections[section_name] = bullets
-					except NoSuchElementException:
-						sections[section_name] = section_content.text.strip()
-				else:
-					pass
-			## check if there are missing headers
-			res = list(set(sections.keys())^set(self.common))
-			for each in res:
-				sections[each] = " "
-		return sections
-	## get content under For Healthcare Professional
-	def getPro(self):
-		## For Healthcare Professionals main context
-		## mskcc__article mskcc__article--sub-article navigate-section
-		context = self.driver.find_elements_by_xpath("/html/body/div[2]/div/div/div[1]/main/div/div[2]/div[2]/div[4]/div/div/article/div[1]/div[4]")
-		return(self.correctSection(context))
-	## get last updated information
-	def getUpdate(self):
-		print("extracting last updated information")
-		section = self.driver.find_element_by_xpath('//*[@id="field-shared-last-updated"]')
-		time = section.find_element_by_xpath("/html/body/div[2]/div/div/div[1]/main/div/div[2]/div[2]/div[4]/div/div/article/div[1]/div[6]/div/div/time").get_attribute("datetime")
-		return time
-	## write to local file
-	def write(self, data):
-		with open(os.path.join(self.path, "cancer_herb_content.jsonl"), "a") as output:
-			json.dump(data, output)
-			output.write("\n")
-		print("finish writing")
-	## process
-	def process(self):
-		try:
-			with open(os.path.join(self.path, self.urls), "r") as f:
-				readCSV = csv.reader(f, delimiter = ",")
-				for row in readCSV:
-					## save each website's extraction in to dict, then save it to jsonl
-					data = {}
-					self.driver.get(row[1])
-					print("=========================")
-					print("processing " + row[0])
-					data["name"] = row[0]
-					names = self.getCommon()
-					data["common_name"] = names
-					sections = self.getPro()
-					## check if the herb has valid contents
-					try:
-						for k, v in sections.items():
-							k = k.lower().split(" ")
-							k = "_".join(k)
-							data[k] = v
-						data["last_updated"] = self.getUpdate()
-						data["url"] = row[1]
-						self.write(data)
-					except AttributeError:
-						pass
-					print("=========================")
-			self.driver.close()
-		except IOError:
-			print("No such file, please run cancer_header.py first.")
-		
-	## main function
-	def run(self):
-		self.process()
+
+
+class CancerContext(object):
+    """
+    Extract section contents for each ingredient
+    This is a following-up class for CancerUrl.py
+    """
+    def __init__(self, driver, path, file_hl, file_con):
+        # common headers for each herb
+        self.common_header = ["scientific_name", "clinical_summary",
+                              "purported_uses", "food_sources",
+                              "mechanism_of_action", "warnings",
+                              "adverse_reactions", "herb-drug_interactions"]
+        # selenium driver, setup in ExtractDriver class
+        self.driver = driver
+        # local file path to store extracted content
+        self.path = path
+        # csv file to store all MSKCC herb's URLs
+        self.file_hl = file_hl
+        # JSONL file to store all pre-defined content
+        self.file_con = file_con
+
+    def get_common_name(self):
+        """
+        Get each herb's common name
+        Return a list that has all common names for the herb
+        """
+        context = self.driver.find_element_by_id("block-mskcc-content")
+        # check if the herb has common names
+        try:
+            value = context.find_element_by_class_name("list-bullets")
+            items = value.find_elements_by_tag_name("li")
+            names = []
+            for each in items:
+                names.append(each.text.strip())
+            return names
+        except NoSuchElementException:
+            print("No common names")
+            return ""
+
+    def correct_section(self):
+        """
+        Extract all subsections under For Healthcare Professionals
+        Return sections, a dict that stores all required extracted info
+        """
+        context = self.driver.find_elements_by_css_selector("div.mskcc__article:nth-child(5)")  # noqa
+        for each in context:
+            try:
+                # check if the section is For Healthcare Professionals
+                each.find_element_by_css_selector("#msk_professional")
+                print("under For Healthcare Professionals")
+                # find all sections under For Healthcare Professionals
+                headers = each.find_elements_by_class_name("accordion ")
+                return self.get_pro_content(headers)
+            except NoSuchElementException:
+                print("ignoring other sections")
+                pass
+
+    def get_pro_content(self, headers):
+        """
+        Get pre-defined section contents for each For Healthcare Professionals
+        Store the required secitons to a dict, sections
+        Return sections
+
+        :param WebDriver headers: blocks of herb's info
+        :param dict sections:
+        """
+        # dict to save required sections
+        sections = {}
+        # iterate all sections
+        for each in headers:
+            # find section name: accordion__headline
+            section_name = each.find_element_by_class_name("accordion__headline")  # noqa
+            section_name = section_name.get_attribute("data-listname").strip()
+            section_name = section_name.lower().split(" ")
+            section_name = "_".join(section_name)
+            # check if the section is needed
+            if section_name in self.common_header:
+                # find section content
+                section_content = each.find_element_by_class_name("field-item")
+                # check if the section has bullet points
+                try:
+                    value = section_content.find_element_by_class_name("bullet-list")  # noqa
+                    items = value.find_elements_by_tag_name("li")
+                    bullets = []
+                    for item in items:
+                        bullets.append(item.text.strip())
+                    sections[section_name] = bullets
+                except NoSuchElementException:
+                    sections[section_name] = section_content.text.strip()
+        return sections
+
+    def get_last_update(self):
+        """
+        Find the date the the herb is last updated
+        Return date
+        """
+        section = self.driver.find_element_by_xpath('//*[@id="field-shared-last-updated"]')  # noqa
+        date = section.find_element_by_class_name("datetime")
+        date = date.get_attribute("datetime")
+        return date
+
+    def write_to_file_con(self, data):
+        """
+        Write extracted info, data, to local JSONL file, file_con
+
+        :param dict data: a dict that stores all extracted info
+        """
+        with open(os.path.join(self.path, self.file_con), "a") as output:
+            json.dump(data, output)
+            output.write("\n")
+
+    def process_file(self):
+        """
+        For every line in file_hl, do:
+        1. Use selenium driver to open the herb's URL
+        2. Save each extracted info to a dict
+        3. Save the dict to local JSONL file, file_con
+        """
+        # open the file_hl
+        with open(os.path.join(self.path, self.file_hl), "r") as f:
+            readCSV = csv.reader(f, delimiter=",")
+            for row in readCSV:
+                # the dict to save all extracted info
+                data = {}
+                print("========================")
+                print("processing: " + row[0])
+                data["name"] = row[0]
+                # use selenium to open URL
+                self.driver.get(row[1])
+                sections = self.correct_section()
+                # merge sections into data
+                # ignore the NoneType created by other sections
+                try:
+                    for k, v in sections.items():
+                        data[k] = v
+                except AttributeError:
+                    pass
+                # get herb's lastest update date
+                date = self.get_last_update()
+                data["last_updated"] = date
+                data["url"] = row[1]
+                # get herb's common name(s)
+                common_names = self.get_common_name()
+                data["common_name"] = common_names
+                self.write_to_file_con(data)

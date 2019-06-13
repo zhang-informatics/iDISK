@@ -1,9 +1,0 @@
-*.log
-scripts/geckodriver.log
-scripts/config.py
-scripts/ghostdriver.log
-scripts/util.py
-scripts/config.py
-scripts/__pycache__/*.*
-download/.DS_Store
-download/*.*
