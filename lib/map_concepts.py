@@ -9,9 +9,15 @@ from py2neo import Graph
 from mappers import MetaMapDriver
 
 
+"""
+This script performs all required mapping to existing terminologies
+as specified in the iDISK schema. 
+"""
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--idisk_json", type=str,
+    parser.add_argument("--concepts_file", type=str,
                         help="""Path to iDISK JSON lines file containing
                                 concepts to map.""")
     parser.add_argument("--outfile", type=str,
@@ -129,11 +135,11 @@ def get_annotators(annotator_ini, schema):
     return annotators
 
 
-def map_concepts(annotators, idisk_json, outfile, schema):
-    with open(idisk_json, 'r') as inF:
+def map_concepts(annotators, concepts_file, outfile, schema):
+    with open(concepts_file, 'r') as inF:
         inlines = [json.loads(line) for line in inF]
     outlines = []
-    
+
     # Build the queries to send to the annotators. Held in strings_to_map,
     # this will be a dict from a terminology to a tuple of an ID and a
     # string to map.
@@ -173,7 +179,7 @@ def map_concepts(annotators, idisk_json, outfile, schema):
         ann = annotators[terminology]
         candidates = ann.map(query)
         mappings[terminology] = ann.get_best_mappings(candidates)
-        
+
     # TODO: Update MetaMapDriver's output to make it work with this.
     # Create new iDISK concepts for those mappings with an 'UNK' ID.
     num_syns = sum([len(c["synonyms"]) for c in inlines])
@@ -188,13 +194,12 @@ def map_concepts(annotators, idisk_json, outfile, schema):
                               src=terminology, src_id=mapping["id"],
                               term_type="SY", is_preferred=True)
 
-            
-            
-
 
 if __name__ == "__main__":
+    raise Exception("This script is unfinished and should not be used.")
     args = parse_args()
     schema = Schema(args.uri, args.user, args.password,
                     cypher_file=args.schema_file)
+    concepts = read_concepts(args.concepts_file)
     annotators = get_annotators(args.annotator_conf, schema)
-    map_concepts(annotators, args.idisk_json, args.outfile, schema)
+    map_concepts(annotators, concepts, args.outfile, schema)

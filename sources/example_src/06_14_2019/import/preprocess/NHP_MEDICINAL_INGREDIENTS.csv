@@ -1,0 +1,101 @@
+product_id,proper_name,proper_name_f,common_name,common_name_f,potency_amount,potency_unit_of_measure,potency_unit_of_measure_f,potency_constituent,quantity,quantity_minimum,quantity_maximum,quantity_unit_of_measure,quantity_unit_of_measure_f,ratio_numerator,ratio_denominator,dried_herb_equivalent,dhe_unit_of_measure,dhe_unit_of_measure_f,extract_type_desc,extract_type_desc_f,source_material,source_material_f
+1000,Serenoa repens,Serenoa repens,,,85.0,percent,Pour cent,"free fatty acids, esters and sterols",160.0,,,milligrams,milligramme,,,,,,,,, 
+1000,Serenoa repens,Serenoa repens,,,95.0,percent,Pour cent,"free fatty acids, ester and sterols",,,,,,,,,,,,,, 
+10000,Zea mays,Zea mays,,,,,,,1.0,,,ml,ml,1.0,3.0,,g,g,,,, 
+100000,Selenium,Sélénium,Selenium,Selenium,,,,,50.0,,,micrograms,microgrammes,,,,,,,,Selenium hydrolyzed vegetable protein (HVP) chelate,Produit de chélation de sélénium et de protéine végétale hydrolysée (PVH) 
+100001,DL-alpha-Lipoic acid,Acide DL-alpha-lipoïque,DL-alpha-Lipoic acid,Acide DL-alpha-lipoique,,,,,200.0,,,milligrams,milligramme,,,,,,,,, 
+100001,Ubiquinol,Ubiquinol,Ubiquinol,Ubiquinol,,,,,100.0,,,milligrams,milligramme,,,,,,,,, 
+100002,Carbamide,Carbamide,Urea,Uree,,,,,18.0,,,%,%,,,,,,,,, 
+100003,DL-alpha-Lipoic acid,Acide DL-alpha-lipoïque,DL-alpha-Lipoic acid,Acide DL-alpha-lipoique,,,,,150.0,,,mg,mg,,,,,,,,DL-alpha-Lipoic acid,Acide DL-alpha-lipoÏque 
+100003,Ubiquinol,Ubiquinol,Ubiquinol,Ubiquinol,,,,,100.0,,,mg,mg,,,,,,,,Ubiquinol,Ubiquinol 
+100004,Carbamide,Carbamide,Urea,Uree,,,,,10.0,,,%,%,,,,,,,,, 
+100005,Zinc,Zinc,Zinc,Zinc,,,,,25.0,,,mg,mg,,,,,,,,Zinc Hydrolyzed vegetable protein (HVP) chelate,Produit de chélation de zinc et de protéine végétale hydrolysée (PVH) 
+100006,2-Amino-2-deoxy-D-glucose sulfate,Sulfate de 2-Amino-2-désoxy-D-glucose,Glucosamine sulfate,Sulfate de glucosamine,,,,,1500.0,,,mg,mg,,,,,,,,Crab exoskeleton,Exosquelette de crabe 
+100006,2-Amino-2-deoxy-D-glucose sulfate,Sulfate de 2-Amino-2-désoxy-D-glucose,Glucosamine sulfate,Sulfate de glucosamine,,,,,1500.0,,,mg,mg,,,,,,,,Lobster exoskeleton,exosquelettes de homards 
+100006,2-Amino-2-deoxy-D-glucose sulfate,Sulfate de 2-Amino-2-désoxy-D-glucose,Glucosamine sulfate,Sulfate de glucosamine,,,,,1500.0,,,mg,mg,,,,,,,,Prawn exoskeleton,exosquelettes de crevettes 
+100006,2-Amino-2-deoxy-D-glucose sulfate,Sulfate de 2-Amino-2-désoxy-D-glucose,Glucosamine sulfate,Sulfate de glucosamine,,,,,1500.0,,,mg,mg,,,,,,,,Shrimp exoskeleton,Exosquelette de crevette 
+100006,Chondroitin sulfate,Sulfate de chondroïtine,Chondroitin sulfate,Sulfate de chondroitine,,,,,800.0,,,mg,mg,,,,,,,,Bos taurus - cartilage,Bos taurus - cartilage 
+100007,N-Acetyl-5-methoxytryptamine,N-acétyl-5-méthoxytryptamine,Melatonin,Melatonine,,,,,3.0,,,mg,mg,,,,,,,,Melatonin,Mélatonine 
+100008,N-Acetyl-5-methoxytryptamine,N-acétyl-5-méthoxytryptamine,Melatonin,Melatonine,,,,,5.0,,,mg,mg,,,,,,,,Melatonin,Mélatonine 
+100009,N-Acetyl-5-methoxytryptamine,N-acétyl-5-méthoxytryptamine,Melatonin,Melatonine,,,,,10.0,,,mg,mg,,,,,,,,Melatonin,Mélatonine 
+10001,Avena sativa,Avena sativa,,,,,,,1.0,,,ml,ml,1.0,1.0,1.0,g,g,,,Seed(s),Graine(s) 
+100010,Vitamin A,Vitamine A,Vitamin A,Vitamine A,,,,,10000.0,,,IU,UI,,,,,,,,Vitamin A palmitate,Palmitate de vitamine A 
+100010,Vitamin A,Vitamine A,Vitamin A,Vitamine A,,,,,3000.0,,,micrograms,microgrammes,,,,,,,,Vitamin A palmitate,Palmitate de vitamine A 
+100011,Biotin,Biotine,,,,,,,300.0,,,mcg,mcg,,,,,,,,Biotin,Biotine 
+100011,Choline,Choline,,,,,,,5.0,,,mg,mg,,,,,,,,Choline bitartrate,Bitartrate de choline 
+100011,Folate,Folate,Folic Acid,Acide folique,,,,,400.0,,,mcg,mcg,,,,,,,,Folic acid,Acide folique 
+100011,Inositol,Inositol,,,,,,,5.0,,,mg,mg,,,,,,,,Inositol,Inositol 
+100011,Niacinamide,Niacinamide,Vitamin B3,Vitamine B3,,,,,50.0,,,mg,mg,,,,,,,,Niacinamide,Niacinamide 
+100011,Pantothenic acid,Acide pantothénique,Vitamin B5,Vitamine B5,,,,,50.0,,,mg,mg,,,,,,,,Calcium-d-pantothenate,D-pantothénate de calcium 
+100011,Riboflavin,Riboflavine,Vitamin B2,Vitamine B2,,,,,3.0,,,mg,mg,,,,,,,,Riboflavin-5-phosphate,Riboflavine-5-phosphate 
+100011,Thiamine,Thiamine,Vitamin B1,Vitamine B1,,,,,3.0,,,mg,mg,,,,,,,,Thiamine hydrochloride,Chlorhydrate de thiamine 
+100011,Vitamin B12,Vitamine B12,Cyanocobalamin,Cyanocobalamine,,,,,10.0,,,mg,mg,,,,,,,,Cyanocobalamin,Cyanocobalamine 
+100011,Vitamin B6,Vitamine B6,Pyridoxine,Pyridoxine,,,,,10.0,,,mg,mg,,,,,,,,Pyridoxine hydrochloride,Chlorhydrate de pyridoxine 
+100012,Vitamin D,Vitamine D,Vitamin D3,Vitamine D3,,,,,8.0,,,micrograms,microgrammes,,,,,,,,Cholecalciferol,Cholécalciférol 
+100013,Artemisia vulgaris,Artemisia vulgaris,Common mugwort,Armoise commune,,,,,450.0,,,mg,mg,4.0,1.0,1800.0,mg,mg,Dry,Matériel brut sec,Herb top,Sommité 
+100013,Foeniculum vulgare subsp. vulgare var. vulgare,Foeniculum vulgare subsp. vulgare var. vulgare,Bitter fennel,Fenouil amer,,,,,1000.0,,,mg,mg,1.0,1.0,1000.0,mg,mg,Dry,Matériel brut sec,"Foeniculum vulgare subsp. vulga
+re var. vulgare - Seed",Foeniculum vulgare subsp. vulgare var. vulgare - Seed 
+100013,Raphanus sativus var. sativus,Raphanus sativus var. sativus,Spanish Black Radish,Radis noir d'Espagne,,,,,400.0,,,mg,mg,10.0,1.0,4.0,g,g,,,Root juice,Jus de racine 
+100014,"(2S)-7-[[6-O-(6-Deoxy-alpha-L-mannopyranosyl)-beta-D-glucopyranosyl]oxy]-2,3-dihydro-5-hydroxy-2-(3-hydroxy-4-methoxyphenyl)-4H-1-benzopyran-4-one","(2S)-7-[[6-O-(6-Deoxy-alpha-L-mannopyranosyl)-beta-D-glucopyranosyl]oxy]-2,3-dihydro-5-hydroxy-2-
+(3-hydroxy-4-methoxyphenyl)-4H-1-benzopyran-4-one",Hesperidin,Hesperidine,,,,,50.0,,,milligrams,milligramme,,,,,,,,Citrus sinensis - fruit,Citrus sinensis - fruit 
+100014,"3-(O-6-deoxy-alpha-l-mannopyranosyl-(1-6)-beta-d-glucopyranosyloxy)-2-(3,4-dihydroxyphenyl)-5,7-dihydroxy-4H-chromen-4-one","3-(O-6-désoxy-alpha-l-mannopyranosyl-(1-6)-bêta-d-glucopyranosyloxy)-2-(3,4-dihydroxyphényl)-5,7-dihydroxy-4H-chromen-4-o
+ne",Rutin,Rutine,,,,,50.0,,,milligrams,milligramme,,,,,,,,"Sophora japonica, flower bud","Sophora japonica, bourgeon floral "
+100014,Althaea officinalis,Althaea officinalis,Marshmallow,Guimauve,,,,,36.0,,,milligrams,milligramme,,,,,,,,Root,Racine 
+100014,Arctium lappa,Arctium lappa,Burdock,Bardane,,,,,60.0,,,milligrams,milligramme,,,,,,,,Root,Racine 
+100014,Berberis vulgaris,Berberis vulgaris,European barberry,European barberry,,,,,73.0,,,milligrams,milligramme,,,,,,,,Root,Racine 
+100014,Citrus limon,Citrus limon,Lemon,Citron,50.0,%,%,Bioflavonoids,250.0,,,milligrams,milligramme,,,,,,,,Fruit,Fruit 
+100014,Petroselinum crispum,Petroselinum crispum,Parsley,persil,,,,,35.0,,,milligrams,milligramme,,,,,,,,Root,Racine 
+100014,Petroselinum crispum,Petroselinum crispum,Parsley,persil,,,,,36.0,,,milligrams,milligramme,,,,,,,,Root,Racine 
+100014,Petroselinum crispum,Petroselinum crispum,Parsley,persil,,,,,9.0,,,milligrams,milligramme,,,,,,,,Leaf,Feuille 
+100014,Raphanus sativus var. niger,Raphanus sativus var. niger,Black radish,Radis noir,,,,,109.0,,,milligrams,milligramme,,,,,,,,Root,Racine 
+100014,Raphanus sativus var. niger,Raphanus sativus var. niger,Black radish,Radis noir,,,,,60.0,,,milligrams,milligramme,,,,,,,,Root,Racine 
+100014,Rosa canina,Rosa canina,Dog rose,Rosier des chiens,,,,,250.0,,,milligrams,milligramme,,,,,,,,Hip,Hanche 
+100014,Rubus idaeus,Rubus idaeus,Red raspberry,Framboise rouge,,,,,9.0,,,milligrams,milligramme,,,,,,,,Leaf,Feuille 
+100014,Silybum marianum,Silybum marianum,Milk thistle,Chardon-Marie,80.0,%,%,Silymarin,125.0,,,milligrams,milligramme,,,,,,,,Seed(s),Graine(s) 
+100014,Stachys officinalis,Stachys officinalis,Wood betony,betoine vulgaire,,,,,36.0,,,milligrams,milligramme,,,,,,,,Herb,Plante 
+100014,Taraxacum officinale,Taraxacum officinale,Dandelion,Pissenlit,,,,,75.0,,,milligrams,milligramme,,,,,,,,Root,Racine 
+100014,Taraxacum officinale,Taraxacum officinale,Dandelion,Pissenlit,,,,,85.0,,,milligrams,milligramme,,,,,,,,Root,Racine 
+100014,Verbascum thapsus,Verbascum thapsus,Mullein,molene,,,,,2.0,,,milligrams,milligramme,,,,,,,,Leaf,Feuille 
+100014,Viburnum opulus,Viburnum opulus,Cramp bark,viorne,,,,,36.0,,,milligrams,milligramme,,,,,,,,Bark,Écorce 
+100014,Vitamin C,Vitamine C,Vitamin C,Vitamine C,,,,,500.0,,,milligrams,milligramme,,,,,,,,Ascorbic acid,Acide ascorbique 
+100014,Zingiber officinale,Zingiber officinale,Ginger,Gingembre,,,,,36.0,,,milligrams,milligramme,,,,,,,,Rhizome,Rhizome 
+100014,Zingiber officinale,Zingiber officinale,Ginger,Gingembre,,,,,60.0,,,milligrams,milligramme,,,,,,,,Rhizome,Rhizome 
+100015,Panax quinquefolius,Panax quinquefolius,American ginseng,Ginseng d'Amerique,,,,,500.0,,,milligrams,milligramme,,,,,,,,Panax quinquefolius root,Panax quinquefolius root 
+100016,"2,5-Cyclohexadiene-1,4-dione, 2-[(2E,6E,10E,14E,18E,22E,26E,30E,34E)-3,7,11,15,19,23,27,31,35,39-decamethyl-2,6,10,14,18,22,26,30,34,38-tetracontadecaenyl]-5,6-dimethoxy-3-methyl","2,5-Cyclohexadiène-1,4-dione, 2-[(2E,6E,10E,14E,18E,22E,26E,30E,3
+4E)-3,7,11,15,19,23,27,31,35,39-décaméthyl-2,6,10,14,18,22,26,30,34,38-tétracontadécaényl]-5,6-diméthoxy-3-méthyl",Co Q10,CoQ10,,,,,15.0,,,milligrams,milligramme,,,,,,,,Coenzyme Q10,Coenzyme Q10 
+100016,Allium sativum,Allium sativum,Garlic,Ail,,,,,100.0,,,milligrams,milligramme,,,,,,,,Bulb,Bulbe 
+100016,Camellia sinensis,Camellia sinensis,Green tea extract,Extrait de the vert,45.0,%,%,Epigallocatechin 3-gallate,,,,,,,,,,,,,Leaf,Feuille 
+100016,Camellia sinensis,Camellia sinensis,Green tea extract,Extrait de the vert,6.0,%,%,Caffeine,35.0,,,milligrams,milligramme,5.0,1.0,175.0,milligrams,milligramme,Dry,Matériel brut sec,Leaf,Feuille 
+100016,Camellia sinensis,Camellia sinensis,Green tea extract,Extrait de the vert,85.0,%,%,Polyphenols,,,,,,,,,,,,,Leaf,Feuille 
+100016,Crataegus pinnatifida,Crataegus pinnatifida,Hawthorn Fruit,Fruit d'aubepine,,,,,50.0,,,milligrams,milligramme,50.0,1.0,2500.0,milligrams,milligramme,Dry,Matériel brut sec,Fruit,Fruit 
+100016,Folate,Folate,Folic Acid,Acide folique,,,,,500.0,,,micrograms,microgrammes,,,,,,,,Folate,Folate 
+100016,"Hexanicotinyl cis-1,2,3,5-trans-4,6-cyclohexane","hexanicotinyl cis-1,2,3,5-trans-4,6-cyclohexane",Inositol hexanicotinate,Hexanicotinate d'inositol,,,,,35.0,,,milligrams,milligramme,,,,,,,,"Inositol hexanicotina
+te",Hexanicotinate d'inositol 
+100016,Omega-3 Fatty Acids,Acides gras oméga-3,,,,,,,30.0,,,milligrams,milligramme,,,,,,,,Omega-3 Fatty acids,Acides gras oméga-3 
+100016,Panax notoginseng,Panax notoginseng,Notoginseng,Notoginseng,,,,,40.0,,,milligrams,milligramme,5.0,1.0,200.0,milligrams,milligramme,Dry,Matériel brut sec,Root,Racine 
+100016,Policosanol,Policosanol,,,,,,,5.0,,,milligrams,milligramme,,,,,,,,Policosanol,Policosanol 
+100016,Vitamin B12,Vitamine B12,,,,,,,200.0,,,micrograms,microgrammes,,,,,,,,Vitamin B12,Vitamine B12 
+100016,Vitis Vinifera,Vitis Vinifera,Grape seed extract,Extrait de pepins de raisin,95.0,%,%,Oligomeric proanthocyanidins,50.0,,,milligrams,milligramme,10.0,1.0,500.0,milligrams,milligramme,Dry,Matériel brut sec,Seed(s),"S
+emence(s) "
+100017,Helichrysum italicum,Helichrysum italicum,White-leaf everlasting,Immortelle a feuille large,,,,,100.0,,,%,%,,,,,,,,Herb top flowering,Sommité en fleurs (herbe) 
+100018,9-Hexadecenoic acid,Acide 9-Hexadécenoïque,Palmitoleic acid,Acide palmitoleique,,,,,110.0,,,milligrams,milligramme,,,,,,,,Palmitoleic acid,Acide palmitoléique 
+100018,Krill oil,Huile de krill,Krill oil,Huile de krill,106.0,milligrams,milligramme,Omega-3 Fatty acids,,,,,,,,,,,,,Euphausia superba - Whole,Euphausia superba - en entier 
+100018,Krill oil,Huile de krill,Krill oil,Huile de krill,231.0,milligrams,milligramme,Phospholipids,,,,,,,,,,,,,Euphausia superba - Whole,Euphausia superba - en entier 
+100018,Krill oil,Huile de krill,Krill oil,Huile de krill,264.0,micrograms,microgrammes,Esterified astaxanthin,,,,,,,,,,,,,Euphausia superba - Whole,Euphausia superba - en entier 
+100018,Krill oil,Huile de krill,Krill oil,Huile de krill,29.0,milligrams,milligramme,Docosahexaenoic acid,,,,,,,,,,,,,Euphausia superba - Whole,Euphausia superba - en entier 
+100018,Krill oil,Huile de krill,Krill oil,Huile de krill,53.0,milligrams,milligramme,Eicosapentaenoic acid,500.0,,,milligrams,milligramme,,,,,,,,Euphausia superba - Whole,Euphausia superba - en entier 
+100019,9-Hexadecenoic acid,Acide 9-Hexadécenoïque,Palmitoleic acid,Acide palmitoleique,,,,,110.0,,,milligrams,milligramme,,,,,,,,Palmitoleic acid,Acide palmitoléique 
+100019,Fish oil,Huile de poisson,Fish oil,Huile de poisson,200.0,milligrams,milligramme,Docosahexaenoic acid,,,,,,,,,,,,,Clupeidae - Whole,Clupeidae - en entier 
+100019,Fish oil,Huile de poisson,Fish oil,Huile de poisson,200.0,milligrams,milligramme,Docosahexaenoic acid,,,,,,,,,,,,,Engraulidae - Whole,Engraulidae - en entier 
+100019,Fish oil,Huile de poisson,Fish oil,Huile de poisson,200.0,milligrams,milligramme,Docosahexaenoic acid,,,,,,,,,,,,,Scombridae - Whole,Scombridae - en entier 
+100019,Fish oil,Huile de poisson,Fish oil,Huile de poisson,300.0,milligrams,milligramme,Eicosapentaenoic acid,1000.0,,,milligrams,milligramme,,,,,,,,Clupeidae - Whole,Clupeidae - en entier 
+100019,Fish oil,Huile de poisson,Fish oil,Huile de poisson,300.0,milligrams,milligramme,Eicosapentaenoic acid,1000.0,,,milligrams,milligramme,,,,,,,,Engraulidae - Whole,Engraulidae - en entier 
+100019,Fish oil,Huile de poisson,Fish oil,Huile de poisson,300.0,milligrams,milligramme,Eicosapentaenoic acid,1000.0,,,milligrams,milligramme,,,,,,,,Scombridae - Whole,Scombridae - en entier 
+10002,Turmeric,Curcuma,,,,,,,1.0,,,ml,ml,1.0,3.0,,g,g,,,, 
+100020,(S)-alpha-Amino-4-hydroxybenzenepropanoic acid,Acide (S)-alpha-amino-4-hydroxybenzènepropanoïque,L-Tyrosine,L-Tyrosine,,,,,110.0,,,milligrams,milligramme,,,,,,,,L-Tyrosine,L-Tyrosine 
+100020,"3,7-Dihydro-1,3,7-trimethyl-1H-purine-2,6-dione","3,7-dihydro-1,3,7-triméthyl-1H-purine-2,6-dione",Caffeine,Cafeine,,,,,180.0,,,milligrams,milligramme,,,,,,,,Caffeine,Caféine 
+100020,Capsicum annuum,Capsicum annuum,Cayenne pepper,Piment de cayenne,,,,,5.0,,,milligrams,milligramme,,,,,,,,Fruit,Fruit 
+100020,Chromium,Chrome,,,,,,,100.0,,,micrograms,microgrammes,,,,,,,,Chromium picolinate,Picolinate de chrome 
+100020,Citrus aurantium,Citrus aurantium,Bitter Orange,Orange amere,,,,,60.0,,,milligrams,milligramme,,,,,,,,Unripe fruit,Fruit non mûr 
+100020,Paullinia cupana,Paullinia cupana,Guarana,guarana,,,,,90.0,,,milligrams,milligramme,,,,,,,,Seed pod,Seed pod 
+100020,Piper nigrum,Piper nigrum,Black pepper,Poivre noir,,,,,5.0,,,milligrams,milligramme,,,,,,,,Fruit,Fruit 
