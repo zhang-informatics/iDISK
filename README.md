@@ -16,26 +16,27 @@ iDISK/			# Top-level directory containing all iDISK related files. Set as the $I
   versions/		# Contains directories containing different iDISK versions.
 
 doc/
-  main.pdf		# Full documentation for iDISK
+  main.pdf		# The full documentation for iDISK.
   src/			# The source TeX files for compiling main.pdf.
 
 lib/
-  set_functions.py	# Functions for combining iDISK concepts.
-  to_prodigy.py		# Conversion script from iDISK JSON lines format to the format expected by the Prodigy annotation tool.
-  tests/	        # Unit tests for the above.
+  idlib/		  # The iDISK API library. A Python package. See corresponding documentation for details.
+  annotation/		  # Scripts related to annotation of iDISK concepts and related data.
+  mappers/		  # Scripts for mapping iDISK concepts and related data to existing terminologies such as UMLS and MedDRA.
+  filter_connections*.py  # Scripts for determining which concepts to merge.
 
 sources/
   README.md		  # File describing the general process for importing source databases into iDISK.
   NMCD/			  # The name of the source database.
     08_01_2018/		  # The date (MM_DD_YYYY) when the source files were downloaded.
       README.md		  # Documentation for this download, including download URL, data version (if applicable), caveats, etc.
-      download/		  # Contains the downloaded data files in their original format.
+      download/		  # Contains the downloaded data files in their original raw format.
       import/		  # Contains the data files in a standard format for importing into iDISK.
 	preprocess/       # Files containing any intermediary preprocessing moving from download/ to import/.
-      ingredients.jsonl   # The file containing ingredients to import into iDISK.
-      products.jsonl  	  # The file containing products to import into iDISK.
-      ....jsonl		  # Other files containing concepts as required.
-      scripts/		  # Scripts required to import this version of this data source.
+        ingredients.jsonl # The file containing ingredients to import into iDISK.
+        products.jsonl    # The file containing products to import into iDISK.
+        ....jsonl	  # Other files containing concepts as required.
+      scripts/		  # Scripts for converting the source data in its raw format to the iDISK format.
     12_01_2017/
       .../
   DSLD/
@@ -98,7 +99,7 @@ After cloning this repository, install `idlib`, the iDISK API library.
 `idlib` is bundled with iDISK: go to `lib/idlib` and follow the instructions in the README.
 
 The rest of this guide assumes you have *properly* populated the `sources/` directory.
-A guide for doing this is coming soon.
+You can find a detailed example of how to do this at `sources/example_src`.
 
 Edit the variables in the PROJECT CONFIGURATION section of the `Makefile` as necessary. Then run,
 
@@ -116,7 +117,17 @@ source activate idisk
 make connections
 ```
 
-These connections can either be used directly, but it is advisable to filter them. 
+These connections can either be used directly, but it is advisable to filter them. Two methods of
+filtering connections are implemented: The first removes connections based on some simple rules; the
+second removes connections using human annotations.
+
+To run the first method:
+
+```
+make filter_annotations
+```
+
+To run the second method, follow these instructions:
 iDISK implements the Prodigy annotation tool for classifying connected pairs as one of the following labels:
 
 * Equal
@@ -134,7 +145,7 @@ make run_annotation
 Once the annotation is complete, filter the connections according to the annotations with
 
 ```
-make filter_connections
+make filter_connections_ann
 ```
 
 Finally, now that we're confident in our connected concepts, we can merge them.
