@@ -4,7 +4,17 @@ import argparse
 from idlib import Atom, Concept, Attribute, Relationship
 
 
-class ConceptMapper(object):
+def parse_arg():
+    """
+    Set up arguments
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--content_file", type=str,
+                        required=True,
+                        help="JSONL file to store herb and its content")
+
+
+class MSKCC_Converter(object):
     """
     Map each extracted info into iDISK format:
     - Atom: self.generate_atom()
@@ -16,17 +26,7 @@ class ConceptMapper(object):
     def __init__(self):
         pass
 
-    def parse_arg(self):
-        """
-        Set up arguments
-        """
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--file_location", type=str,
-                            required=True,
-                            help="the parent path of for file_con")
-        parser.add_argument("--file_con", type=str,
-                            required=True,
-                            help="JSONL file to store herb and its content")
+
 
     def remove(self, content):
         """
@@ -39,9 +39,13 @@ class ConceptMapper(object):
         :rtype: list
         """
         if isinstance(list, content):
-            output = []
+            output = [each.split(":")[0] for each in content]
+            return output
+        else:
+            return [content.split(":")[0]]
 
-    def iterate_mskcc_file(self, path, read_file):
+
+    def iterate_mskcc_file(self, path, read_file, source):
         """
         For MSKCC source data ONLY
         Iterate the extracted JSONL file
@@ -61,19 +65,36 @@ class ConceptMapper(object):
 
         :param str path: the parent path of the extracted JSONL file
         :param str read_file: the file name of the the extracted JSONL file
+        :param str source: data source
         """
         with open(os.path.join(path, read_file), "r") as f:
             for line in f:
+                # counter as Atom's src_id
+                # TODO: discuss with Jake about better src_id choice
+                counter = 0
                 # load all extracted info
                 items = json.loads(line)
 
-    def generate_atom(self, info, line_number):
+    def generate_atom(self, info, counter, source, term_type):
         """
         Given the input, generate an iDISK Atom
-        Return the generated iDISK Atom
+        Return the generated iDISK
 
         :param str info: the extracted content that needs to map to Atom
-        :param int line_number: the line number that the content fits in
+        :param int counter: counter as Atom's src_id
+        :param str source: data source
+        :param str term_type: Atom term type
         :return: the generated iDISK Atom
         :rtype: idlib.Atom
         """
+        cleaned_info = self.remove(info)
+        atoms = []
+        # add each term in the input as iDISK Atom
+        for each in cleaned_info:
+            atom = Atom(each, src=source, src_id=source+str(counter),
+                        term_type=term_type, is_preferred=True)
+            atoms.append(atom)
+            # increase counter
+            counter += 1
+        return atoms
+

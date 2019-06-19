@@ -1,9 +1,28 @@
-import os
 import argparse
-from CancerUrl import CancerUrl
-from CancerContext import CancerContext
+
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
+
+from mskcc_web_scraper import MSKCC_URL
+from mskcc_web_scraper import MSKCC_Content
+
+
+def parse_args():
+    """
+    Set up arguments
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--al_file", type=str,
+                        required=True,
+                        help="Full path to the CSV file to store alphabetic listing URL.")  # noqa
+    parser.add_argument("--herb_file", type=str,
+                        required=True,
+                        help="Full path to the CSV file to store all MSKCC herb's URLs.")  # noqa
+    parser.add_argument("--content_file", type=str,
+                        required=True,
+                        help="Full path to the JSONL file to store herb and its content.")  # noqa
+    args = parser.parse_args()
+    return args
 
 
 class ExtractDriver(object):
@@ -11,10 +30,17 @@ class ExtractDriver(object):
     The driver for extracting herb url and pre-defined headers
     """
 
-    def __init__(self):
-        # get downloaded file location
-        self.path = os.path.dirname(os.getcwd())
-        self.path = os.path.join(self.path, "download")
+    def __init__(self, al_file, herb_file, content_file):
+        """
+        ExtractDriver consturctor
+
+        :param str al_file: the full path of alphabetic listing CSV file  # noqa
+        :param str herb_file: the full path of herb URL CSV file  # noqa
+        :param str content_file: the full path of herb content JSONL file  # noqa
+        """
+        self.al_file = al_file
+        self.herb_file = herb_file
+        self.content_file = content_file
 
     def setup_driver(self):
         """
@@ -28,65 +54,44 @@ class ExtractDriver(object):
         driver.implicitly_wait(1)
         return driver
 
-    def parse_arg(self):
-        """
-        Set up arguments
-        """
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--file_al", type=str,
-                            required=True,
-                            help="JSONL file to store alphabetic listing URL.")
-        parser.add_argument("--file_hl", type=str,
-                            required=True,
-                            help="csv file to store all MSKCC herb's URLs.")
-        parser.add_argument("--file_con", type=str,
-                            required=True,
-                            help="JSONL file to store herb and its content.")
-        args = parser.parse_args()
-        return args
-
-    def get_herb_url(self, driver, path, file_al, file_hl):
+    def get_herb_url(self, driver, al_file, herb_file):
         """
         Get URL for each MSKCC herb
 
         :param WebDriver driver: selenium driver
         :param str path: local file to store extracted info
-        :param str file_al: csv file to store alphabetic listing
-        :param str fiel_hl: csv file to store all MSKCC herb's URLs
+        :param str al_file: csv file to store alphabetic listing
+        :param str herb_file: csv file to store all MSKCC herb's URLs
         """
-        url_getter = CancerUrl(driver, path, file_al, file_hl)
+        url_getter = MSKCC_URL(driver, al_file, herb_file)
         url_getter.run()
 
-    def get_herb_content(self, driver, path, file_hl, file_con):
+    def get_herb_content(self, driver, herb_file, content_file):
         """
         Get contents for each MSKCC herb
 
         :param WebDriver driver: selenium driver
-        :param str path: local file to store extracted info
-        :param str fiel_hl: csv file to store all MSKCC herb's URLs
-        :param str file_con: JSONL file to store all extracted contents
+        :param str herb_file: CSV file to store all MSKCC herb's URLs
+        :param str content_file: JSONL file to store all extracted contents
         """
-        content_getter = CancerContext(driver, path, file_hl, file_con)
+        content_getter = MSKCC_Content(driver, herb_file, content_file)
         content_getter.process_file()
 
     def extract_process(self):
         """
-        Main function for ExtractDriver
+        Main function for ExtractDriver class
         """
-        # set up arguments
-        args = self.parse_arg()
         # set up driver
         driver = self.setup_driver()
-        '''
         # extract herb url
-        self.get_herb_url(driver, self.path,
-                          args.file_al, args.file_hl)
-        '''
+        self.get_herb_url(driver, self.al_file,
+                          self.herb_file)
         # extract herb content
-        self.get_herb_content(driver, self.path,
-                              args.file_hl, args.file_con)
+        self.get_herb_content(driver, self.herb_file,
+                              self.content_file)
 
 
 if __name__ == "__main__":
-    x = ExtractDriver()
+    args = parse_args()
+    x = ExtractDriver(args.al_file, args.herb_file, args.content_file)
     x.extract_process()
