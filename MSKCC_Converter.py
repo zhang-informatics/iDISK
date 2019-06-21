@@ -1,17 +1,20 @@
-import os
 import json
 import argparse
+
 from idlib import Atom, Concept, Attribute, Relationship
 
 
-def parse_arg():
+def parse_args():
     """
     Set up arguments
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--content_file", type=str,
                         required=True,
-                        help="JSONL file to store herb and its content")
+                        help="JSONL file that stores herb and contents")
+    parser.add_argument("--idisk_output", type=str,
+                        required=True,
+                        help="JSONL file to store iDISK format")
 
 
 class MSKCC_Converter(object):
@@ -23,10 +26,13 @@ class MSKCC_Converter(object):
     - Relationship: self.generate_rel()
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, content_file):
+        """
+        MSKCC_Converter constructor
 
-
+        :param str content_file: full path to extracted MSKCC JSONL file
+        """
+        self.content_file = content_file
 
     def remove(self, content):
         """
@@ -44,8 +50,7 @@ class MSKCC_Converter(object):
         else:
             return [content.split(":")[0]]
 
-
-    def iterate_mskcc_file(self, path, read_file, source):
+    def iterate_mskcc_file(self, content_file, source):
         """
         For MSKCC source data ONLY
         Iterate the extracted JSONL file
@@ -56,18 +61,17 @@ class MSKCC_Converter(object):
         scientific_name     Scientific Name     Atom        None  # noqa
         common_names        Synonym     Atom        None  # noqa
         clinical_summary        Background      Attribute       None  # noqa
-        purported_uses      Diseases        Concept     effects_on/"inverse_effects_on  # noqa
+        purported_uses      Diseases        Concept     effects_on/inverse_effects_on  # noqa
         mechanism_of_action     Mechanism of Action     Attribute       None  # noqa
         warnings        Safety      Attribute       None  # noqa
         adverse_reactions       Signs/Symptoms      Concept     has_adverse_reaction/adverse_reaction_of  # noqa
         herb-drug_interactions      Pharmacological drug        Concept     interact_with  # noqa
         original herb name      Preferred Name/Semantic Dietary Supplement Ingredient (SDSI)        Concept     None  # noqa
 
-        :param str path: the parent path of the extracted JSONL file
-        :param str read_file: the file name of the the extracted JSONL file
+        :param str content_file: the file name of the the extracted JSONL file
         :param str source: data source
         """
-        with open(os.path.join(path, read_file), "r") as f:
+        with open(content_file, "r") as f:
             for line in f:
                 # counter as Atom's src_id
                 # TODO: discuss with Jake about better src_id choice
@@ -97,4 +101,3 @@ class MSKCC_Converter(object):
             # increase counter
             counter += 1
         return atoms
-

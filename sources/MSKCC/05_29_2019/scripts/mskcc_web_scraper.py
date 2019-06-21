@@ -63,7 +63,7 @@ class MSKCC_URL(object):
     def write_to_alphabetic_listing_csv(self, infile):
         """
         For alphabetic listing
-        Write the alphabetic listing URL into a local file: file_al
+        Write the alphabetic listing URL into a local file: infile
 
         :param str infile: the full path of alphabetic listing URL csv file
         """
@@ -82,7 +82,7 @@ class MSKCC_URL(object):
     def write_to_herb_listing_csv(self, outfile):
         """
         For individual herb
-        Write the dict, self.herbs, to the local file: file_hl
+        Write the dict, self.herbs, to the local file: herb_file
         self.herbs stores every single herb and the associated URL
         i.e., self.herb["herb_A"]: "herb_A_url_in_MSKCC"
 
@@ -102,7 +102,7 @@ class MSKCC_URL(object):
     def save_to_dict(self, name, link):
         """
         For individual herb
-        Save the herb name and the associated URL in self.herbs, a dictionday
+        Save the herb name and the associated URL in self.herbs, a dict
 
         :param str name: individual herb name, i.e. Vitamin E
         :param str link: the extracted herb's URL
@@ -173,7 +173,7 @@ class MSKCC_URL(object):
 
     def run(self):
         """
-        Main function for CancerUrl class
+        Main function for MSKCC_URL class
         """
         # find alphabetic listing url
         self.create_keyword_file(self.infile)
@@ -305,7 +305,7 @@ class MSKCC_Content(object):
 
     def write_to_output_file(self, data):
         """
-        Write extracted info, data, to local JSONL file, file_con
+        Write extracted info, data, to local JSONL file, content_file
 
         :param dict data: a dict that stores all extracted info
         """
@@ -315,10 +315,11 @@ class MSKCC_Content(object):
 
     def process_file(self):
         """
-        For every line in file_hl, do:
+        For every line in herb_file, do:
         1. Use selenium driver to open the herb's URL
         2. Save each extracted info to a dict
-        3. Save the dict to local JSONL file, file_con
+        3. Save the dict to local JSONL file, content_file
+        Each dict represents an herb in MSKCC
         """
         # open the file_hl
         with open(self.infile, "r") as f:
@@ -333,12 +334,8 @@ class MSKCC_Content(object):
                 self.driver.get(row["url"])
                 sections = self.correct_section()
                 # merge sections into data
-                # ignore the NoneType created by other sections
-                try:
-                    for k, v in sections.items():
-                        data[k] = v
-                except AttributeError:
-                    pass
+                if sections is not None:
+                    data.update(sections)
                 # get herb's lastest update date
                 date = self.get_last_updated_date()
                 data["last_updated"] = date
