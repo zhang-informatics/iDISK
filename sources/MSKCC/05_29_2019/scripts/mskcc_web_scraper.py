@@ -1,7 +1,3 @@
-import csv
-import json
-import os
-
 from selenium.common.exceptions import NoSuchElementException
 
 
@@ -21,7 +17,7 @@ class MSKCC_URL(object):
     Save each herb's URL into file_hl
     """
 
-    def __init__(self, driver, infile_csv, outfile_csv):
+    def __init__(self, driver):
         """
         MSKCC_URL class constructor
 
@@ -29,7 +25,6 @@ class MSKCC_URL(object):
         :param str infile_csv: full path for alphabetic listing csv file
         :param str outfile_csv: full path for each MSKCC herb
         """
-        self.urls = {}
         self.domain = "https://www.mskcc.org/cancer-care"  # noqa
         self.start_page = "https://www.mskcc.org/cancer-care/diagnosis-treatment/symptom-management/integrative-medicine/herbs/search"  # noqa
         # pages that are split by herb leading character
@@ -37,10 +32,8 @@ class MSKCC_URL(object):
         # url for each herb
         self.herbs = {}
         self.driver = driver
-        self.infile = infile_csv
-        self.outfile = outfile_csv
 
-    def create_keyword_file(self, infile):
+    def create_keyword_file(self):
         """
         For alphabetic listing
         Load herb URL in alphabetic listing
@@ -58,57 +51,6 @@ class MSKCC_URL(object):
             else:
                 url = self.domain + url
                 self.pages[each.text] = url
-        self.write_to_alphabetic_listing_csv(infile)
-
-    def write_to_alphabetic_listing_csv(self, infile):
-        """
-        For alphabetic listing
-        Write the alphabetic listing URL into a local file: infile
-
-        :param str infile: the full path of alphabetic listing URL csv file
-        """
-        print("start writing leading character specific website into file")
-        headers = ["char", "url"]
-        # if it is the first time, write header before anything else
-        file_exists = os.path.isfile(infile)
-        with open(infile, "a") as f:
-            w = csv.DictWriter(f, delimiter=",",
-                               fieldnames=headers)
-            if not file_exists:
-                w.writeheader()
-            for k, v in self.pages.items():
-                w.writerow({"char": k, "url": v})
-
-    def write_to_herb_listing_csv(self, outfile):
-        """
-        For individual herb
-        Write the dict, self.herbs, to the local file: herb_file
-        self.herbs stores every single herb and the associated URL
-        i.e., self.herb["herb_A"]: "herb_A_url_in_MSKCC"
-
-        :param str outfile: the full path of herb listing URL csv file
-        """
-        headers = ["herb", "url"]
-        # if it is the first time, write header before anything else
-        file_exists = os.path.isfile(outfile)
-        with open(outfile, "a") as f:
-            w = csv.DictWriter(f, delimiter=",",
-                               fieldnames=headers)
-            if not file_exists:
-                w.writeheader()
-            for k, v in self.herbs.items():
-                w.writerow({"herb": k, "url": v})
-
-    def save_to_dict(self, name, link):
-        """
-        For individual herb
-        Save the herb name and the associated URL in self.herbs, a dict
-
-        :param str name: individual herb name, i.e. Vitamin E
-        :param str link: the extracted herb's URL
-        """
-        if name not in self.herbs:
-            self.herbs[name] = link
 
     def complete_url(self, link):
         """
@@ -137,48 +79,43 @@ class MSKCC_URL(object):
             link = each.get_attribute("href")
             link = self.complete_url(link)
             name = each.text.strip()
-            self.save_to_dict(name, link)
+            if name not in self.herbs:
+                self.herbs[name] = link
 
-    def load_entire_page(self, infile, outfile):
+    def load_entire_page(self):
         """
         For alphabetic listing
         Load entire page for a specific character
         I.e., load entire page under leading character "A"
-
-        :param str infile: the full path of alphabetic listing URL csv file
-        :param str outfile: the full path of herb listing URL csv file
         """
         print("Start to extract")
-        # check if the file exists
-        if os.path.exists(infile):
-            with open(infile, "r") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    url = row["url"]
-                    self.driver.get(url)
-                    try:
-                        while self.driver.find_element_by_link_text("Load More"):  # noqa
-                            self.driver.find_element_by_link_text(
+        for char, url in self.pages.items():
+            print("Currently processing leading char: " + char)
+            self.driver.get(url)
+            # load all page
+            try:
+                while self.driver.find_element_by_link_text("Load More"):  # noqa
+                    self.driver.find_element_by_link_text(
                                     "Load More").click()
-                            self.extract_url()
-                    except NoSuchElementException:
-                        self.extract_url()
-            self.write_to_herb_listing_csv(outfile)
-        else:
-            print("No such file, regenrating now...")
-            self.create_keyword_file(infile)
-            print("Re-running the function...")
-            self.load_entire_page(infile, outfile)
+                    self.extract_url()
+            except NoSuchElementException:
+                self.extract_url()
         print("Finish extracting.")
 
-    def run(self):
+    def get_herb_url(self):
         """
         Main function for MSKCC_URL class
+        Return self.herbs that follows the below format
+        self.herbs["herb_a"] = "herb_a's url"
+
+        :return: dict that contains each herb's URL
+        :rtype: dict
         """
         # find alphabetic listing url
-        self.create_keyword_file(self.infile)
+        self.create_keyword_file()
         # find all ingredient urls
-        self.load_entire_page(self.infile, self.outfile)
+        self.load_entire_page()
+        return self.herbs
 
 
 class MSKCC_Content(object):
@@ -187,13 +124,12 @@ class MSKCC_Content(object):
     This is a following-up class for MSKCC_URL.py
     """
 
-    def __init__(self, driver, infile, outfile):
+    def __init__(self, driver):
         """
         MSKCC_Content constructor
 
         :param WebDriver driver: selenium driver, setup in ExtractDriver class
-        :param str infile: full path for each herb csv file
-                               generated from MSKCC_URL
+        :param dict herbs: MSKCC herb and its URL, generated from MSKCC_URL
         :param str outfile: full path for each herb content JSONL file
         """
         # common headers for each herb
@@ -203,10 +139,6 @@ class MSKCC_Content(object):
                               "adverse_reactions", "herb-drug_interactions"]
         # selenium driver, setup in ExtractDriver class
         self.driver = driver
-        # csv file to store all MSKCC herb's URLs
-        self.infile = infile
-        # JSONL file to store all pre-defined content
-        self.outfile = outfile
 
     def get_common_name(self):
         """
@@ -257,7 +189,6 @@ class MSKCC_Content(object):
         Return sections
 
         :param WebDriver headers: blocks of herb's info
-        :param dict sections:
         :return: a dict that contains all pre-defined sections and contents
         :rtype: dict
         """
@@ -303,44 +234,27 @@ class MSKCC_Content(object):
         date = date.get_attribute("datetime")
         return date
 
-    def write_to_output_file(self, data):
-        """
-        Write extracted info, data, to local JSONL file, content_file
-
-        :param dict data: a dict that stores all extracted info
-        """
-        with open(self.outfile, "a") as output:
-            json.dump(data, output)
-            output.write("\n")
-
-    def process_file(self):
+    def get_content_from_url(self, herb_name, url):
         """
         For every line in herb_file, do:
         1. Use selenium driver to open the herb's URL
         2. Save each extracted info to a dict
-        3. Save the dict to local JSONL file, content_file
-        Each dict represents an herb in MSKCC
+        3. Return the dict
+
+        :return: the dict that contains required content
+        :rtype: dict
         """
-        # open the file_hl
-        with open(self.infile, "r") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                # the dict to save all extracted info
-                data = {}
-                print("========================")
-                print("processing: " + row["herb"])
-                data["name"] = row["herb"]
-                # use selenium to open URL
-                self.driver.get(row["url"])
-                sections = self.correct_section()
-                # merge sections into data
-                if sections is not None:
-                    data.update(sections)
-                # get herb's lastest update date
-                date = self.get_last_updated_date()
-                data["last_updated"] = date
-                data["url"] = row["url"]
-                # get herb's common name(s)
-                common_names = self.get_common_name()
-                data["common_name"] = common_names
-                self.write_to_output_file(data)
+        data = {}
+        data["herb_name"] = herb_name
+        data["url"] = url
+        print("---------------------")
+        print("Currently processing herb: " + herb_name)
+        self.driver.get(url)
+        sections = self.correct_section()
+        # merge sections into data
+        if sections is not None:
+            data.update(sections)
+        data["last_updated_date"] = self.get_last_updated_date()
+        data["common_name"] = self.get_common_name()
+        print("---------------------")
+        return data
