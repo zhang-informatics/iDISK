@@ -25,7 +25,6 @@ class Atom(object):
     _ui_template = "DA{0:07}"
 
     def __init__(self, term, src, src_id, term_type, is_preferred, ui=None):
-        self._check_params(term, src, src_id, term_type, is_preferred, ui)
         self.term = term  # 5-HTP
         self.src = src  # NMCD
         self.src_id = src_id  # 1234
@@ -37,6 +36,7 @@ class Atom(object):
         else:
             self.ui = ui
             self.init_counter(int(ui.replace("DA", "")))
+        self._check_params()
 
     def __repr__(self):
         # Verbose representation.
@@ -60,16 +60,16 @@ class Atom(object):
                     self.src_id == other.src_id,
                     self.term_type == other.term_type])
 
-    def _check_params(self, term, src, src_id, term_type, is_preferred, ui):
-        assert isinstance(term, str)
-        assert src.upper() in SOURCES
-        assert isinstance(src_id, str)
-        assert term_type.upper() in TERM_TYPES
-        if term_type.upper() == "PN":
+    def _check_params(self):
+        assert isinstance(self.term, str)
+        assert self.src.upper() in SOURCES
+        assert isinstance(self.src_id, str)
+        assert self.term_type.upper() in TERM_TYPES
+        if self.term_type.upper() == "PN":
             msg = "Term type PN (preferred name) is deprecated. Use PT (preferred term) instead."  # noqa
             warnings.warn(msg, DeprecationWarning)
-        assert isinstance(is_preferred, bool)
-        assert isinstance(ui, (type(None), str))
+        assert isinstance(self.is_preferred, bool)
+        assert isinstance(self.ui, (type(None), str))
 
     def to_dict(self):
         """
@@ -149,14 +149,12 @@ class Concept(object):
     _ui_template = "{0}{1:07}"  # Prefix, number
     _source_rank = SOURCES
 
-    def __init__(self, concept_type, atoms=[],
-                 attributes=[], relationships=[], ui=None):
-        self._check_params(concept_type, atoms, attributes,
-                           relationships, ui)
+    def __init__(self, concept_type, atoms=None, attributes=None,
+                 relationships=None, ui=None):
         self.concept_type = concept_type
-        self.atoms = atoms
-        self.attributes = attributes
-        self.relationships = relationships
+        self.atoms = atoms or []
+        self.attributes = attributes or []
+        self.relationships = relationships or []
         # Set the UI for this concept
         if ui is None:
             self._increment()
@@ -166,6 +164,7 @@ class Concept(object):
             self.init_counter(int(ui[-7:]))
         self._preferred_atom = None
         self.__refs__[self.__class__].append(weakref.ref(self))
+        self._check_params()
 
     def __repr__(self):
         return f"{self.preferred_atom} ({self.ui} {self.concept_type})"
@@ -182,20 +181,20 @@ class Concept(object):
         return all([self.concept_type == other.concept_type,
                     self.atoms == other.atoms])
 
-    def _check_params(self, concept_type, atoms, attributes,
-                      relationships, ui):
-        assert isinstance(concept_type, str)
-        assert concept_type in CONCEPT_TYPES
-        assert isinstance(atoms, list)
-        assert all([isinstance(atom, Atom) for atom in atoms])
-        assert all([isinstance(atr, Attribute) for atr in attributes])
-        assert all([isinstance(rel, Relationship) for rel in relationships])
-        assert isinstance(ui, (type(None), str))
+    def _check_params(self):
+        assert isinstance(self.concept_type, str)
+        assert self.concept_type in CONCEPT_TYPES
+        assert isinstance(self.atoms, list)
+        assert all([isinstance(atom, Atom) for atom in self.atoms])
+        assert all([isinstance(atr, Attribute) for atr in self.attributes])
+        assert all([isinstance(rel, Relationship)
+                    for rel in self.relationships])
+        assert isinstance(self.ui, (type(None), str))
 
     @property
     def ui(self):
         """
-        The unique identifier is always dynamically determined by the 
+        The unique identifier is always dynamically determined by the
         values of self._prefix and self._num.
         """
         return self._ui_template.format(self._prefix, self._num)
@@ -203,7 +202,7 @@ class Concept(object):
     @ui.setter
     def ui(self, value):
         """
-        The unique identifier is always dynamically determined by the 
+        The unique identifier is always dynamically determined by the
         values of self._prefix and self._num. However, the values of these
         hidden variables can be modified by using the UI setter.
 
@@ -253,10 +252,12 @@ class Concept(object):
             elif r_type == "dict":
                 yield atom.to_dict()
 
-    def get_attributes(self, r_type="object"):
+    def get_attributes(self, atr_name=None, r_type="object"):
         """
         Returns a generator over the attributes of this concept.
 
+        :param str atr_name: If not None (default), return only those
+                             attributes of type atr_name.
         :param str r_type: How to yield each attribute. Possible values
                            are ["object", "dict"]. If "object", yields
                            Attribute instances. If "dict", yields dicts
@@ -266,16 +267,21 @@ class Concept(object):
         """
         if r_type.lower() not in ["object", "dict"]:
             raise ValueError("rtype must be 'object' or 'dict'.")
-        for atr in self.attributes:
+        return_atrs = self.attributes
+        if atr_name is not None:
+            return_atrs = [a for a in return_atrs if a.atr_name == atr_name]
+        for atr in return_atrs:
             if r_type == "object":
                 yield atr
             elif r_type == "dict":
                 yield atr.to_dict()
 
-    def get_relationships(self, r_type="object"):
+    def get_relationships(self, rel_name=None, r_type="object"):
         """
         Returns a generator over the relationships of this concept.
 
+        :param str rel_name: If not None (default), return only those
+                             relationships of type rel_name.
         :param str r_type: How to yield each relationship. Possible values
                            are ["object", "dict"]. If "object", yields
                            Relationship instances. If "dict", yields dicts
@@ -285,7 +291,10 @@ class Concept(object):
         """
         if r_type.lower() not in ["object", "dict"]:
             raise ValueError("rtype must be 'object' or 'dict'.")
-        for rel in self.relationships:
+        return_rels = self.relationships
+        if rel_name is not None:
+            return_rels = [r for r in return_rels if r.rel_name == rel_name]
+        for rel in return_rels:
             if r_type == "object":
                 yield rel
             elif r_type == "dict":
@@ -365,27 +374,6 @@ class Concept(object):
         :param int num: The number to initialize with.
         """
         cls._counter = num
-
-    @classmethod
-    def from_atoms(cls, atoms, concept_type, attributes=[], relationships=[]):
-        """
-        Create a Concept instance from a collection of Atom instances.
-
-        :param list(Atom) atoms: Atom instances that comprise this concept.
-        :param str concept_type: The iDISK type of this concept. E.g. 'SDSI'.
-        :param list(Attribute) attributes: Attributes of this concept.
-                                           Optional.
-        :param list(Relationship) relationships: Relationships of this concept.
-                                                 Optional.
-        :returns: Concept made up of the specified atoms.
-        :rtype: Concept
-        """
-        assert all([isinstance(atom, Atom) for atom in atoms])
-        assert all([isinstance(atr, Attribute) for atr in attributes])
-        assert all([isinstance(rel, Relationship) for rel in relationships])
-        return cls(concept_type=concept_type,
-                   atoms=atoms, attributes=attributes,
-                   relationships=relationships)
 
     # TODO: Check for valid JSON
     @classmethod
@@ -471,13 +459,13 @@ class Attribute(object):
     _ui_template = "DAT{0:07}"
 
     def __init__(self, subject, atr_name, atr_value, src):
-        self._check_params(subject, atr_name, atr_value, src)
         self._increment()
         self.ui = self._ui_template.format(self._counter)
         self.subject = subject
         self.atr_name = atr_name
         self.atr_value = atr_value
         self.src = src
+        self._check_params()
 
     def __repr__(self):
         return str(self.to_dict(return_subject=True))
@@ -499,11 +487,11 @@ class Attribute(object):
                     self.atr_value == other.atr_value,
                     self.src == other.src])
 
-    def _check_params(self, subject, atr_name, atr_value, src):
-        assert isinstance(subject, (Concept, Relationship))
-        assert isinstance(atr_name, str)
-        assert isinstance(atr_value, str)
-        assert isinstance(src, str)
+    def _check_params(self):
+        assert isinstance(self.subject, (Concept, Relationship))
+        assert isinstance(self.atr_name, str)
+        assert isinstance(self.atr_value, str)
+        assert isinstance(self.src, str)
 
     def to_dict(self, return_subject=False, verbose_subject=False):
         """
@@ -593,8 +581,7 @@ class Relationship(object):
     _counter = 0
     _ui_template = "DR{0:07}"
 
-    def __init__(self, subject, rel_name, obj, src, attributes=[]):
-        self._check_params(subject, rel_name, obj, src, attributes)
+    def __init__(self, subject, rel_name, obj, src, attributes=None):
         self._increment()
         self.ui = self._ui_template.format(self._counter)
         self.subject = subject
@@ -602,7 +589,8 @@ class Relationship(object):
         self.object = obj
         self.src = src
         # Relationship attributes
-        self.attributes = attributes
+        self.attributes = attributes or []
+        self._check_params()
 
     def __repr__(self):
         return self.ui
@@ -625,13 +613,13 @@ class Relationship(object):
                     self.object == other.object,
                     self.src == other.src])
 
-    def _check_params(self, subject, rel_name, obj, src, attributes):
-        assert isinstance(subject, Concept)
-        assert isinstance(rel_name, str)
+    def _check_params(self):
+        assert isinstance(self.subject, Concept)
+        assert isinstance(self.rel_name, str)
         # Object can be a concept or a concept UI.
-        assert isinstance(obj, (Concept, str))
-        assert src.upper() in SOURCES
-        for atr in attributes:
+        assert isinstance(self.object, (Concept, str))
+        assert self.src.upper() in SOURCES
+        for atr in self.attributes:
             assert isinstance(atr, Attribute)
 
     def to_dict(self, return_subject=False, verbose=False):

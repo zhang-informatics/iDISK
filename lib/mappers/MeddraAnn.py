@@ -92,10 +92,6 @@ class MeddraAnn(object):
                     continue
         return labels
 
-    # remove all non-ASCII characters in the content
-    # remove contents inside of ()
-    # @value: the content needs to be cleaned
-
     def remove_useless_content(self, value):
         """
         remove useless content, i.e. non-ASCII char, content in ()
@@ -113,10 +109,6 @@ class MeddraAnn(object):
             value = re.sub(r'[^\x00-\x7F]+', " ", value)
             value = re.sub(r" ?\([^)]+\)", "", value)
             return value
-
-    # adverse reactions pre-process
-    # @ar: data["adverse_reactions"]
-    # return annotated terms
 
     def get_annotation_process(self, ar):
         """
@@ -145,10 +137,6 @@ class MeddraAnn(object):
             labels = self.get_annotation(ar_annotations, ar)
             return labels
 
-    # check if content is none or empty
-    # @content: herb["adverse_reactions"]
-    # return true if content is either none or empty
-    # otherwise return false
     def is_blank(self, content):
         """
         check if contentis none or empty
@@ -171,11 +159,7 @@ class MeddraAnn(object):
             # content is None OR content is empty or blank
             return True
 
-    # AR annotation process main function
-    # get AR content annotated using MEDDRA
-    # @ar: AR content
-
-    def run(self, ar):
+    def get_final_annotations(self, ar):
         """
         the main function for the class
         get ADR content annotated using MEDDRA and save to a list of dict
@@ -184,9 +168,11 @@ class MeddraAnn(object):
         :return: a list of dict with annotated terms
         :rtype: list
         """
+        self.get_meddra_config(longest_only=True, whole_word_only=True,
+                               exclude_numbers=True, exclude_synonyms=True)
         ar = self.remove_useless_content(ar)
         if self.is_blank(ar):
-            return " "
+            return ""
         else:
             anno = []
             res = self.get_annotation_process(ar)
