@@ -47,19 +47,14 @@ versions/
     CHANGELOG.md	  # Changelog for this version of iDISK.
     lib/ 		  # Symbolic link to ${IDISK_HOME}/lib
     scripts/		  # Contains additional scripts required to build this specific version of iDISK.
-    build/		  # Contains the intermediate files generated to build iDISK.
+    concepts/		  # Contains the intermediate files generated to build iDISK.
       ingredients/	  # Contains all files and scripts for processing and matching ingredient concepts.
-        manual_review/    # Contains all files and scripts related to the manual review of matched ingredients.
       products/		  # Contains all files and scripts for processing product concepts.
       .../		  # Directories for other concepts as required.
-    tables/
+    build/		  # Contains the final iDISK data files.
+      Neo4j/
       UMLS/
-        CMD.LOG		  # Log of commands used to create the files in this directory.
-        DSCONSO.RRF
-        DSSTY.RRF
-        DSSAT.RRF
-        DSREL.RRF
-      RDF/
+      .../
 ```
 
 
@@ -124,7 +119,7 @@ second removes connections using human annotations.
 To run the first method:
 
 ```
-make filter_annotations
+make filter_connections
 ```
 
 To run the second method, follow these instructions:
@@ -153,3 +148,25 @@ Finally, now that we're confident in our connected concepts, we can merge them.
 ```
 make merge
 ```
+
+## The iDISK Schema
+
+iDISK is built using Neo4j, so the first step is to install the latest version of [Neo4j](https://neo4j.com/download/).
+Neo4j is used both to define the iDISK schema as well as to hold the final database. Here, we discuss creating and using
+a schema. Neo4j graphs are specified using a query language called Cypher and we've supplied a Cypher script for the
+current iDISK schema at `lib/schemas/schema_1.0.0.cypher`.
+
+**N.B.** Schema versions are specified using semantic versioning (major.minor.patch). The schema versions are distinct
+from the iDISK versions. That is, if iDISK updates to a new version, the schema will not necessarily require updating.
+However, a new schema version always necessitates a new iDISK version.
+
+Once you've installed Neo4j, open Neo4j Desktop, create a new graph, and start it (leaving it empty for now).
+Take note of the username, password, and BOLT URI for this graph and enter them into the schema configuration file at
+`lib/schemas/schemas.ini`. Finally, run the following to create the schema graph:
+
+```
+make schema
+```
+
+Now, if you go back to Neo4j Desktop and open your graph in the Neo4j browser, you'll see it has been populated. You can
+view the entire schema with the Cypher query `MATCH(n) RETURN(n)`.

@@ -10,7 +10,11 @@ PYTHON_INTERPRETER = python3
 IDISK_HOME = /Users/vasil024/Projects/InProgressProjects/dietary_supplements_refactor/iDISK
 # The version of iDISK to build.
 IDISK_VERSION = 1.0.0
+# Configuration file specifying how to build the schema.
+SCHEMA_VERSION = 1.0.0
+SCHEMA_CONF_FILE := $(IDISK_HOME)/lib/schemas/schemas.ini
 # Paths to the source ingredient concept files.
+# TODO: Add product concept files.
 SOURCE_FILES := $(IDISK_HOME)/sources/NMCD/11_30_2018/import/ingredients.jsonl \
 	        $(IDISK_HOME)/sources/DSLD/10_22_2018/import/ingredients.jsonl \
 	        $(IDISK_HOME)/sources/NHP/12_1_2017/import/ingredients.jsonl
@@ -21,7 +25,7 @@ SOURCE_FILES := $(IDISK_HOME)/sources/NMCD/11_30_2018/import/ingredients.jsonl \
 #################################################################################
 
 PROJECT_NAME = idisk
-BUILD_DIR := $(IDISK_HOME)/versions/$(IDISK_VERSION)/
+VERSION_DIR := $(IDISK_HOME)/versions/$(IDISK_VERSION)/
 
 
 #################################################################################
@@ -30,49 +34,52 @@ BUILD_DIR := $(IDISK_HOME)/versions/$(IDISK_VERSION)/
 
 ## Remove this version
 clean:
-	rm -r $(BUILD_DIR)
+	rm -r $(VERSION_DIR)
 
 
 ## Remove all annotation files and Prodigy datasets.
 clean_annotation:
-	rm -r $(BUILD_DIR)/ingredients/manual_review/indata
-	rm $(BUILD_DIR)/ingredients/manual_review/prodigy.json  # symlink
+	rm -r $(VERSION_DIR)/concepts/manual_review/indata
+	rm $(VERSION_DIR)/concepts/manual_review/prodigy.json  # symlink
 	prodigy drop concept_matching
 
 
 ## Create the directories for this version.
 version:
-	mkdir -p $(BUILD_DIR)/{ingredients,products}/
-	cd $(BUILD_DIR) && ln -s $(IDISK_HOME)/lib .
+	mkdir -p $(VERSION_DIR)/concepts/
+	mkdir -p $(VERSION_DIR)/build/{Neo4j,UMLS}/
+	cd $(VERSION_DIR) && ln -s $(IDISK_HOME)/lib .
 
 
 ## Find candidate connections between concepts. This requires idlib to be installed.
 ## This can take a few hours for a large number of inputs.
 connections:
-	@echo "cat $(SOURCE_FILES) > $(BUILD_DIR)/ingredients/all_ingredients.jsonl" > $(BUILD_DIR)/ingredients/LOG
-	@cat $(SOURCE_FILES) > $(BUILD_DIR)/ingredients/all_ingredients.jsonl
+	@echo "cat $(SOURCE_FILES) > $(VERSION_DIR)/concepts/concepts_orig.jsonl" \
+		> $(VERSION_DIR)/concepts/LOG
+	@cat $(SOURCE_FILES) > $(VERSION_DIR)/concepts/concepts_orig.jsonl
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/set_functions.py \
 		find_connections \
 		--infiles $(SOURCE_FILES) \
-		--outfile $(BUILD_DIR)/ingredients/connections.csv
+		--outfile $(VERSION_DIR)/concepts/connections.csv
 
 
 ## Run annotation using Prodigy
 run_annotation:
 	# Create the annotation data in Prodigy JSON lines format.
-	mkdir -p $(BUILD_DIR)/ingredients/manual_review/indata
+	mkdir -p $(VERSION_DIR)/concepts/manual_review/indata
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/annotation/to_prodigy.py \
-		--concepts_file $(BUILD_DIR)/ingredients/all_ingredients.jsonl \
-		--connections_file $(BUILD_DIR)/ingredients/connections.csv \
-		--outfile $(BUILD_DIR)/ingredients/manual_review/indata/matches.jsonl
+		--concepts_file $(VERSION_DIR)/concepts/concepts_orig.jsonl \
+		--connections_file $(VERSION_DIR)/concepts/connections.csv \
+		--outfile $(VERSION_DIR)/concepts/manual_review/indata/matches.jsonl
 	# Create a dataset to hold the annotations if it doesn't exist.
-	cd $(BUILD_DIR)/ingredients/manual_review/
+	cd $(VERSION_DIR)/concepts/manual_review/
 	[[ -f prodigy.json ]] || ln -s $(IDISK_HOME)/lib/annotation/prodigy_resources/prodigy.json . 
-	prodigy stats -l | grep -q "concept_matching" || \
+	prodigy stats -l | grep -q "concept_matching" && \
+		echo "Prodigy dataset already exists. Make sure this is what you want." || \
 		prodigy dataset concept_matching "Evaluate whether connected concepts are indeed synonymous."
 	# Run annotation.
 	prodigy compare concept_matching \
-		$(BUILD_DIR)/ingredients/manual_review/indata/matches.jsonl \
+		$(VERSION_DIR)/concepts/manual_review/indata/matches.jsonl \
 		$(IDISK_HOME)/lib/annotation/prodigy_resources/template.html \
 		-F $(IDISK_HOME)/lib/annotation/prodigy_resources/recipe.py
 
@@ -80,35 +87,42 @@ run_annotation:
 ## Filter connections based on simple heuristics
 filter_connections:
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/filter_connections_basic.py \
-		--connections_file $(BUILD_DIR)/ingredients/connections.csv \
-		--concepts_file $(BUILD_DIR)/ingredients/all_ingredients.jsonl \
-		--outfile $(BUILD_DIR)/ingredients/connections_new.csv
-	@mv $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections_orig.csv
-	@mv $(BUILD_DIR)/ingredients/connections_new.csv $(BUILD_DIR)/ingredients/connections.csv
-	@echo "New connections written to \n\t $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections.csv"
-	@echo "Original connections at \n\t $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections_orig.csv"
+		--connections_file $(VERSION_DIR)/concepts/connections.csv \
+		--concepts_file $(VERSION_DIR)/concepts/concepts_orig.jsonl \
+		--outfile $(VERSION_DIR)/concepts/connections_new.csv
+	@mv $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv
+	@mv $(VERSION_DIR)/concepts/connections_new.csv $(VERSION_DIR)/concepts/connections.csv
+	@echo "New connections written to \n\t $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections.csv"
+	@echo "Original connections at \n\t $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv"
 
 
 ## Filter connections according to annotations.
 filter_connections_ann:
 	# Save annotations to a file
-	prodigy db-out concept_matching $(BUILD_DIR)/ingredients/manual_review/annotations
+	prodigy db-out concept_matching $(VERSION_DIR)/concepts/manual_review/annotations
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/annotation/filter_connections_ann.py \
-		--connections_file $(BUILD_DIR)/ingredients/connections.csv \
-		--annotations_file $(BUILD_DIR)/ingredients/manual_review/annotations/concept_matching.jsonl \
-		--outfile $(BUILD_DIR)/ingredients/connections_new.csv
-	@mv $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections_orig.csv
-	@mv $(BUILD_DIR)/ingredients/connections_new.csv $(BUILD_DIR)/ingredients/connections.csv
-	@echo "New connections written to \n\t $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections.csv"
-	@echo "Original connections at \n\t $(BUILD_DIR)/ingredients/connections.csv $(BUILD_DIR)/ingredients/connections_orig.csv"
+		--connections_file $(VERSION_DIR)/concepts/connections.csv \
+		--annotations_file $(VERSION_DIR)/concepts/manual_review/annotations/concept_matching.jsonl \
+		--outfile $(VERSION_DIR)/concepts/connections_new.csv
+	@mv $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv
+	@mv $(VERSION_DIR)/concepts/connections_new.csv $(VERSION_DIR)/concepts/connections.csv
+	@echo "New connections written to \n\t $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections.csv"
+	@echo "Original connections at \n\t $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv"
+
 
 ## Merge matched concepts.
 merge:
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/set_functions.py union \
-		--infiles $(BUILD_DIR)/ingredients/all_ingredients.jsonl \
-		--connections $(BUILD_DIR)/ingredients/connections.csv \
-		--outfile $(BUILD_DIR)/ingredients/merged_ingredients.jsonl
+		--infiles $(VERSION_DIR)/concepts/concepts_orig.jsonl \
+		--connections $(VERSION_DIR)/concepts/connections.csv \
+		--outfile $(VERSION_DIR)/concepts/concepts_merged.jsonl
 
+
+## Create the iDISK schema as a neo4j graph
+schema:
+	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/schema.py \
+		--schema_version $(SCHEMA_VERSION) \
+		--schema_conf_file $(SCHEMA_CONF_FILE)
 
 
 #################################################################################

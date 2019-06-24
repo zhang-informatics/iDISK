@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="pall.config" href="config.html" />
+    <link rel="next" title="idlib.set_functions" href="set_functions.html" />
     <link rel="prev" title="The iDISK API Library (idlib)" href="../index.html" /> 
 </head>
 
@@ -89,6 +89,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#relationship">Relationship</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="set_functions.html">idlib.set_functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="config.html">pall.config</a></li>
 </ul>
 
@@ -160,7 +161,7 @@
 <h2>Atom<a class="headerlink" href="#atom" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="idlib.base.Atom">
-<em class="property">class </em><code class="descclassname">idlib.base.</code><code class="descname">Atom</code><span class="sig-paren">(</span><em>term</em>, <em>src</em>, <em>src_id</em>, <em>term_type</em>, <em>is_preferred</em>, <em>dsaui=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Atom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Atom" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">idlib.base.</code><code class="descname">Atom</code><span class="sig-paren">(</span><em>term</em>, <em>src</em>, <em>src_id</em>, <em>term_type</em>, <em>is_preferred</em>, <em>ui=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Atom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Atom" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>An atom is an instance of a concept with a unique string, source,
 source ID, and term type.</p>
@@ -175,7 +176,7 @@ source ID, and term type.</p>
 <li><strong>term_type</strong> (<em>str</em>) – The type of term. E.g. “SY” for synonym.</li>
 <li><strong>is_preferred</strong> (<em>bool</em>) – Whether this string is the preferred name
 in its source.</li>
-<li><strong>dsaui</strong> (<em>str</em>) – The iDISK unique identifier of this atom. Optional.</li>
+<li><strong>ui</strong> (<em>str</em>) – The iDISK unique identifier of this atom. Optional.</li>
 </ul>
 </td>
 </tr>
@@ -234,13 +235,6 @@ The JSON must be formatted:</p>
 </div>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="idlib.base.Atom.ui">
-<code class="descname">ui</code><a class="headerlink" href="#idlib.base.Atom.ui" title="Permalink to this definition">¶</a></dt>
-<dd><p>This property offers a consistent mode of access to unique identifiers
-whatever the class of the object.</p>
-</dd></dl>
-
 </dd></dl>
 
 </div>
@@ -248,7 +242,7 @@ whatever the class of the object.</p>
 <h2>Concept<a class="headerlink" href="#concept" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="idlib.base.Concept">
-<em class="property">class </em><code class="descclassname">idlib.base.</code><code class="descname">Concept</code><span class="sig-paren">(</span><em>concept_type</em>, <em>atoms=[]</em>, <em>attributes=[]</em>, <em>relationships=[]</em>, <em>dscui=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">idlib.base.</code><code class="descname">Concept</code><span class="sig-paren">(</span><em>concept_type</em>, <em>atoms=[]</em>, <em>attributes=[]</em>, <em>relationships=[]</em>, <em>ui=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/base.html#Concept"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.base.Concept" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>An iDISK concept.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -260,7 +254,7 @@ whatever the class of the object.</p>
 E.g. “SDSI”.</li>
 <li><strong>atoms</strong> (<em>list</em>) – List of synonyms for this concept. Each member
 must be an instance of Atom. Optional.</li>
-<li><strong>dscui</strong> (<em>str</em>) – the iDISK CUI for this concept. Optional.</li>
+<li><strong>ui</strong> (<em>str</em>) – the iDISK CUI for this concept. Optional.</li>
 </ul>
 </td>
 </tr>
@@ -426,12 +420,20 @@ from the Relationship.to_dict() method.</td>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="idlib.base.Concept.preferred_term">
-<code class="descname">preferred_term</code><a class="headerlink" href="#idlib.base.Concept.preferred_term" title="Permalink to this definition">¶</a></dt>
+<dt id="idlib.base.Concept.preferred_atom">
+<code class="descname">preferred_atom</code><a class="headerlink" href="#idlib.base.Concept.preferred_atom" title="Permalink to this definition">¶</a></dt>
 <dd><p>The preferred term for this concept is the preferred term
 from the highest ranking source. That is, the atom such that
 atom[“src”] is the closest to the top of the SOURCES list
 and atom[“is_preferred”] is True.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#idlib.base.Atom" title="idlib.base.Atom">Atom</a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="classmethod">
@@ -496,8 +498,8 @@ case, this method should be run after creating all concept instances.</p>
 <dl class="attribute">
 <dt id="idlib.base.Concept.ui">
 <code class="descname">ui</code><a class="headerlink" href="#idlib.base.Concept.ui" title="Permalink to this definition">¶</a></dt>
-<dd><p>This property offers a consistent mode of access to unique identifiers
-whatever the class of the object.</p>
+<dd><p>The unique identifier is always dynamically determined by the 
+values of self._prefix and self._num.</p>
 </dd></dl>
 
 </dd></dl>
@@ -587,8 +589,8 @@ The subject is optional to accord with the iDISK JSON format.</p>
 a “subject” key.</li>
 <li><strong>verbose_subject</strong> (<em>bool</em>) – If True and return_subject is True,
 the value of the “subject” key includes
-the dscui, name, and source, instead of
-just the dscui.</li>
+the ui, name, and source, instead of
+just the ui.</li>
 </ul>
 </td>
 </tr>
@@ -600,13 +602,6 @@ just the dscui.</li>
 </tr>
 </tbody>
 </table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="idlib.base.Attribute.ui">
-<code class="descname">ui</code><a class="headerlink" href="#idlib.base.Attribute.ui" title="Permalink to this definition">¶</a></dt>
-<dd><p>This property offers a consistent mode of access to unique identifiers
-whatever the class of the object.</p>
 </dd></dl>
 
 </dd></dl>
@@ -734,8 +729,8 @@ The subject is optional to accord with the iDISK JSON format.</p>
 a “subject” key.</li>
 <li><strong>verbose_subject</strong> (<em>bool</em>) – If True and return_subject is True,
 the value of the “subject” key includes
-the dscui, name, and source, instead of
-just the dscui.</li>
+the ui, name, and source, instead of
+just the ui.</li>
 </ul>
 </td>
 </tr>
@@ -747,13 +742,6 @@ just the dscui.</li>
 </tr>
 </tbody>
 </table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="idlib.base.Relationship.ui">
-<code class="descname">ui</code><a class="headerlink" href="#idlib.base.Relationship.ui" title="Permalink to this definition">¶</a></dt>
-<dd><p>This property offers a consistent mode of access to unique identifiers
-whatever the class of the object.</p>
 </dd></dl>
 
 </dd></dl>
@@ -769,7 +757,7 @@ whatever the class of the object.</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="config.html" class="btn btn-neutral float-right" title="pall.config" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="set_functions.html" class="btn btn-neutral float-right" title="idlib.set_functions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="../index.html" class="btn btn-neutral float-left" title="The iDISK API Library (idlib)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>

@@ -164,7 +164,8 @@ class Union(object):
 
     def _connected(self, i, j):
         """
-        Two concepts are connected if they share one or more atoms.
+        Two concepts are connected if they are of the same type
+        and they share one or more atoms.
 
         :param int i: The index of the first concept.
         :param int j: The index of the second concept.
@@ -173,6 +174,8 @@ class Union(object):
         """
         ci = self.concepts_map[i]
         cj = self.concepts_map[j]
+        if ci.concept_type != cj.concept_type:
+            return False
         ci_terms = [a.term for a in ci.get_atoms()]
         cj_terms = [a.term for a in cj.get_atoms()]
         overlap = set(ci_terms).intersection(set(cj_terms))
