@@ -119,18 +119,27 @@ class MSKCC_Converter(object):
                 print("Currently processing: " + items["herb_name"])
                 """
                 TODO:
-                Current HDI problems:
-                1. Zeolite has "general: ....." content,
+                Current problems:
+                1. Zeolite has "general: ....." HDI content,
                    currently pre-processing will only keep "general"
                 2. how to properly deal with empty content?
                 3. "None reported" content in HDI
+                4. no Concept.from_atoms() method
                 """
-                # print("HDI Atoms: ")
-                # print(hdi_atom)
+                print("HDI Atoms: ")
+                print(hdi_atom)
+                print("----------------------")
                 print("Scientific name Atoms: ")
                 sn = items["scientific_name"]
-                sn_atoms, counter = self.generate_atom(sn, counter,"SN")
+                sn_atoms, counter = self.generate_atom(sn, counter, "SN")
                 print(sn_atoms)
+                # build concept based on HDI & Scientific name Atoms
+
+                herb_concept = Concept.from_atoms(hdi_atom,
+                                                  concept_type="SDSI")
+                herb_concept = Concept.from_atoms(sn_atoms,
+                                                  concept_type="SDSI")
+                print(herb_concept)
                 print("=====================================")
 
     def generate_atom(self, content, counter, term_type):
@@ -161,6 +170,8 @@ class MSKCC_Converter(object):
                 counter += 1
                 atoms.append(atom)
         return (atoms, counter)
+
+    # def generate_attr(self, )
 
     def test(self):
         """
