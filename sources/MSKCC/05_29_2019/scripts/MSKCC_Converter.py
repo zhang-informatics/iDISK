@@ -29,7 +29,6 @@ class MSKCC_Converter(object):
     """
     Map each extracted info into iDISK format:
     - Atom: self.generate_atom()
-    - Concept: self.generate_concept()
     - Attribute: self.generate_attr()
     - Relationship: self.generate_rel()
     """
@@ -60,31 +59,55 @@ class MSKCC_Converter(object):
         if isinstance(content, list):
             output = [each.split(":")[0] for each in content]
             output = [re.sub(r" ?\([^)]+\)", "", each) for each in output]
-            output = [re.sub(r'[^\x00-\x7F]+', " ", each) for each in output]
+            output = [re.sub(r'[^\x00-\x7F]+', "", each) for each in output]
             output = [each.strip() for each in output]
             return output
         else:
             output = [content.split(":")[0]]
             output = [re.sub(r" ?\([^)]+\)", "", each) for each in output]
-            output = [re.sub(r'[^\x00-\x7F]+', " ", each) for each in output]
+            output = [re.sub(r'[^\x00-\x7F]+', "", each) for each in output]
             output = [each.strip() for each in output]
             return output
 
-    def split_scientific_name(self, sn):
+    def split_names(self, names):
         """
-        Split scientific name into list
+        Split scientific & common name into list
         Split it by "; ", ", "
 
-        :param str sn: scientific name
-        :return: a list of seperated scientific name
+        :param str/list names: scientific/common name
+        :return: a list of seperated scientific/common name
         :rtype: list
         """
         # scientific name must be string
-        splited_sn = sn.split("; ")
-        output = []
-        for each in splited_sn:
-            output.extend(each.split(", "))
-        return output
+        # common name could be list, or empty string
+        # empty string case is ignored under iterate_mskcc_file
+        if isinstance(names, str):
+            output = re.split(", |; ", names)
+            return output
+        else:
+            output = []
+            for each in names:
+                splited = re.split(", |; ", each)
+                output.extend(splited)
+            return output
+
+    def is_valid_content(self, content):
+        """
+        check if HDI content is valid
+        e.g. if the content is "general", "none reports",
+        ignore it and return False,
+        otherwise return True
+
+        :param str content: the content to be checked
+        :rtype: bool
+        """
+        if content.lower() == "general" or \
+            content.lower() == "none reports." or \
+                content.lower() == "none known." or \
+                content == "":
+            return False
+        else:
+            return True
 
     def iterate_mskcc_file(self):
         """
@@ -95,7 +118,7 @@ class MSKCC_Converter(object):
         Mapping details:
         MSKCC headers           iDISK schemas           iDISK data types        Relationship (if any)  # noqa
         scientific_name         Scientific Name         Atom                    None  # noqa
-        common_names            Synonym                 Atom                    None  # noqa
+        common_name             Synonym                 Atom                    None  # noqa
         clinical_summary        Background              Attribute               None  # noqa
         purported_uses          Diseases                Concept                 effects_on  # noqa
                                                                                 inverse_effects_on
@@ -113,34 +136,59 @@ class MSKCC_Converter(object):
             # use counter as herb id
             for line in f:
                 items = json.loads(line)
-                hdi = self.remove_useless_for_HDI(items["herb-drug_interactions"])  # noqa
-                hdi_atom, counter = self.generate_atom(hdi, counter, "SY")
-                print("=====================================")
-                print("Currently processing: " + items["herb_name"])
-                """
-                TODO:
-                Current problems:
-                1. Zeolite has "general: ....." HDI content,
-                   currently pre-processing will only keep "general"
-                2. how to properly deal with empty content?
-                3. "None reported" content in HDI
-                4. no Concept.from_atoms() method
-                """
-                print("HDI Atoms: ")
-                print(hdi_atom)
-                print("----------------------")
-                print("Scientific name Atoms: ")
+                herb_atom, counter = self.generate_atom(items["herb_name"],
+                                                        counter, "PT")
+                # scientific_name
                 sn = items["scientific_name"]
-                sn_atoms, counter = self.generate_atom(sn, counter, "SN")
-                print(sn_atoms)
-                # build concept based on HDI & Scientific name Atoms
-
-                herb_concept = Concept.from_atoms(hdi_atom,
-                                                  concept_type="SDSI")
-                herb_concept = Concept.from_atoms(sn_atoms,
-                                                  concept_type="SDSI")
-                print(herb_concept)
-                print("=====================================")
+                if sn == "":
+                    pass
+                sn = self.split_names(sn)
+                sn_atom, counter = self.generate_atom(sn, counter, "SN")
+                # common_name
+                cn = items["common_name"]
+                if cn == "":
+                    pass
+                cn = self.split_names(cn)
+                cn_atom, counter = self.generate_atom(cn, counter, "CN")
+                # build concept based on Common Name & Scientific name Atoms
+                herb_atom.extend(sn_atom)
+                herb_atom.extend(cn_atom)
+                herb_concept = Concept("SDSI", atoms=herb_atom)
+                # clinical_summary
+                cs = items["clinical_summary"]
+                herb_concept = self.generate_attr(herb_concept,
+                                                  "Background", cs)
+                # mechanism_of_action
+                moa = items["mechanism_of_action"]
+                herb_concept = self.generate_attr(herb_concept,
+                                                  "Mechanism of Action", moa)
+                # warnings
+                warn = items["warnings"]
+                herb_concept = self.generate_attr(herb_concept,
+                                                  "Safety", warn)
+                # purported_uses
+                pu = items["purported_uses"]
+                herb_concept, counter = self.generate_idisk_schema(
+                                        pu, "SY", counter,
+                                        "DIS", "effects_on",
+                                        herb_concept)
+                # adverse_reactions
+                ar = items["adverse_reactions"]
+                herb_concept, counter = self.generate_idisk_schema(
+                                        ar, "SY", counter,
+                                        "SS", "has_adverse_reaction",
+                                        herb_concept)
+                # herb-drug_interactions
+                hdi = items["herb-drug_interactions"]
+                hdi = self.remove_useless_for_HDI(hdi)
+                herb_concept, counter = self.generate_idisk_schema(
+                                        hdi, "SY", counter,
+                                        "SPD", "interact_with",
+                                        herb_concept)
+                # write to local file
+                with open(self.idisk_format_output, "a") as outf:
+                    json.dump(herb_concept.to_dict(), outf)
+                    outf.write("\n")
 
     def generate_atom(self, content, counter, term_type):
         """
@@ -158,29 +206,86 @@ class MSKCC_Converter(object):
         atoms = []
         if isinstance(content, list):
             for each in content:
-                atom = Atom(each, src="MSKCC", src_id=str(counter),
-                            term_type=term_type, is_preferred=True)
-                counter += 1
-                atoms.append(atom)
+                if self.is_valid_content(each):
+                    atom = Atom(each, src="MSKCC", src_id=str(counter),
+                                term_type=term_type, is_preferred=True)
+                    counter += 1
+                    atoms.append(atom)
+                else:
+                    pass
         else:
-            # check if the content is empty
-            if len(content) != 0:
+            if self.is_valid_content(content):
                 atom = Atom(content, src="MSKCC", src_id=str(counter),
                             term_type=term_type, is_preferred=True)
                 counter += 1
                 atoms.append(atom)
+            else:
+                pass
         return (atoms, counter)
 
-    # def generate_attr(self, )
+    def generate_attr(self, herb_concept, attr_name, attr_value):
+        """
+        Given the content, transform it into Attribute
 
-    def test(self):
+        :param idlib.Concept herb_concept: the concept that the Attribute is in
+        :param str name: Attribute name for Concept
+        :param str/list value: the content to transform into Attribute
+        :rtype: idlib.Concept
         """
-        a test function
+        if isinstance(attr_value, list):
+            attr_value = " ".join(attr_value)
+            atr = Attribute(herb_concept, attr_name, attr_value, src="MSKCC")
+            herb_concept.attributes.append(atr)
+            return herb_concept
+        else:
+            atr = Attribute(herb_concept, attr_name, attr_value, src="MSKCC")
+            herb_concept.attributes.append(atr)
+            return herb_concept
+
+    def generate_rel(self, from_concept, to_concept,
+                     rel_name):
         """
-        self.iterate_mskcc_file()
+        Given the content, rel_name, edge concepts, generate Relationship
+
+        :param Concept from_concept: the subject of this Relationship
+        :param Concept to_concept: the object of this Relationship
+        :param str rel_name: iDISK Relationship name
+        :return: the subject Concept of this Relationship
+        :rtype: Concept
+        """
+        rel = Relationship(subject=from_concept, obj=to_concept,
+                           rel_name=rel_name, src="MSKCC")
+        from_concept.relationships.append(rel)
+        return from_concept
+
+    def generate_idisk_schema(self, value, value_type, counter,
+                              concept_type, rel_name, from_concept):
+        """
+        Given the herb content:
+        1. generate its Atom,
+        2. generate Concept based on Atom generated from step 1
+        3. generate Relationship based on the Concept generated from step 2
+        4. return the subject Concept after building this schema
+
+        :param str/list value: herb content
+        :param str value_type: herb content Atom type
+        :param int counter: the counter as id
+        :param str concept_type: Concept type for the generated Atom
+        :param str rel_name: Relationship type given the generated Concept
+        :param Concept from_concept: the subject Concept of this schema
+
+        :return: the subject Concept of this shema and current id counter,
+                 as tuple
+        :retype: tuple
+        """
+        value_atom, counter = self.generate_atom(value, counter, value_type)
+        value_concept = Concept(concept_type, value_atom)
+        from_concept = self.generate_rel(from_concept, value_concept,
+                                         rel_name)
+        return(from_concept, counter)
 
 
 if __name__ == "__main__":
     args = parse_args()
     x = MSKCC_Converter(args.content_file, args.idisk_format_output)
-    x.test()
+    x.iterate_mskcc_file()
