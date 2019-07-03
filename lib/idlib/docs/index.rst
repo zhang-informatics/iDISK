@@ -10,7 +10,7 @@ The iDISK API Library (idlib)
    :maxdepth: 2
    :caption: Contents:
 
-   source/base
+   source/data_elements
    source/set_functions
    source/config
 
@@ -62,13 +62,13 @@ DC0000001: ascorbic acid *found_in* Orange
 >>> # Relationships can also have attributes
 >>> rel_attr = Attribute(rel, atr_name="confidence", atr_value="High", src="NMCD")
 >>> rel_str.add_elements(rel_attr)
-```
+
 
 It is often the case that there are synonymous concepts, i.e. two or more concepts
 that have overlapping atom terms. The `set_functions` module can be used to compute
 the union of some lists of concepts. For example:
 
-```python
+
 >>> from idlib import Atom, Concept, Attribute, Relationship
 >>> from idlib.set_functions import Union
 >>> # Let's create some unifiable concepts.
