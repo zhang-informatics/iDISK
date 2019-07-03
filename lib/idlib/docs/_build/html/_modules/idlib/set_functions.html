@@ -80,7 +80,7 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../source/base.html">idlib.base</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/data_elements.html">idlib.data_elements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../source/set_functions.html">idlib.set_functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../source/config.html">idlib.config</a></li>
 </ul>
@@ -358,24 +358,21 @@
         <span class="c1"># Replace the prefix</span>
         <span class="n">new_prefix</span> <span class="o">=</span> <span class="n">_get_prefix</span><span class="p">(</span><span class="n">concept_i</span><span class="p">,</span> <span class="n">concept_j</span><span class="p">)</span>
         <span class="n">merged</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">new_prefix</span>
-        <span class="c1"># Merge atoms, removing duplicates.</span>
-        <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">concept_j</span><span class="o">.</span><span class="n">get_atoms</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">atom</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">atoms</span><span class="p">:</span>
-                <span class="n">merged</span><span class="o">.</span><span class="n">atoms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
 
-        <span class="c1"># Merge attributes, removing duplicates and changing the subject.</span>
+        <span class="c1"># Merge atoms.</span>
+        <span class="n">merged</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">concept_j</span><span class="o">.</span><span class="n">get_atoms</span><span class="p">())</span>
+
+        <span class="c1"># Merge attributes, changing the subject.</span>
         <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">concept_j</span><span class="o">.</span><span class="n">get_attributes</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">atr</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">attributes</span><span class="p">:</span>
-                <span class="n">atr</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">merged</span>
-                <span class="n">merged</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atr</span><span class="p">)</span>
+            <span class="n">atr</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">merged</span>
+            <span class="n">merged</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">atr</span><span class="p">)</span>
 
         <span class="c1"># Merge relationships, removing duplicates and changing the subject.</span>
         <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">concept_j</span><span class="o">.</span><span class="n">get_relationships</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">rel</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">merged</span><span class="o">.</span><span class="n">relationships</span><span class="p">:</span>
-                <span class="n">rel</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">merged</span>
-                <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">rel</span><span class="o">.</span><span class="n">attributes</span><span class="p">:</span>
-                    <span class="n">a</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">merged</span>
-                <span class="n">merged</span><span class="o">.</span><span class="n">relationships</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rel</span><span class="p">)</span>
+            <span class="n">rel</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">merged</span>
+            <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">rel</span><span class="o">.</span><span class="n">get_attributes</span><span class="p">():</span>
+                <span class="n">a</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">merged</span>
+            <span class="n">merged</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">rel</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">merged</span>
 
     <span class="k">def</span> <span class="nf">_find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">):</span>
@@ -405,7 +402,7 @@
         <span class="n">concept_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span>
         <span class="n">concept_j</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concepts_map</span><span class="p">[</span><span class="n">pj</span><span class="p">]</span>
         <span class="c1"># Merge the smaller concept into the bigger.</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">concept_i</span><span class="o">.</span><span class="n">atoms</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">concept_j</span><span class="o">.</span><span class="n">atoms</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">concept_i</span><span class="o">.</span><span class="n">_atoms</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">concept_j</span><span class="o">.</span><span class="n">_atoms</span><span class="p">):</span>
             <span class="n">pi</span><span class="p">,</span> <span class="n">pj</span> <span class="o">=</span> <span class="n">pj</span><span class="p">,</span> <span class="n">pi</span>
             <span class="n">concept_i</span><span class="p">,</span> <span class="n">concept_j</span> <span class="o">=</span> <span class="n">concept_j</span><span class="p">,</span> <span class="n">concept_i</span>
         <span class="c1"># Merge concept_j into concept_i</span>

@@ -1,4 +1,4 @@
-# pall.config
+# idlib.config
 
 This module defines the following variables:
 
