@@ -210,24 +210,21 @@ class Union(object):
         # Replace the prefix
         new_prefix = _get_prefix(concept_i, concept_j)
         merged._prefix = new_prefix
-        # Merge atoms, removing duplicates.
-        for atom in concept_j.get_atoms():
-            if atom not in merged.atoms:
-                merged.atoms.append(atom)
 
-        # Merge attributes, removing duplicates and changing the subject.
+        # Merge atoms.
+        merged.add_elements(concept_j.get_atoms())
+
+        # Merge attributes, changing the subject.
         for atr in concept_j.get_attributes():
-            if atr not in merged.attributes:
-                atr.subject = merged
-                merged.attributes.append(atr)
+            atr.subject = merged
+            merged.add_elements(atr)
 
         # Merge relationships, removing duplicates and changing the subject.
         for rel in concept_j.get_relationships():
-            if rel not in merged.relationships:
-                rel.subject = merged
-                for a in rel.attributes:
-                    a.subject = merged
-                merged.relationships.append(rel)
+            rel.subject = merged
+            for a in rel.get_attributes():
+                a.subject = merged
+            merged.add_elements(rel)
         return merged
 
     def _find(self, i):
@@ -257,7 +254,7 @@ class Union(object):
         concept_i = self.concepts_map[pi]
         concept_j = self.concepts_map[pj]
         # Merge the smaller concept into the bigger.
-        if len(concept_i.atoms) < len(concept_j.atoms):
+        if len(concept_i._atoms) < len(concept_j._atoms):
             pi, pj = pj, pi
             concept_i, concept_j = concept_j, concept_i
         # Merge concept_j into concept_i
