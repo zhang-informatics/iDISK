@@ -373,7 +373,7 @@ class Concept(DataElement):
             self.ui = ui
             self.init_counter(int(ui[-7:]))
         self._preferred_atom = None
-        self._atoms = set(atoms) or set()
+        self._atoms = set(atoms) if atoms is not None else set()
         self._attributes = set()
         self._relationships = set()
         self._check_params()
@@ -494,16 +494,16 @@ class Concept(DataElement):
         """
         concept = cls(concept_type=data["concept_type"], ui=data["ui"])
         atoms = [Atom.from_dict(syn) for syn in data["synonyms"]]
-        concept.add_atoms(atoms)
+        concept.add_elements(atoms)
         atrs = [Attribute.from_dict(atr, subject=concept)
                 for atr in data["attributes"]]
-        concept._attributes = atrs
+        concept.add_elements(atrs)
         # Because we do not have a concept mapping yet, these relationships
         # will have concept UIs as their objects. This can be resolved via
         # Concept.resolve_relationships()
         rels = [Relationship.from_dict(rel, subject=concept)
                 for rel in data["relationships"]]
-        concept._relationships = rels
+        concept.add_elements(rels)
         return concept
 
     # TODO: Refactor this to deal with strings that are mapped to multiple
@@ -802,6 +802,6 @@ class Relationship(DataElement):
                   src=data["src"])
         atrs = [Attribute.from_dict(atr, subject=rel)
                 for atr in data["attributes"]]
-        rel._attributes = atrs
+        rel.add_elements(atrs)
 
         return rel
