@@ -7,11 +7,18 @@ from collections import defaultdict
 from py2neo import Graph
 
 from mappers import MetaMapDriver
+from idlib import Concept
+
+
+"""
+This script performs all required mapping to existing terminologies
+as specified in the iDISK schema.
+"""
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--idisk_json", type=str,
+    parser.add_argument("--concepts_file", type=str,
                         help="""Path to iDISK JSON lines file containing
                                 concepts to map.""")
     parser.add_argument("--outfile", type=str,
@@ -44,7 +51,7 @@ class Schema(object):
 
     def __init__(self, uri, user, pswd, cypher_file=None):
         self.graph = self._get_graph(uri, user, pswd)
-        # Create the graph is a schema was specified.
+        # Create the graph if a schema was specified.
         # Otherwise, use the existing graph at the uri.
         if cypher_file is not None:
             self._create_schema(cypher_file)
@@ -75,7 +82,8 @@ class Schema(object):
         :param str cypher_file: Path to a Cypher file that defines the schema.
         """
         if len(self.graph.nodes) > 0:
-            raise ValueError(f"Cypher file specified but the graph is not empty. Aborting.")  # noqa
+            msg = "Cypher file specified but the graph is not empty. Aborting."
+            raise ValueError(msg)
         cyp = open(cypher_file, 'r').read()
         self.graph.run(cyp)
 
@@ -94,10 +102,16 @@ class Schema(object):
                 terms.add(node["maps_to"])
         return terms
 
-    def node_from_label(self, label):
+    def get_node_from_label(self, label):
+        """
+        :param str label: The label to use as a lookup.
+        """
         return self.graph.nodes.match(label).first()
 
-    def rel_from_name(self, rel_name):
+    def get_relationship_from_name(self, rel_name):
+        """
+        :param str rel_name: The relationship name.
+        """
         return self.graph.relationships.match(r_type=rel_name).first()
 
 
@@ -129,11 +143,57 @@ def get_annotators(annotator_ini, schema):
     return annotators
 
 
-def map_concepts(annotators, idisk_json, outfile, schema):
-    with open(idisk_json, 'r') as inF:
+def build_mapping_queries(annotators, concepts, schema):
+    strings_to_map = defaultdict(list)
+
+    new_concept_counter = 0
+    counter_template = "UNK{0.07}"
+    for concept in concepts:
+        data_element = schema.get_node_from_label(concept.concept_type)
+        concept_terminology = data_element["maps_to"]
+        strings_to_map[concept_terminology].append((concept.ui,
+                                                    concept.preferred_term))
+
+        for rel in concept.get_relationships():
+            rel_graph = schema.get_relationship_from_name(rel.rel_name)
+            if rel_graph.end_node() is None:
+                warnings.warn(f"Relationship '{rel.rel_name}' not in schema.")
+                continue
+            rel_terminology = rel_graph.end_node()["maps_to"]
+            string_id = counter_template.format(new_concept_counter)
+            new_concept_counter += 1
+            strings_to_map[terminology].append((string_id, rel.rel_value))
+
+    return strings_to_map
+
+
+def map_strings_to_terminologies(strings_to_map, annotators):
+    mappings = {}
+    for terminology in strings_to_map.keys():
+        ann = annotators[terminology]
+        query = '\n'.join([f"{sid}|{string}" for (sid, string)
+                           in strings_to_map[terminology].items()])
+        candidates = ann.map(query)
+        mappings[terminology] = ann.get_best_mappings(candidates)
+    return mappings
+
+
+def create_concepts_from_mappings(mappings, existing_concepts):
+    num_atoms = sum([1 for atom in concept.get_atoms()
+                     for concept in existing_concepts])
+    Atom.init_counter(num_atoms)
+    Concept.init_counter(len(existing_concepts))
+    for terminology in mappings.keys():
+        for (sid, mappings) in mappings[terminology].items():
+            orig_str_atom = Atom(
+
+
+        
+def map_concepts(annotators, concepts_file, outfile, schema):
+    with open(concepts_file, 'r') as inF:
         inlines = [json.loads(line) for line in inF]
     outlines = []
-    
+
     # Build the queries to send to the annotators. Held in strings_to_map,
     # this will be a dict from a terminology to a tuple of an ID and a
     # string to map.
@@ -173,7 +233,7 @@ def map_concepts(annotators, idisk_json, outfile, schema):
         ann = annotators[terminology]
         candidates = ann.map(query)
         mappings[terminology] = ann.get_best_mappings(candidates)
-        
+
     # TODO: Update MetaMapDriver's output to make it work with this.
     # Create new iDISK concepts for those mappings with an 'UNK' ID.
     num_syns = sum([len(c["synonyms"]) for c in inlines])
@@ -188,13 +248,12 @@ def map_concepts(annotators, idisk_json, outfile, schema):
                               src=terminology, src_id=mapping["id"],
                               term_type="SY", is_preferred=True)
 
-            
-            
-
 
 if __name__ == "__main__":
+    raise Exception("This script is unfinished and should not be used.")
     args = parse_args()
     schema = Schema(args.uri, args.user, args.password,
                     cypher_file=args.schema_file)
+    concepts = read_concepts(args.concepts_file)
     annotators = get_annotators(args.annotator_conf, schema)
-    map_concepts(annotators, args.idisk_json, args.outfile, schema)
+    map_concepts(annotators, concepts, args.outfile, schema)

@@ -2,6 +2,7 @@ import argparse
 import json
 import csv
 import copy
+from tqdm import tqdm, trange  # Progress bar
 
 from idlib import Concept
 
@@ -90,7 +91,6 @@ def perform_set_function(func, outfile, *infiles, connections=None):
             outF.write('\n')
 
 
-# TODO: Implement this so merged concepts have merged prefixes.
 def _get_prefix(concept1, concept2):
     """
     Build a  Concept UI prefix as the combination of the
@@ -164,7 +164,8 @@ class Union(object):
 
     def _connected(self, i, j):
         """
-        Two concepts are connected if they share one or more atoms.
+        Two concepts are connected if they are of the same type
+        and they share one or more atoms.
 
         :param int i: The index of the first concept.
         :param int j: The index of the second concept.
@@ -173,6 +174,8 @@ class Union(object):
         """
         ci = self.concepts_map[i]
         cj = self.concepts_map[j]
+        if ci.concept_type != cj.concept_type:
+            return False
         ci_terms = [a.term for a in ci.get_atoms()]
         cj_terms = [a.term for a in cj.get_atoms()]
         overlap = set(ci_terms).intersection(set(cj_terms))
@@ -187,8 +190,7 @@ class Union(object):
         :rtype: list
         """
         connections = []
-        for i in range(len(self.concepts_map)):
-            print(f"{i}/{len(self.concepts_map)}\r", end='')
+        for i in trange(len(self.concepts_map)):
             for j in range(i+1, len(self.concepts_map)):
                 if self._connected(i, j):
                     connections.append((i, j))
@@ -266,11 +268,8 @@ class Union(object):
         """
         The union-find routine. Given a list of connections, merges them.
         """
-        counter = 0
-        for (i, j) in self.connections:
+        for (i, j) in tqdm(self.connections):
             self._union(i, j)
-            counter += 1
-            print(f"{counter}/{len(self.connections)}\r", end='')
 
 
 class Intersection(Union):
