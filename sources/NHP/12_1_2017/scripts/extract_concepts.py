@@ -73,12 +73,10 @@ def merge_duplicate_concepts(concepts):
         Luckily NHP concepts don't have attributes (yet),
         so we don't have to merge those.
         """
-        for atom in concept2.get_atoms():
-            if atom not in concept1.get_atoms():
-                concept1.atoms.append(atom)
+        concept1.add_elements(concept2.get_atoms())
         for rel in concept2.get_relationships():
-            if rel not in concept1.get_relationships():
-                concept1.relationships.append(rel)
+            rel.subject = concept1
+            concept1.add_elements(rel)
 
     seen = {}  # {src_id: Concept}
     for (i, concept) in enumerate(concepts):
@@ -144,7 +142,7 @@ def create_ingredient_concepts(dataframe):
                            rel_name="ingredient_of",
                            obj=product_id,
                            src="NHPID")
-        concept.relationships.append(rel)
+        concept.add_elements(rel)
 
         concepts.append(concept)
     return concepts
@@ -220,13 +218,14 @@ def connect_ingredients_to_products(ingredient_concepts, product_concepts):
                 product = id2product[product_id]
             except KeyError:
                 print(f"Missing product {product_id} for ingredient {ing}.")
+                ing.rm_elements(rel)
                 continue
             rel.object = product
             has_ing_rel = Relationship(subject=product,
                                        rel_name="has_ingredient",
                                        obj=ing,
                                        src="NHPID")
-            product.relationships.append(has_ing_rel)
+            product.add_elements(has_ing_rel)
 
     return list(ingredient_concepts) + list(product_concepts)
 

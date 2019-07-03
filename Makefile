@@ -14,10 +14,9 @@ IDISK_VERSION = 1.0.0
 SCHEMA_VERSION = 1.0.0
 SCHEMA_CONF_FILE := $(IDISK_HOME)/lib/schemas/schemas.ini
 # Paths to the source ingredient concept files.
-# TODO: Add product concept files.
-SOURCE_FILES := $(IDISK_HOME)/sources/NMCD/11_30_2018/import/ingredients.jsonl \
-	        $(IDISK_HOME)/sources/DSLD/10_22_2018/import/ingredients.jsonl \
-	        $(IDISK_HOME)/sources/NHP/12_1_2017/import/ingredients.jsonl
+SOURCE_FILES := $(IDISK_HOME)/sources/NMCD/11_30_2018/import/concepts.jsonl \
+	        $(IDISK_HOME)/sources/DSLD/10_22_2018/import/concepts.jsonl \
+	        $(IDISK_HOME)/sources/NHP/12_1_2017/import/concepts.jsonl
 
 
 #################################################################################
