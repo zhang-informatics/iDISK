@@ -1,4 +1,4 @@
-.PHONY: clean version connections run_annotation filter_connections filter_connections_ann merge
+.PHONY: version_clean version connections run_annotation filter_connections filter_connections_ann merge
 
 #################################################################################
 # PROJECT CONFIGURATION (You can change these)                                  #
@@ -32,7 +32,7 @@ VERSION_DIR := $(IDISK_HOME)/versions/$(IDISK_VERSION)/
 #################################################################################
 
 ## Remove this version
-clean:
+version_clean:
 	rm -r $(VERSION_DIR)
 
 
