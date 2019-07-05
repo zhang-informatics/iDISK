@@ -2,7 +2,9 @@ import argparse
 import json
 import csv
 import copy
-from tqdm import tqdm, trange  # Progress bar
+from itertools import combinations
+
+from tqdm import tqdm  # Progress bar
 
 from idlib import Concept
 
@@ -181,7 +183,7 @@ class Union(object):
         overlap = set(ci_terms).intersection(set(cj_terms))
         return len(overlap) > 0
 
-    def find_connections(self):
+    def find_connections(self, parallel=False):
         """
         Finds all pairs of concepts that share one or more atom
         terms. Returns connections as a list of int tuples.
@@ -189,11 +191,17 @@ class Union(object):
         :returns: connections
         :rtype: list
         """
-        connections = []
-        for i in trange(len(self.concepts_map)):
-            for j in range(i+1, len(self.concepts_map)):
-                if self._connected(i, j):
-                    connections.append((i, j))
+        combos = combinations(range(len(self.concepts_map)), 2)
+        if parallel is True:
+            import numpy as np
+            from pathos.multiprocessing import ProcessingPool
+            combos = np.array(combos)
+            pool = ProcessingPool()
+            connected = pool.map(self._connected, combos[:, 0], combos[:, 1])
+            connections = combos[connected, :]
+        else:
+            connections = [(i, j) for (i, j) in combos
+                           if self._connected(i, j)]
         return connections
 
     def _merge(self, concept_i, concept_j):
