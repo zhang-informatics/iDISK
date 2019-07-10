@@ -91,8 +91,8 @@ filter_connections:
 		--outfile $(VERSION_DIR)/concepts/connections_new.csv
 	@mv $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv
 	@mv $(VERSION_DIR)/concepts/connections_new.csv $(VERSION_DIR)/concepts/connections.csv
-	@echo "New connections written to \n\t $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections.csv"
-	@echo "Original connections at \n\t $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv"
+	@echo "New connections written to \n\t $(VERSION_DIR)/concepts/connections.csv"
+	@echo "Original connections at \n\t $(VERSION_DIR)/concepts/connections_orig.csv"
 
 
 ## Filter connections according to annotations.
@@ -115,6 +115,7 @@ merge:
 		--infiles $(VERSION_DIR)/concepts/concepts_orig.jsonl \
 		--connections $(VERSION_DIR)/concepts/connections.csv \
 		--outfile $(VERSION_DIR)/concepts/concepts_merged.jsonl
+	@echo "Merged concepts written to $(VERSION_DIR)/concepts/concepts_merged.jsonl"
 
 
 ## Create the iDISK schema as a neo4j graph
