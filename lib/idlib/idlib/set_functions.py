@@ -2,6 +2,7 @@ import argparse
 import json
 import csv
 import copy
+from itertools import combinations
 from tqdm import tqdm, trange  # Progress bar
 
 from idlib import Concept
@@ -148,7 +149,7 @@ class Union(object):
             self.connections = self.find_connections()
         else:
             self.connections = connections
-        print(f"Number of connections: {len(self.connections)}")
+        #print(f"Number of connections: {len(self.connections)}")
         if run_union is True:
             self.union_find()
             self.result = [self.concepts_map[i]
@@ -162,39 +163,47 @@ class Union(object):
             assert(all([isinstance(i, int) for elem in connections
                         for i in elem]))
 
-    def _connected(self, i, j):
-        """
-        Two concepts are connected if they are of the same type
-        and they share one or more atoms.
-
-        :param int i: The index of the first concept.
-        :param int j: The index of the second concept.
-        :returns: Whether concepts i and j are connected.
-        :rtype: bool
-        """
-        ci = self.concepts_map[i]
-        cj = self.concepts_map[j]
-        if ci.concept_type != cj.concept_type:
-            return False
-        ci_terms = [a.term for a in ci.get_atoms()]
-        cj_terms = [a.term for a in cj.get_atoms()]
-        overlap = set(ci_terms).intersection(set(cj_terms))
-        return len(overlap) > 0
 
     def find_connections(self):
         """
         Finds all pairs of concepts that share one or more atom
-        terms. Returns connections as a list of int tuples.
+        terms. Returns connections as a generator over int tuples.
 
-        :returns: connections
-        :rtype: list
+        :returns: A generator over connections [i, j]
+        :rtype: Generator
         """
-        connections = []
-        for i in trange(len(self.concepts_map)):
-            for j in range(i+1, len(self.concepts_map)):
-                if self._connected(i, j):
-                    connections.append((i, j))
-        return connections
+
+        def _cache_atoms(indices):
+            # Cache the atoms of each concept to speed things up.
+            cache = {i: set([a.term.lower()
+                             for a in self.concepts_map[i].get_atoms()])
+                        for i in indices}
+            return cache
+
+        def _connected(i, j):
+            # Returns True if ci is connected to cj, else False.
+            ci = self.concepts_map[i]
+            cj = self.concepts_map[j]
+            if ci.concept_type != cj.concept_type:
+                return False
+            ci_terms = _atom_cache[i]
+            cj_terms = _atom_cache[j]
+            overlap = ci_terms.intersection(cj_terms)
+            return bool(overlap)
+
+        idxs = list(range(len(self.concepts_map)))
+        _atom_cache = _cache_atoms(idxs)
+
+        combos = combinations(idxs, 2)
+        # This is a quick approximation as the factorials get large.
+        n_combos = (idxs[-1]**2 // 2) - idxs[-1]
+        n_connections = 0
+        for (count, (i, j)) in enumerate(combos):
+            if count % 1000000 == 0:
+                print(f"{count}/{n_combos} : # cnxs {n_connections}")
+            if _connected(i, j):
+                n_connections += 1
+                yield (i, j)
 
     def _merge(self, concept_i, concept_j):
         """
