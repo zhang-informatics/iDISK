@@ -3,7 +3,8 @@ import json
 import csv
 import copy
 from itertools import combinations
-from tqdm import tqdm, trange  # Progress bar
+
+from tqdm import tqdm  # Progress bar
 
 from idlib import Concept
 
@@ -149,7 +150,7 @@ class Union(object):
             self.connections = self.find_connections()
         else:
             self.connections = connections
-        #print(f"Number of connections: {len(self.connections)}")
+        print(f"Number of connections: {len(self.connections)}")
         if run_union is True:
             self.union_find()
             self.result = [self.concepts_map[i]
@@ -187,22 +188,7 @@ class Union(object):
             if ci.concept_type != cj.concept_type:
                 return False
             ci_terms = _atom_cache[i]
-            cj_terms = _atom_cache[j]
-            overlap = ci_terms.intersection(cj_terms)
-            return bool(overlap)
-
-        idxs = list(range(len(self.concepts_map)))
-        _atom_cache = _cache_atoms(idxs)
-
-        combos = combinations(idxs, 2)
-        # This is a quick approximation as the factorials get large.
-        n_combos = (idxs[-1]**2 // 2) - idxs[-1]
-        n_connections = 0
-        for (count, (i, j)) in enumerate(combos):
-            if count % 1000000 == 0:
-                print(f"{count}/{n_combos} : # cnxs {n_connections}")
-            if _connected(i, j):
-                n_connections += 1
+        return connections
                 yield (i, j)
 
     def _merge(self, concept_i, concept_j):
