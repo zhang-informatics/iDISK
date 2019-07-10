@@ -164,45 +164,32 @@ class Union(object):
             assert(all([isinstance(i, int) for elem in connections
                         for i in elem]))
 
-    def _connected(self, i, j):
-        """
-        Two concepts are connected if they are of the same type
-        and they share one or more atoms.
 
-        :param int i: The index of the first concept.
-        :param int j: The index of the second concept.
-        :returns: Whether concepts i and j are connected.
-        :rtype: bool
-        """
-        ci = self.concepts_map[i]
-        cj = self.concepts_map[j]
-        if ci.concept_type != cj.concept_type:
-            return False
-        ci_terms = [a.term for a in ci.get_atoms()]
-        cj_terms = [a.term for a in cj.get_atoms()]
-        overlap = set(ci_terms).intersection(set(cj_terms))
-        return len(overlap) > 0
-
-    def find_connections(self, parallel=False):
+    def find_connections(self):
         """
         Finds all pairs of concepts that share one or more atom
-        terms. Returns connections as a list of int tuples.
+        terms. Returns connections as a generator over int tuples.
 
-        :returns: connections
-        :rtype: list
+        :returns: A generator over connections [i, j]
+        :rtype: Generator
         """
-        combos = combinations(range(len(self.concepts_map)), 2)
-        if parallel is True:
-            import numpy as np
-            from pathos.multiprocessing import ProcessingPool
-            combos = np.array(combos)
-            pool = ProcessingPool()
-            connected = pool.map(self._connected, combos[:, 0], combos[:, 1])
-            connections = combos[connected, :]
-        else:
-            connections = [(i, j) for (i, j) in combos
-                           if self._connected(i, j)]
+
+        def _cache_atoms(indices):
+            # Cache the atoms of each concept to speed things up.
+            cache = {i: set([a.term.lower()
+                             for a in self.concepts_map[i].get_atoms()])
+                        for i in indices}
+            return cache
+
+        def _connected(i, j):
+            # Returns True if ci is connected to cj, else False.
+            ci = self.concepts_map[i]
+            cj = self.concepts_map[j]
+            if ci.concept_type != cj.concept_type:
+                return False
+            ci_terms = _atom_cache[i]
         return connections
+                yield (i, j)
 
     def _merge(self, concept_i, concept_j):
         """

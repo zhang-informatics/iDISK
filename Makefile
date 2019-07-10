@@ -7,7 +7,7 @@
 # Your preferred Python.
 PYTHON_INTERPRETER = python3
 # Where iDISK is located.
-IDISK_HOME = /Users/vasil024/Projects/InProgressProjects/dietary_supplements_refactor/iDISK
+IDISK_HOME = /home/zhan1386/vasil024/Projects/dietary_supplements/iDISK
 # The version of iDISK to build.
 IDISK_VERSION = 1.0.0
 # Configuration file specifying how to build the schema.
