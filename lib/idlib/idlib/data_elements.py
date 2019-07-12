@@ -1,6 +1,7 @@
 import re
 import weakref
-import warnings
+import logging
+import json
 import numpy as np
 from collections import OrderedDict, defaultdict
 
@@ -152,10 +153,13 @@ class DataElement(object):
                          Relationship: self._relationships}
         element_type = type(element)
         if element_type not in [Atom, Attribute, Relationship]:
-            raise TypeError(f"Can't add element of type '{element_type}'.")
+            raise TypeError(f"Can't remove element of type '{element_type}'.")
         container = container_map[element_type]
         if container is None:
             msg = f"{element_type} not implemented for {type(self).__name__}."
+            raise AttributeError(msg)
+        if element not in container:
+            msg = f"{element} not found in {self}"
             raise AttributeError(msg)
         container.discard(element)
 
@@ -300,7 +304,7 @@ class Atom(DataElement):
         if self.term_type.upper() == "PN" or self.term_type.upper() == "PT":
             msg = "Term types PN (preferred name) and PT (preferred term) are \
                    deprecated. Set is_preffered=True."
-            warnings.warn(msg, DeprecationWarning)
+            logging.warning(msg, DeprecationWarning)
         assert isinstance(self.is_preferred, bool)
         assert isinstance(self.ui, (type(None), str))
 
@@ -461,7 +465,6 @@ class Concept(DataElement):
                          "relationships": rels})
         return d
 
-    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data):
         """
@@ -506,6 +509,22 @@ class Concept(DataElement):
         concept.add_elements(rels)
         return concept
 
+    @classmethod
+    def read_jsonl_file(cls, filepath):
+        """
+        Creates a concept for each line in the JSON lines file.
+
+        :param str filepath: Path to the JSON lines file containing concepts.
+        :returns: Generator over Concept instances
+        :rtype: generator
+        """
+        concepts = []
+        with open(filepath, 'r') as inF:
+            for line in inF:
+                concept = Concept.from_dict(json.loads(line))
+                concepts.append(concept)
+        return concepts
+
     # TODO: Refactor this to deal with strings that are mapped to multiple
     # concepts. E.g. "aspirin and ibuprofen" |--> "aspirin", "ibuprofen".
     @classmethod
@@ -526,7 +545,7 @@ class Concept(DataElement):
                         obj_concept = ui2concepts[rel.object]
                     except KeyError:
                         msg = f"Relationship object '{rel.object}' not found"
-                        warnings.warn(msg)
+                        logging.warning(msg)
                         continue
                     rel.object = obj_concept
 

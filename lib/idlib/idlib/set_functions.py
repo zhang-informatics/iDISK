@@ -1,11 +1,14 @@
 import argparse
+import logging
 import json
 import csv
 import copy
 from itertools import combinations
-from tqdm import tqdm, trange  # Progress bar
+from tqdm import tqdm  # Progress bar
 
 from idlib import Concept
+
+logging.getLogger().setLevel(logging.INFO)
 
 
 def parse_args():
@@ -58,10 +61,9 @@ def perform_find_connections(outfile, *infiles):
     """
     all_concepts = []
     for fpath in infiles:
-        data = [json.loads(line) for line in open(fpath, 'r')]
-        concepts = [Concept.from_dict(d) for d in data]
+        concepts = Concept.read_jsonl_file(fpath)
         all_concepts.extend(concepts)
-    print(f"Number of starting concepts: {len(all_concepts)}")
+    logging.info(f"Number of starting concepts: {len(all_concepts)}")
     cnxs = Union(all_concepts, run_union=False).connections
     with open(outfile, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
@@ -80,12 +82,11 @@ def perform_set_function(func, outfile, *infiles, connections=None):
     """
     all_concepts = []
     for fpath in infiles:
-        data = [json.loads(line) for line in open(fpath, 'r')]
-        concepts = [Concept.from_dict(d) for d in data]
+        concepts = Concept.read_jsonl_file(fpath)
         all_concepts.extend(concepts)
-    print(f"Number of starting concepts: {len(all_concepts)}")
+    logging.info(f"Number of starting concepts: {len(all_concepts)}")
     result = func(all_concepts, connections=connections).result
-    print(f"Number of resulting concepts: {len(result)}")
+    logging.info(f"Number of resulting concepts: {len(result)}")
     with open(outfile, 'w') as outF:
         for concept in result:
             json.dump(concept.to_dict(), outF)
@@ -145,11 +146,10 @@ class Union(object):
         self.concepts_map = dict(enumerate(self.concepts))
         self.parents_map = dict(enumerate(range(len(self.concepts))))
         if connections == []:
-            print(f"Finding connections...")
+            logging.info(f"Finding connections...")
             self.connections = self.find_connections()
         else:
             self.connections = connections
-        #print(f"Number of connections: {len(self.connections)}")
         if run_union is True:
             self.union_find()
             self.result = [self.concepts_map[i]
@@ -162,7 +162,6 @@ class Union(object):
             assert(all([isinstance(elem, tuple) for elem in connections]))
             assert(all([isinstance(i, int) for elem in connections
                         for i in elem]))
-
 
     def find_connections(self):
         """
@@ -177,7 +176,7 @@ class Union(object):
             # Cache the atoms of each concept to speed things up.
             cache = {i: set([a.term.lower()
                              for a in self.concepts_map[i].get_atoms()])
-                        for i in indices}
+                     for i in indices}
             return cache
 
         def _connected(i, j):
@@ -200,7 +199,7 @@ class Union(object):
         n_connections = 0
         for (count, (i, j)) in enumerate(combos):
             if count % 1000000 == 0:
-                print(f"{count}/{n_combos} : # cnxs {n_connections}")
+                logging.info(f"{count}/{n_combos} : # cnxs {n_connections}")
             if _connected(i, j):
                 n_connections += 1
                 yield (i, j)
