@@ -131,25 +131,25 @@ class MSKCC_Converter(object):
                                 Semantic
                                 Dietary Supplement Ingredient (SDSI)
         """
-        counter = 0
+        Concept.set_ui_prefix("MSKCC")
         with open(self.content_file, "r") as f:
             # use counter as herb id
             for line in f:
                 items = json.loads(line)
-                herb_atom, counter = self.generate_atom(items["herb_name"],
-                                                        counter, "PT")
+                herb_atom = self.generate_atom(items["herb_name"],
+                                               True, "PT")
                 # scientific_name
                 sn = items["scientific_name"]
                 if sn == "":
                     pass
                 sn = self.split_names(sn)
-                sn_atom, counter = self.generate_atom(sn, counter, "SN")
+                sn_atom = self.generate_atom(sn, False, "SN")
                 # common_name
                 cn = items["common_name"]
                 if cn == "":
                     pass
                 cn = self.split_names(cn)
-                cn_atom, counter = self.generate_atom(cn, counter, "CN")
+                cn_atom = self.generate_atom(cn, False, "CN")
                 # build concept based on Common Name & Scientific name Atoms
                 herb_atom.extend(sn_atom)
                 herb_atom.extend(cn_atom)
@@ -168,21 +168,21 @@ class MSKCC_Converter(object):
                                                   "Safety", warn)
                 # purported_uses
                 pu = items["purported_uses"]
-                herb_concept, counter = self.generate_idisk_schema(
-                                        pu, "SY", counter,
+                herb_concept = self.generate_idisk_schema(
+                                        pu, "SY", False,
                                         "DIS", "effects_on",
                                         herb_concept)
                 # adverse_reactions
                 ar = items["adverse_reactions"]
-                herb_concept, counter = self.generate_idisk_schema(
-                                        ar, "SY", counter,
+                herb_concept = self.generate_idisk_schema(
+                                        ar, "SY", False,
                                         "SS", "has_adverse_reaction",
                                         herb_concept)
                 # herb-drug_interactions
                 hdi = items["herb-drug_interactions"]
                 hdi = self.remove_useless_for_HDI(hdi)
-                herb_concept, counter = self.generate_idisk_schema(
-                                        hdi, "SY", counter,
+                herb_concept = self.generate_idisk_schema(
+                                        hdi, "SY", False,
                                         "SPD", "interact_with",
                                         herb_concept)
                 # write to local file
@@ -190,13 +190,13 @@ class MSKCC_Converter(object):
                     json.dump(herb_concept.to_dict(), outf)
                     outf.write("\n")
 
-    def generate_atom(self, content, counter, term_type):
+    def generate_atom(self, content, prefer_label, term_type):
         """
         Given the input, generate an iDISK Atom
         Return the generated iDISK Atom
 
         :param str content: the extracted content that needs to map to Atom
-        :param int counter: counter as Atom's src_id
+        :param bool prefer_label: whether or not the term is preferred
         :param str term_type: Atom term type
         :return: the generated iDISK Atom
         :rtype: list
@@ -207,21 +207,21 @@ class MSKCC_Converter(object):
         if isinstance(content, list):
             for each in content:
                 if self.is_valid_content(each):
-                    atom = Atom(each, src="MSKCC", src_id=str(counter),
-                                term_type=term_type, is_preferred=True)
-                    counter += 1
+                    atom = Atom(each, src="MSKCC", src_id="0",
+                                term_type=term_type,
+                                is_preferred=prefer_label)
                     atoms.append(atom)
                 else:
                     pass
         else:
             if self.is_valid_content(content):
-                atom = Atom(content, src="MSKCC", src_id=str(counter),
-                            term_type=term_type, is_preferred=True)
-                counter += 1
+                atom = Atom(content, src="MSKCC", src_id="0",
+                            term_type=term_type,
+                            is_preferred=prefer_label)
                 atoms.append(atom)
             else:
                 pass
-        return (atoms, counter)
+        return atoms
 
     def generate_attr(self, herb_concept, attr_name, attr_value):
         """
@@ -258,7 +258,7 @@ class MSKCC_Converter(object):
         from_concept.relationships.append(rel)
         return from_concept
 
-    def generate_idisk_schema(self, value, value_type, counter,
+    def generate_idisk_schema(self, value, value_type, prefer_label,
                               concept_type, rel_name, from_concept):
         """
         Given the herb content:
@@ -269,20 +269,19 @@ class MSKCC_Converter(object):
 
         :param str/list value: herb content
         :param str value_type: herb content Atom type
-        :param int counter: the counter as id
+        :param bool prefer_label: whether or not the term is preferred
         :param str concept_type: Concept type for the generated Atom
         :param str rel_name: Relationship type given the generated Concept
         :param Concept from_concept: the subject Concept of this schema
 
-        :return: the subject Concept of this shema and current id counter,
-                 as tuple
-        :retype: tuple
+        :return: the subject Concept of this shema
+        :retype: Concept
         """
-        value_atom, counter = self.generate_atom(value, counter, value_type)
+        value_atom = self.generate_atom(value, prefer_label, value_type)
         value_concept = Concept(concept_type, value_atom)
         from_concept = self.generate_rel(from_concept, value_concept,
                                          rel_name)
-        return(from_concept, counter)
+        return from_concept
 
 
 if __name__ == "__main__":
