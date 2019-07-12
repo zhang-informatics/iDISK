@@ -55,7 +55,7 @@ CREATE (i) -[:IS_EFFECTIVE_FOR {rating: "Rating"}]-> (d)
 CREATE (i) -[:HAS_THERAPEUTIC_CLASS]-> (t)
 
 // Adverse effect on
-CREATE (i) -[:ADVERSE_EFFECT_ON]-> (c)
+CREATE (i) -[:HAS_ADVERSE_EFFECT_ON]-> (c)
 
 // Has adverse reaction
 CREATE (i) -[:HAS_ADVERSE_REACTION]-> (s)
