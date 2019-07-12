@@ -3,6 +3,7 @@ import subprocess
 import re
 import json
 import logging
+from datetime import datetime
 
 
 logging.getLogger().setLevel(logging.INFO)
@@ -73,6 +74,16 @@ class EntityLinker(object):
         msg = f"<{self.name}> " + msg
         func(msg)
 
+    def _get_query_directory_name(self):
+        """
+        Queries to the entity linker and their results are
+        stored in a timestamped directory for debugging
+        purposes.
+        """
+        datetime_str = datetime.now().strftime("%Y_%m_%d_%H:%M:%S")
+        dirname = f".query_{self.name}_{datetime_str}"
+        return dirname
+
     def link(self, input_strings, **kwargs):
         """
         Link an input string or sequence of input strings
@@ -109,15 +120,28 @@ class MetaMapDriver(EntityLinker):
     :param str mm_bin: path to MetaMap bin/ directory.
     :param str data_year: corresponds to the -V option. E.g. '2018AA'
     :param str data_version: corresponds to the -Z option. E.g. 'Base'
+    :param int min_score: minimum score of a candidate mapping to keep.
     """
 
-    def __init__(self, mm_bin, data_year="2018AB", data_version="Base"):
+    def __init__(self, mm_bin, data_year="2018AB", data_version="Base",
+                 min_score=800):
         super().__init__("metamap")
         self.mm_bin = mm_bin
         self.metamap = os.path.join(self.mm_bin, "metamap16")
         self.data_year = data_year
         self.data_version = data_version
+        self.min_score = min_score
+        self._log_parameters()
         self._start()
+
+    def _log_parameters(self):
+        self._log(f"Staring annotator '{self.name}'")
+        self._log(f"{self.name} parameters:")
+        self._log(f"  mm_bin : {self.mm_bin}")
+        self._log(f"  metamap_cmd : {self.metamap}")
+        self._log(f"  data_year : {self.data_year}")
+        self._log(f"  data_version : {self.data_version}")
+        self._log(f"  min_score : {self.min_score}")
 
     def _start(self):
         """
@@ -157,12 +181,12 @@ class MetaMapDriver(EntityLinker):
         """
         return [f"{i}|{input}" for (i, input) in enumerate(data)]
 
-    def _get_call(self, data_filename, term_processing=False,
+    def _get_call(self, indata, term_processing=False,
                   options=None, relaxed=True):
         """
         Build the command line call to MetaMap.
 
-        :param str inputs: newline delimited string of terms to map.
+        :param list indata: list of strings to map.
         :param bool term_processing: Whether to use the --term_processing
                                      option and the recommend options to
                                      accompany it. (default False).
@@ -188,7 +212,19 @@ class MetaMapDriver(EntityLinker):
             args.append(options)
         args_str = ' '.join(args)
 
-        call = f"{self.metamap} {args_str} {data_filename}"
+        log_dir = self._get_query_directory_name()
+        os.makedirs(log_dir)
+        logging.info(f"Logging query to {log_dir}")
+        infile = os.path.join(log_dir, "query.in")
+        outfile = os.path.join(log_dir, "query.out")
+
+        # Log the query
+        # MetaMap requires an extra newline at the end.
+        indata = '\n'.join(indata) + '\n'
+        with open(infile, 'w') as outF:
+            outF.write(indata)
+
+        call = f"{self.metamap} {args_str} {infile} {outfile}"
         return call
 
     def _run_call(self, call):
@@ -201,7 +237,8 @@ class MetaMapDriver(EntityLinker):
         """
         process = subprocess.Popen(call, shell=True, stdout=subprocess.PIPE)
         process.wait()
-        output = json.loads(open("tmp.txt.out", 'r').read())
+        outfile = call.split()[-1]
+        output = json.loads(open(outfile, 'r').read())
         return output
 
     def _convert_output_to_candidate_links(self, output, keep_semtypes={}):
@@ -287,19 +324,14 @@ class MetaMapDriver(EntityLinker):
             self._log(msg, level="warn")
             clean = self._add_ids(clean)
 
-        # TODO: Figure out best way to specify the input/output filename.
-        indata = '\n'.join(clean)
-        with open("tmp.txt", 'w') as outF:
-            outF.write(indata)
-            outF.write('\n')  # MetaMap requires an extra newline at the end.
-        call = self._get_call("tmp.txt", term_processing=term_processing,
+        call = self._get_call(clean, term_processing=term_processing,
                               options=call_options)
         output = self._run_call(call)
         links = self._convert_output_to_candidate_links(output,
                                                         keep_semtypes)
         return links
 
-    def get_best_links(self, candidate_links, min_score=800):
+    def get_best_links(self, candidate_links, min_score=None):
         """
         Returns the candidate link with the highest score
         for each input term.
@@ -307,7 +339,9 @@ class MetaMapDriver(EntityLinker):
         be returned at random.
 
         :param dict mappings: dict of candidate mappings. Output of self.map.
-        :param int min_score: minimum candidate mapping score to accept.
+        :param int min_score: (Optional) minimum candidate mapping score to
+                              accept. If not specified, defaults to
+                              self.min_score.
         :returns: The best candidate mapping for each input term.
         :rtype: list
         """
@@ -316,8 +350,7 @@ class MetaMapDriver(EntityLinker):
 
         all_concepts = {}
         for (doc_id, phrases) in candidate_links.items():
-            #phrase2candidate = {}
-            best_candidates = []
+            phrase2candidate = {}
             for (phrase_text, candidates) in phrases.items():
                 best_score = float("-inf")
                 best_candidate = None
@@ -330,8 +363,6 @@ class MetaMapDriver(EntityLinker):
                     msg = f"No best candidate for input '{phrase_text}'."
                     self._log(msg, level="warn")
 
-                best_candidates.append(best_candidate)
-                #phrase2candidate[phrase_text] = best_candidate
-            #all_concepts[doc_id] = phrase2candidate
-            all_concepts[doc_id] = best_candidate
+                phrase2candidate[phrase_text] = best_candidate
+            all_concepts[doc_id] = phrase2candidate
         return all_concepts

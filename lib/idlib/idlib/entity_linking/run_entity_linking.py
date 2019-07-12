@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 import logging
@@ -5,7 +6,7 @@ import configparser
 import json
 from collections import defaultdict
 
-from mappers import MetaMapDriver
+from linkers import MetaMapDriver
 from idlib import Schema, Atom, Concept, Attribute
 
 
@@ -64,13 +65,16 @@ class LinkedString(object):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    # Input and output files
     parser.add_argument("--concepts_file", type=str,
                         help="""Path to iDISK JSON lines file containing
                                 concepts to map.""")
     parser.add_argument("--outfile", type=str,
                         help="Where to write the mapped JSON lines file.")
+    # Annotator settings
     parser.add_argument("--annotator_conf", type=str,
                         help="Path to config file for the annotators.")
+    # Schema access
     parser.add_argument("--uri", type=str, default="localhost",
                         help="URI of the graph to connect to.")
     parser.add_argument("--user", type=str, default="neo4j",
@@ -80,6 +84,7 @@ def parse_args():
     parser.add_argument("--schema_file", type=str, default=None,
                         help="""Path to schema.cypher.
                                 If None, use existing graph at --uri.""")
+
     args = parser.parse_args()
     return args
 
@@ -96,6 +101,9 @@ def get_annotators(annotator_ini, schema):
     :rtype: dict
     """
     annotator_map = {"umls": MetaMapDriver}
+
+    if not os.path.exists(annotator_ini):
+        raise OSError("{annotator_ini} not found.")
 
     external_dbs = schema.external_terminologies
     config = configparser.ConfigParser()
@@ -123,6 +131,7 @@ def get_linkables_from_concepts(concepts, schema):
               candidate_links attribute.
     :rtype: list
     """
+    seen = set()
     linkables = []
     for concept in concepts:
         concept_node = schema.get_node_from_label(concept.concept_type)
@@ -134,8 +143,10 @@ def get_linkables_from_concepts(concepts, schema):
                                 terminology=concept_terminology,
                                 id=concept.ui,
                                 concept_type=list(concept_node.labels)[0])
-        linkables.append(linkable)
-    return linkables
+        if linkable.id not in seen:
+            seen.add(linkable.id)
+            linkables.append(linkable)
+    return list(linkables)
 
 
 def get_linkables_from_relationships(concepts, schema):
@@ -151,6 +162,7 @@ def get_linkables_from_relationships(concepts, schema):
     :returns: Set of Linking instances without the candidate_links attribute.
     :rtype: list
     """
+    seen = set()
     linkables = []
     for concept in concepts:
         for rel in concept.get_relationships():
@@ -167,9 +179,11 @@ def get_linkables_from_relationships(concepts, schema):
             linkable = LinkedString(string=rel.object,
                                     terminology=rel_terminology,
                                     concept_type=concept_type)
-            linkables.append(linkable)
+            if linkable.id not in seen:
+                seen.add(linkable.id)
+                linkables.append(linkable)
             rel.object = linkable.id
-    return linkables
+    return list(linkables)
 
 
 def link_entities(linkables, annotators):
@@ -199,9 +213,9 @@ def link_entities(linkables, annotators):
     for i in range(len(linkables)):
         terminology = linkables[i].terminology
         lid = linkables[i].id
+        string = linkables[i].string
         concept_type = linkables[i].concept_type
         semtypes = valid_semtypes.get(concept_type)
-        string = linkables[i].string
         if semtypes is not None:
             keep_semtypes_by_terminology[terminology][lid] = semtypes
         query = f"{lid}|{string}"
@@ -215,15 +229,16 @@ def link_entities(linkables, annotators):
             continue
         keep_semtypes = keep_semtypes_by_terminology[terminology]
         candidates = ann.link(queries, keep_semtypes=keep_semtypes)
-        candidates = ann.get_best_links(candidates)
+        candidates = ann.get_best_links(candidates, min_score=700)
 
         # Add the linked entities to the corresponding Linking instance.
-        # {LinkedString().id: [[CandidateLink], [...]]}
-        for (lid, cand_link) in candidates.items():
-            if cand_link is None:
-                continue
-            linkable = linkables_by_id[lid]
-            linkable.candidate_links.append(cand_link)
+        # {LinkedString().id: {matched_str: CandidateLink}}
+        for lid in candidates.keys():
+            for cand_link in candidates[lid].values():
+                if cand_link is None:
+                    continue
+                linkable = linkables_by_id[lid]
+                linkable.candidate_links.append(cand_link)
 
     return linkables
 
@@ -353,9 +368,9 @@ def create_concepts_from_linkings(linked_strs, existing_concepts):
                 orig_string = linked_strs_by_id[str_id].string
                 rel.object = orig_string
                 if str_id not in already_warned:
+                    already_warned.add(str_id)
                     msg = f"{str_id} ({orig_string}) was not linked."
                     logging.warning(msg)
-                    already_warned.add(str_id)
                 continue
             rel.object = obj_concept
 
