@@ -423,6 +423,8 @@ class Concept(DataElement):
             return None
         if self._preferred_atom is None:
             atoms = [atom for atom in self._atoms if atom.is_preferred is True]
+            if atoms == []:
+                atoms = list(self.get_atoms())
             atom_rank = [SOURCES.index(atom.src) for atom in atoms]
             pref = atoms[np.argmin(atom_rank)]
             self._preferred_atom = pref
@@ -525,8 +527,6 @@ class Concept(DataElement):
                 concepts.append(concept)
         return concepts
 
-    # TODO: Refactor this to deal with strings that are mapped to multiple
-    # concepts. E.g. "aspirin and ibuprofen" |--> "aspirin", "ibuprofen".
     @classmethod
     def resolve_relationships(cls):
         """
@@ -544,7 +544,7 @@ class Concept(DataElement):
                     try:
                         obj_concept = ui2concepts[rel.object]
                     except KeyError:
-                        msg = f"Relationship object '{rel.object}' not found"
+                        msg = f"Object of {rel.rel_name} '{rel.object}' not found"
                         logging.warning(msg)
                         continue
                     rel.object = obj_concept
