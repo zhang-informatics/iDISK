@@ -109,6 +109,18 @@ class MSKCC_Converter(object):
         else:
             return True
 
+    def write_to_local_file(self, concept):
+        """
+        Write concept into a local file
+        Remove duplicate items
+
+        :param list seen_id: concept ids that have beed processed
+        :param Concept concept: the concept to be written in the local file
+        """
+        with open(self.idisk_format_output, "a") as outf:
+            json.dump(concept.to_dict(), outf)
+            outf.write("\n")
+
     def iterate_mskcc_file(self):
         """
         For MSKCC source data ONLY
@@ -132,10 +144,12 @@ class MSKCC_Converter(object):
                                 Dietary Supplement Ingredient (SDSI)
         """
         Concept.set_ui_prefix("MSKCC")
+        seen_id = []
         with open(self.content_file, "r") as f:
             # use counter as herb id
             for line in f:
                 items = json.loads(line)
+                print("currently processing: " + items["herb_name"])
                 herb_atom = self.generate_atom(items["herb_name"],
                                                True, "PT")
                 # scientific_name
@@ -168,27 +182,33 @@ class MSKCC_Converter(object):
                                                   "Safety", warn)
                 # purported_uses
                 pu = items["purported_uses"]
-                herb_concept = self.generate_idisk_schema(
-                                        pu, "SY", False,
-                                        "DIS", "effects_on",
-                                        herb_concept)
+                herb_concept, pu_concept = self.generate_idisk_schema(
+                                            pu, "SY", False,
+                                            "DIS", "effects_on",
+                                            herb_concept)
                 # adverse_reactions
                 ar = items["adverse_reactions"]
-                herb_concept = self.generate_idisk_schema(
-                                        ar, "SY", False,
-                                        "SS", "has_adverse_reaction",
-                                        herb_concept)
+                herb_concept, adr_concept = self.generate_idisk_schema(
+                                            ar, "SY", False,
+                                            "SS", "has_adverse_reaction",
+                                            herb_concept)
                 # herb-drug_interactions
                 hdi = items["herb-drug_interactions"]
                 hdi = self.remove_useless_for_HDI(hdi)
-                herb_concept = self.generate_idisk_schema(
-                                        hdi, "SY", False,
-                                        "SPD", "interact_with",
-                                        herb_concept)
-                # write to local file
-                with open(self.idisk_format_output, "a") as outf:
-                    json.dump(herb_concept.to_dict(), outf)
-                    outf.write("\n")
+                herb_concept, hdi_concept = self.generate_idisk_schema(
+                                            hdi, "SY", False,
+                                            "SPD", "interact_with",
+                                            herb_concept)
+                # remove duplicate items
+                seen_id.append(herb_concept.ui)
+                seen_id.append(pu_concept.ui)
+                seen_id.append(adr_concept.ui)
+                seen_id.append(hdi_concept.ui)
+                # write all concepts to local file
+                self.write_to_local_file(herb_concept)
+                self.write_to_local_file(pu_concept)
+                self.write_to_local_file(adr_concept)
+                self.write_to_local_file(hdi_concept)
 
     def generate_atom(self, content, prefer_label, term_type):
         """
@@ -250,13 +270,17 @@ class MSKCC_Converter(object):
         :param Concept from_concept: the subject of this Relationship
         :param Concept to_concept: the object of this Relationship
         :param str rel_name: iDISK Relationship name
-        :return: the subject Concept of this Relationship
-        :rtype: Concept
+        :return: the subject and object Concept of this Relationship
+        :rtype: tuple
         """
         rel = Relationship(subject=from_concept, obj=to_concept,
                            rel_name=rel_name, src="MSKCC")
         from_concept.relationships.append(rel)
-        return from_concept
+        # make the relationship two-way
+        rel_object = Relationship(subject=to_concept, obj=from_concept,
+                                  rel_name=rel_name, src="MSKCC")
+        to_concept.relationships.append(rel_object)
+        return (from_concept, to_concept)
 
     def generate_idisk_schema(self, value, value_type, prefer_label,
                               concept_type, rel_name, from_concept):
@@ -265,7 +289,7 @@ class MSKCC_Converter(object):
         1. generate its Atom,
         2. generate Concept based on Atom generated from step 1
         3. generate Relationship based on the Concept generated from step 2
-        4. return the subject Concept after building this schema
+        4. return the subject and object Concepts after building this schema
 
         :param str/list value: herb content
         :param str value_type: herb content Atom type
@@ -274,14 +298,15 @@ class MSKCC_Converter(object):
         :param str rel_name: Relationship type given the generated Concept
         :param Concept from_concept: the subject Concept of this schema
 
-        :return: the subject Concept of this shema
-        :retype: Concept
+        :return: the subject and object Concept of this Relationship
+        :rtype: tuple
         """
         value_atom = self.generate_atom(value, prefer_label, value_type)
-        value_concept = Concept(concept_type, value_atom)
-        from_concept = self.generate_rel(from_concept, value_concept,
-                                         rel_name)
-        return from_concept
+        value_concept = Concept(concept_type, atoms=value_atom)
+        from_concept, value_concept = self.generate_rel(
+                                            from_concept, value_concept,
+                                            rel_name)
+        return (from_concept, value_concept)
 
 
 if __name__ == "__main__":
