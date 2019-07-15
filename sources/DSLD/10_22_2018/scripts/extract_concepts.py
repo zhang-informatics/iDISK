@@ -8,7 +8,6 @@ from nltk.corpus import stopwords
 
 from idlib import Atom, Concept, Attribute, Relationship
 
-# TODO: Write docstrings
 """
 Obtains all the synonyms of the DSLD manual download
 and saves them as a JSON lines file.
@@ -31,22 +30,6 @@ def parse_args():
                                 by default.""")
     args = parser.parse_args()
     return args
-
-
-def read_ingredients_data(infile):
-    ingredients_data = pd.read_csv(infile,
-                                   dtype={"Ingredient - Group ID": int})
-    ingredients_data = ingredients_data[["Ingredient - Group ID",
-                                         "Ingredient - Group Name",
-                                         "Synonyms/Sources"]]
-    ingredients_data.drop_duplicates(inplace=True)
-    ingredients_data.columns = ["group_id", "group_name", "synonyms"]
-    return ingredients_data
-
-
-def read_products_data(infile):
-    products_data = [json.loads(line.strip()) for line in open(infile, 'r')]
-    return products_data
 
 
 def main():
@@ -103,28 +86,64 @@ def main():
             outF.write("\n")
 
 
+def read_ingredients_data(infile):
+    """
+    Read the ingredients data from the CSV file at infile
+    into a pandas DataFrame.
+
+    :param str infile: The CSV file to read.
+    :returns: ingredients data
+    :rtype: pandas.DataFrame
+    """
+    ingredients_data = pd.read_csv(infile,
+                                   dtype={"Ingredient - Group ID": int})
+    ingredients_data = ingredients_data[["Ingredient - Group ID",
+                                         "Ingredient - Group Name",
+                                         "Synonyms/Sources"]]
+    ingredients_data.drop_duplicates(inplace=True)
+    ingredients_data.columns = ["group_id", "group_name", "synonyms"]
+    return ingredients_data
+
+
+def read_products_data(infile):
+    """
+    Read the products data from the JSON lines file at infile
+    and return the result as a list of dicts.
+
+    :param str infile: JSON lines file to read.
+    :returns: products data
+    :rtype: list
+    """
+    products_data = [json.loads(line.strip()) for line in open(infile, 'r')]
+    return products_data
+
+
 def connect_products_to_ingredients(product_concepts, ingredient_concepts):
+    """
+    Given a set of ingredient and product Concept instances, update the object
+    of the has_ingredient Relationships to be the ingredient instances.
+
+    :param list product_concepts: List of Concepts of type DSP.
+    :param list ingredient_concepts: List of Concepts of type SDSI.
+    :returns: List of both product and ingredient concepts, with
+              ingredient_of Relationships.
+    :rtype: list
+    """
     id2ingredient = dict([(c.preferred_atom.src_id, c)
                           for c in ingredient_concepts])
     num_missing_ingredients = 0
     for (i, product) in enumerate(product_concepts):
-        print(f"{i}/{len(product_concepts)}\r", end='')
+        print(f"{i+1}/{len(product_concepts)}\r", end='')
         for rel in product.get_relationships("has_ingredient"):
             ingredient_id = rel.object
             try:
-                ingredient = id2ingredient[ingredient_id]
+                ingredient_concept = id2ingredient[ingredient_id]
+                rel.object = ingredient_concept
             except KeyError:
-                logging.warning(f"Unable to find ingredient {ingredient_id} \
-                                  of product {product}.")
+                logging.warning(f"Unable to find ingredient {ingredient_id} of product {product}.")  # noqa
                 num_missing_ingredients += 1
                 product.rm_elements(rel)
                 continue
-            rel.object = ingredient  # Update the object to be a Concept.
-            ing_of_rel = Relationship(subject=ingredient,
-                                      rel_name="ingredient_of",
-                                      obj=product,
-                                      src="NMCD")
-            ingredient.add_elements(ing_of_rel)
 
     logging.warning(f"Couldn't find {num_missing_ingredients} ingredients.")
     return ingredient_concepts + product_concepts
@@ -147,7 +166,6 @@ def convert_products_to_concepts(json_data):
                             src="DSLD")
             concept.add_elements(atr)
 
-        # has_ingredient relationships
         for ing in line["ingredients"]:
             ing_id = ing["Ingredient_Group_GRP_ID"]
             has_ing_rel = Relationship(subject=concept,

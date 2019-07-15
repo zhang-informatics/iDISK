@@ -221,11 +221,6 @@ def connect_ingredients_to_products(ingredient_concepts, product_concepts):
                 ing.rm_elements(rel)
                 continue
             rel.object = product
-            has_ing_rel = Relationship(subject=product,
-                                       rel_name="has_ingredient",
-                                       obj=ing,
-                                       src="NHPID")
-            product.add_elements(has_ing_rel)
 
     return list(ingredient_concepts) + list(product_concepts)
 
