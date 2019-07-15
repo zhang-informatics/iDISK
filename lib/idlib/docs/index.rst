@@ -13,6 +13,7 @@ The iDISK API Library (idlib)
    source/data_elements
    source/set_functions
    source/config
+   source/entity_linking
 
 
 ------------

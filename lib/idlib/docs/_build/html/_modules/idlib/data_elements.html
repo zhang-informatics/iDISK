@@ -83,6 +83,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../source/data_elements.html">idlib.data_elements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../source/set_functions.html">idlib.set_functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../source/config.html">idlib.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../source/entity_linking.html">idlib.entity_linking</a></li>
 </ul>
 
             
@@ -148,7 +149,8 @@
   <h1>Source code for idlib.data_elements</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">weakref</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
 
@@ -300,10 +302,13 @@
                          <span class="n">Relationship</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relationships</span><span class="p">}</span>
         <span class="n">element_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">element_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Atom</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">]:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Can&#39;t add element of type &#39;</span><span class="si">{element_type}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Can&#39;t remove element of type &#39;</span><span class="si">{element_type}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
         <span class="n">container</span> <span class="o">=</span> <span class="n">container_map</span><span class="p">[</span><span class="n">element_type</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">container</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{element_type}</span><span class="s2"> not implemented for {type(self).__name__}.&quot;</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">element</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">container</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{element}</span><span class="s2"> not found in </span><span class="si">{self}</span><span class="s2">&quot;</span>
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="n">container</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
 
@@ -448,7 +453,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;PN&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;PT&quot;</span><span class="p">:</span>
             <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Term types PN (preferred name) and PT (preferred term) are </span><span class="se">\</span>
 <span class="s2">                   deprecated. Set is_preffered=True.&quot;</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_preferred</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="p">,</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="nb">str</span><span class="p">))</span>
 
@@ -521,7 +526,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="n">ui</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">init_counter</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ui</span><span class="p">[</span><span class="o">-</span><span class="mi">7</span><span class="p">:]))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_preferred_atom</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span> <span class="k">if</span> <span class="n">atoms</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">set</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_attributes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_relationships</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">()</span>
@@ -609,7 +614,6 @@
                          <span class="s2">&quot;relationships&quot;</span><span class="p">:</span> <span class="n">rels</span><span class="p">})</span>
         <span class="k">return</span> <span class="n">d</span></div>
 
-    <span class="c1"># TODO: Check for valid JSON</span>
 <div class="viewcode-block" id="Concept.from_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -642,17 +646,33 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">concept</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">concept_type</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;concept_type&quot;</span><span class="p">],</span> <span class="n">ui</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;ui&quot;</span><span class="p">])</span>
         <span class="n">atoms</span> <span class="o">=</span> <span class="p">[</span><span class="n">Atom</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">syn</span><span class="p">)</span> <span class="k">for</span> <span class="n">syn</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;synonyms&quot;</span><span class="p">]]</span>
-        <span class="n">concept</span><span class="o">.</span><span class="n">add_atoms</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span>
+        <span class="n">concept</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span>
         <span class="n">atrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">Attribute</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">atr</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="n">concept</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">]]</span>
-        <span class="n">concept</span><span class="o">.</span><span class="n">_attributes</span> <span class="o">=</span> <span class="n">atrs</span>
+        <span class="n">concept</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">atrs</span><span class="p">)</span>
         <span class="c1"># Because we do not have a concept mapping yet, these relationships</span>
         <span class="c1"># will have concept UIs as their objects. This can be resolved via</span>
         <span class="c1"># Concept.resolve_relationships()</span>
         <span class="n">rels</span> <span class="o">=</span> <span class="p">[</span><span class="n">Relationship</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="n">concept</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;relationships&quot;</span><span class="p">]]</span>
-        <span class="n">concept</span><span class="o">.</span><span class="n">_relationships</span> <span class="o">=</span> <span class="n">rels</span>
+        <span class="n">concept</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">rels</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">concept</span></div>
+
+<div class="viewcode-block" id="Concept.read_jsonl_file"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept.read_jsonl_file">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">read_jsonl_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filepath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a concept for each line in the JSON lines file.</span>
+
+<span class="sd">        :param str filepath: Path to the JSON lines file containing concepts.</span>
+<span class="sd">        :returns: Generator over Concept instances</span>
+<span class="sd">        :rtype: generator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">concepts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">inF</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">inF</span><span class="p">:</span>
+                <span class="n">concept</span> <span class="o">=</span> <span class="n">Concept</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+                <span class="n">concepts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">concept</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">concepts</span></div>
 
     <span class="c1"># TODO: Refactor this to deal with strings that are mapped to multiple</span>
     <span class="c1"># concepts. E.g. &quot;aspirin and ibuprofen&quot; |--&gt; &quot;aspirin&quot;, &quot;ibuprofen&quot;.</span>
@@ -674,7 +694,7 @@
                         <span class="n">obj_concept</span> <span class="o">=</span> <span class="n">ui2concepts</span><span class="p">[</span><span class="n">rel</span><span class="o">.</span><span class="n">object</span><span class="p">]</span>
                     <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
                         <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;Relationship object &#39;</span><span class="si">{rel.object}</span><span class="s2">&#39; not found&quot;</span>
-                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
                         <span class="k">continue</span>
                     <span class="n">rel</span><span class="o">.</span><span class="n">object</span> <span class="o">=</span> <span class="n">obj_concept</span></div></div>
 
@@ -950,7 +970,7 @@
                   <span class="n">src</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;src&quot;</span><span class="p">])</span>
         <span class="n">atrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">Attribute</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">atr</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="n">rel</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">]]</span>
-        <span class="n">rel</span><span class="o">.</span><span class="n">_attributes</span> <span class="o">=</span> <span class="n">atrs</span>
+        <span class="n">rel</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">atrs</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">rel</span></div></div>
 </pre></div>
