@@ -125,12 +125,13 @@ class MSKCC_Converter(object):
         :param str content: the content to be checked
         :rtype: bool
         """
+        content = content.strip()
         if content.lower() == "general" or \
             content.lower() == "none reports." or \
-                content.lower() == "none known." or \
-                content == "" or \
-                content.lower() == "case reports" or \
-                any(char.isdigit() for char in content):
+            content.lower() == "none known." or \
+            content.lower() == "case reports" or \
+            content.lower() == "none reported." or \
+                len(content) == 0:
             return False
         else:
             return True
@@ -174,24 +175,22 @@ class MSKCC_Converter(object):
             # use counter as herb id
             for line in f:
                 items = json.loads(line)
-                print("currently processing: " + items["herb_name"])
                 herb_atom = self.generate_atom(items["herb_name"],
-                                               True, "PT")
-                # scientific_name
+                                               prefer_label=True,
+                                               term_type="SY")
+                # scientific name
                 sn = items["scientific_name"]
-                if sn == "":
-                    pass
-                sn = self.split_names(sn)
-                sn_atom = self.generate_atom(sn, True, "SN")
-                # common_name
                 cn = items["common_name"]
-                if cn == "":
-                    pass
-                cn = self.split_names(cn)
-                cn_atom = self.generate_atom(cn, True, "CN")
-                # build concept based on Common Name & Scientific name Atoms
-                herb_atom.extend(sn_atom)
-                herb_atom.extend(cn_atom)
+                if len(sn) != 0:
+                    sn = self.split_names(sn)
+                    sn_atom = self.generate_atom(sn, True, "SN")
+                    herb_atom.extend(sn_atom)
+                # common_name
+                if len(cn) != 0:
+                    cn = self.split_names(cn)
+                    cn_atom = self.generate_atom(cn, True, "CN")
+                    herb_atom.extend(cn_atom)
+                # build concept from names
                 herb_concept = Concept("SDSI", atoms=herb_atom)
                 # clinical_summary
                 cs = items["clinical_summary"]
@@ -208,32 +207,29 @@ class MSKCC_Converter(object):
                 # purported_uses
                 pu = items["purported_uses"]
                 pu = self.split_content(pu)
-                if len(pu) > 1:
-                    for each in pu:
-                        herb_concept = self.generate_idisk_schema(
-                                        each, "SY", False,
-                                        "DIS", "effects_on",
-                                        herb_concept)
+                for each in pu:
+                    herb_concept = self.generate_idisk_schema(
+                                    each, "SY", False,
+                                    "DIS", "effects_on",
+                                    herb_concept)
                 # adverse_reactions
                 ar = items["adverse_reactions"]
                 ar = self.split_content(ar)
-                if len(ar) > 1:
-                    for each in ar:
-                        herb_concept = self.generate_idisk_schema(
-                                        each, "SY", False,
-                                        "SS",
-                                        "has_adverse_reaction",
-                                        herb_concept)
+                for each in ar:
+                    herb_concept = self.generate_idisk_schema(
+                                    each, "SY", False,
+                                    "SS",
+                                    "has_adverse_reaction",
+                                    herb_concept)
                 # herb-drug_interactions
                 hdi = items["herb-drug_interactions"]
                 hdi = self.remove_useless_for_HDI(hdi)
                 hdi = self.split_content(hdi)
-                if len(hdi) > 1:
-                    for each in hdi:
-                        herb_concept = self.generate_idisk_schema(
-                                        each, "SY", False,
-                                        "SPD", "interact_with",
-                                        herb_concept)
+                for each in hdi:
+                    herb_concept = self.generate_idisk_schema(
+                                    each, "SY", False,
+                                    "SPD", "interacts_with",
+                                    herb_concept)
                 # write all concepts to local file
                 self.write_to_local_file(herb_concept)
 
@@ -280,14 +276,21 @@ class MSKCC_Converter(object):
         :rtype: idlib.Concept
         """
         if isinstance(attr_value, list):
-            attr_value = " ".join(attr_value)
-            atr = Attribute(herb_concept, attr_name, attr_value, src="MSKCC")
+            # keep only valid content
+            concated_value = []
+            for each in attr_value:
+                if self.is_valid_content(each):
+                    concated_value.append(each)
+            attr_value = " ".join(concated_value)
+            atr = Attribute(herb_concept,
+                            attr_name, attr_value, src="MSKCC")
             herb_concept.attributes.append(atr)
-            return herb_concept
         else:
-            atr = Attribute(herb_concept, attr_name, attr_value, src="MSKCC")
-            herb_concept.attributes.append(atr)
-            return herb_concept
+            if self.is_valid_content(attr_value):
+                atr = Attribute(herb_concept,
+                                attr_name, attr_value, src="MSKCC")
+                herb_concept.attributes.append(atr)
+        return herb_concept
 
     def generate_rel(self, from_concept, to_concept,
                      rel_name):
@@ -325,11 +328,13 @@ class MSKCC_Converter(object):
         :rtype: Concept
         """
         value_atom = self.generate_atom(value, prefer_label, value_type)
-        value_concept = Concept(concept_type, atoms=value_atom)
-        from_concept, value_concept = self.generate_rel(
-                                            from_concept, value_concept,
-                                            rel_name)
-        self.write_to_local_file(value_concept)
+        # if the atom does not have anything
+        if len(value_atom) != 0:
+            value_concept = Concept(concept_type, atoms=value_atom)
+            from_concept, value_concept = self.generate_rel(
+                                                from_concept, value_concept,
+                                                rel_name)
+            self.write_to_local_file(value_concept)
         return from_concept
 
 
