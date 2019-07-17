@@ -2,6 +2,7 @@ import re
 import weakref
 import logging
 import json
+import numbers
 import numpy as np
 from collections import OrderedDict, defaultdict
 
@@ -403,10 +404,11 @@ class Concept(DataElement):
                     self._atoms == other._atoms])
 
     def _check_params(self):
+        if self._atoms == set():
+            raise AssertionError("Concept must have at least one Atom.")
+        assert all([isinstance(atom, Atom) for atom in self._atoms])
         assert isinstance(self.concept_type, str)
         assert self.concept_type in CONCEPT_TYPES
-        assert hasattr(self._atoms, "__iter__")
-        assert all([isinstance(atom, Atom) for atom in self._atoms])
         assert isinstance(self.ui, (type(None), str))
 
     @property
@@ -601,7 +603,7 @@ class Attribute(DataElement):
     def _check_params(self):
         assert isinstance(self.subject, (Concept, Relationship))
         assert isinstance(self.atr_name, str)
-        assert isinstance(self.atr_value, str)
+        assert isinstance(self.atr_value, (str, numbers.Number))
         assert isinstance(self.src, str)
 
     def to_dict(self, return_subject=False, verbose_subject=False):
