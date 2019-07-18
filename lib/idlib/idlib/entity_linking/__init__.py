@@ -1,1 +1,1 @@
-from .metamap import MetaMapDriver
+from .linkers import MetaMapDriver, BioPortalDriver

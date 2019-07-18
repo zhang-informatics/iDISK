@@ -61,10 +61,10 @@ class Schema(object):
         :rtype: list
         """
         terms = set()
-        for i in range(len(self.graph.nodes)):
-            node = self.graph.nodes[i]
-            if "maps_to" in node:
-                terms.add(node["maps_to"])
+        for node_record in self.graph.run("MATCH (n) RETURN (n)"):
+            node = node_record["n"]
+            if "links_to" in node:
+                terms.add(node["links_to"])
         return terms
 
     def get_node_from_label(self, label):

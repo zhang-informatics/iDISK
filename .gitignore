@@ -12,3 +12,4 @@ playground/
 umls.py
 NMCD
 versions/
+lib/idlib/idlib/entity_linking/annotator.conf

@@ -2,12 +2,13 @@ import os
 import sys
 import argparse
 import logging
-import configparser
 import json
+from copy import copy
 from collections import defaultdict
 
-from linkers import MetaMapDriver
-from idlib import Schema, Atom, Concept, Attribute
+from linkers import MetaMapDriver, QuickUMLSDriver, \
+                    BioPortalDriver, MedDRARuleBased
+from idlib import Schema, Atom, Concept, Attribute, Relationship
 
 
 """
@@ -89,40 +90,48 @@ def parse_args():
     return args
 
 
-def get_annotators(annotator_ini, schema):
+def get_annotators(annotator_conf, schema):
     """
     Create instances of annotators for mapping
     concepts to existing terminologies.
 
-    :param str annotator_ini: .ini file containing configuration parameters
+    :param str annotator_conf: JSON file containing configuration parameters
                               for each annotation driver class.
     :param Schema schema: instance of Schema.
     :returns: annotators for each external database in the schema.
     :rtype: dict
     """
-    annotator_map = {"umls": MetaMapDriver}
+    annotator_map = {"umls.metamap": MetaMapDriver,
+                     "umls.quickumls.dis": QuickUMLSDriver,
+                     "umls.quickumls.sdsi": QuickUMLSDriver,
+                     "umls.quickumls.spd": QuickUMLSDriver,
+                     "umls.quickumls.ss": QuickUMLSDriver,
+                     "umls.quickumls.tc": QuickUMLSDriver,
+                     "meddra.bioportal": BioPortalDriver,
+                     "meddra.rulebased": MedDRARuleBased}
 
-    if not os.path.exists(annotator_ini):
-        raise OSError("{annotator_ini} not found.")
+    if not os.path.exists(annotator_conf):
+        raise OSError("{annotator_conf} not found.")
 
     external_dbs = schema.external_terminologies
-    config = configparser.ConfigParser()
-    config.read(annotator_ini)
+    config = json.load(open(annotator_conf, 'r'))
 
+    logging.info("Starting annotators")
     annotators = {}
     for db in external_dbs:
         if db not in annotator_map.keys():
             logging.warning(f"No driver available for '{db}'. Skipping.")
             continue
-        params = config[db]
         driver = annotator_map[db]
-        annotators[db] = driver(**params)
+        params = config[db]
+        params.update({"name": db})
+        annotators[db] = (driver, params)
     return annotators
 
 
 def get_linkables_from_concepts(concepts, schema):
     """
-    Create a LinkedString instance for each concept with a maps_to
+    Create a LinkedString instance for each concept with a links_to
     attribute in the schema.
 
     :param iterable concepts: The concepts to search within.
@@ -135,9 +144,8 @@ def get_linkables_from_concepts(concepts, schema):
     linkables = []
     for concept in concepts:
         concept_node = schema.get_node_from_label(concept.concept_type)
-        try:
-            concept_terminology = concept_node["maps_to"]
-        except KeyError:
+        concept_terminology = concept_node["links_to"]
+        if concept_terminology is None:
             continue
         linkable = LinkedString(string=concept.preferred_atom.term,
                                 terminology=concept_terminology,
@@ -162,16 +170,19 @@ def get_linkables_from_relationships(concepts, schema):
     :returns: Set of Linking instances without the candidate_links attribute.
     :rtype: list
     """
+    already_warned = set()
     seen = set()
     linkables = []
     for concept in concepts:
         for rel in concept.get_relationships():
             rel_graph = schema.get_relationship_from_name(rel.rel_name)
             if rel_graph is None:
-                msg = f"Relationship {rel.rel_name} is not in the schema."
-                logging.warning(msg)
+                if rel.rel_name not in already_warned:
+                    already_warned.add(rel.rel_name)
+                    msg = f"Relationship {rel.rel_name} is not in the schema."
+                    logging.warning(msg)
                 continue
-            rel_terminology = rel_graph.end_node["maps_to"]
+            rel_terminology = rel_graph.end_node["links_to"]
             if rel_terminology is None:
                 # We aren't supposed to link this.
                 continue
@@ -198,63 +209,60 @@ def link_entities(linkables, annotators):
               candidate_links values populated.
     :rtype: list
     """
-    # TODO: Come up with a definitive list and put it in a config file.
-    valid_semtypes = {"SDSI": ["vita", "phsu", "clnd", "plnt", "orch"],
-                      "DIS": ["dsyn", "inbe"],
-                      "SPD": ["phsu", "clnd"],
-                      }
-
     linkables_by_id = {l.id: l for l in linkables}
 
     # Build the queries to send to each terminology.
     queries_by_terminology = defaultdict(list)
     # Used to restrict the possible entities for a query.
-    keep_semtypes_by_terminology = defaultdict(dict)
-    for i in range(len(linkables)):
-        terminology = linkables[i].terminology
-        lid = linkables[i].id
-        string = linkables[i].string
-        concept_type = linkables[i].concept_type
-        semtypes = valid_semtypes.get(concept_type)
-        if semtypes is not None:
-            keep_semtypes_by_terminology[terminology][lid] = semtypes
-        query = f"{lid}|{string}"
+    for linkable in linkables:
+        terminology = linkable.terminology
+        lid = linkable.id
+        string = linkable.string
+        query = (lid, string)
         queries_by_terminology[terminology].append(query)
 
     # Run each query.
     for (terminology, queries) in queries_by_terminology.items():
         try:
-            ann = annotators[terminology]
+            driver, params = annotators[terminology]
+            ann = driver(**params)
         except KeyError:
             continue
-        keep_semtypes = keep_semtypes_by_terminology[terminology]
-        candidates = ann.link(queries, keep_semtypes=keep_semtypes)
-        candidates = ann.get_best_links(candidates, min_score=700)
+        candidates = ann.link(queries)
+        candidates = ann.get_best_links(candidates)
 
         # Add the linked entities to the corresponding Linking instance.
         # {LinkedString().id: {matched_str: CandidateLink}}
+        total = 0
         for lid in candidates.keys():
             for cand_link in candidates[lid].values():
                 if cand_link is None:
                     continue
+                total += 1
                 linkable = linkables_by_id[lid]
                 linkable.candidate_links.append(cand_link)
+        # Destroy this driver. Required for QuickUMLS, but good in
+        # all cases to ensure we're not keeping unnecessary things
+        # in memory.
+        del ann
 
+    logging.info(f"Num linked: {total}")
     return linkables
 
 
-def add_linkings_to_existing_concepts(linked_strs, existing_concepts):
+def create_concepts_from_linkings(linkings, existing_concepts):
     """
-    Given a set of Linking instances and existing concepts, create an
-    Atom for each CandidateLink that linked from an existing concept and
-    add it to the concept. Also add any attributes associated with the
-    CandidateLink as attributes of the concept.
+    Given a set of Linking instances and existing concepts, create a new
+    Concept for each CandidateLink. Also add any attributes associated with
+    the CandidateLink as attributes of the concept.
 
     :param iterable linked_strs: LinkedString instances to create concepts for.
     :param iterable existing_concepts: Already existing concepts.
     :returns: Updated set of concepts.
     :rtype: list
     """
+    # TODO: Make these more robust by finding the max value
+    # of the Atom and Concept UIs.
     num_existing_atoms = sum([1 for concept in existing_concepts
                               for atom in concept.get_atoms()])
     Atom.init_counter(num_existing_atoms)
@@ -262,34 +270,70 @@ def add_linkings_to_existing_concepts(linked_strs, existing_concepts):
 
     concept_lookup = {c.ui: c for c in existing_concepts}
 
-    for linked_str in linked_strs:
+    new_concepts = []
+    old2new_concepts = defaultdict(list)
+    for linked_str in linkings:
+        # "umls.metamap" -> "UMLS"
+        link_src = linked_str.terminology.split('.')[0].upper()
         if linked_str.candidate_links == []:
             continue
         try:
-            concept = concept_lookup[linked_str.id]
+            old_concept = concept_lookup[linked_str.id]
         except KeyError:
             continue
+        # For each candidate linking...
         for cand in linked_str.candidate_links:
+            # Create a Concept for that link
+            new_concept = copy(old_concept)
             mapped_str_atom = Atom(cand.candidate_term,
                                    src=cand.candidate_source,
                                    src_id=cand.candidate_id,
                                    term_type="SY",
                                    is_preferred=True)
-            concept.add_elements(mapped_str_atom)
+            new_concept.add_elements(mapped_str_atom)
+            # Add any other attributes from the CandidateLink,
+            # such as the linking score, UMLS semantic types, etc.
             for (atr_name, atr_values) in cand.attrs.items():
-                if isinstance(atr_values, str):
+                if not isinstance(atr_values, (list, set)):
                     atr_values = [atr_values]
                 for val in atr_values:
-                    concept.add_elements(
-                            Attribute(subject=concept,
+                    new_concept.add_elements(
+                            Attribute(subject=new_concept,
                                       atr_name=atr_name,
                                       atr_value=val,
-                                      src=linked_str.terminology.upper())
+                                      src=link_src)
                             )
-    return existing_concepts
+            new_concepts.append(new_concept)
+            old2new_concepts[old_concept.ui].append(new_concept)
+            # Delete the original concept that we mapped from.
+            # TODO: I can't figure out why existing_concepts.remove(concept)
+            # doesn't work. concept in existing_concepts returns True.
+            existing_concepts = [c for c in existing_concepts if c != old_concept]
+
+    # Update the relationships for all the concepts.
+    all_concepts = existing_concepts + new_concepts
+    for concept in all_concepts:
+        to_add = []
+        to_rm = []
+        for rel in concept.get_relationships():
+            try:
+                new_concepts = old2new_concepts[rel.object]
+            except (KeyError, AttributeError):
+                continue
+            for nc in new_concepts:
+                new_rel = Relationship(subject=concept,
+                                       rel_name=rel.rel_name,
+                                       object=nc,
+                                       src=rel.src)
+                to_add.append(new_rel)
+            to_rm.append(rel)
+        concept.add_elements(to_add)
+        concept.rm_elements(to_rm)
+
+    return all_concepts
 
 
-def create_concepts_from_linkings(linked_strs, existing_concepts):
+def orig_create_concepts_from_linkings(linked_strs, existing_concepts):
     """
     This function creates Concept instances for those Relationship objects
     that were successfully linked and updates the Relationship objects to
@@ -311,12 +355,13 @@ def create_concepts_from_linkings(linked_strs, existing_concepts):
     # Create the Concepts for each entity linked from each Relationship object.
     # Each Concept has two Atoms, one for the original string, and one for the
     # linked entity.
-    new_concepts_by_id = {}
+    new_concepts_by_id = defaultdict(list)
     for linked_str in linked_strs:
         if linked_str.candidate_links == []:
             continue
         if linked_str.id in existing_concept_uis:
             continue
+        link_src = linked_str.terminology.split('.')[0].upper()
         for cand in linked_str.candidate_links:
             orig_str_atom = Atom(linked_str.string,
                                  src="IDISK",
@@ -346,10 +391,11 @@ def create_concepts_from_linkings(linked_strs, existing_concepts):
                             Attribute(subject=new_concept,
                                       atr_name=atr_name,
                                       atr_value=val,
-                                      src=linked_str.terminology.upper())
+                                      src=link_src)
                             )
 
-            new_concepts_by_id[linked_str.id] = new_concept
+            # TODO: new_concepts_by_id[linked_str.id].append(new_concept)
+            new_concepts_by_id[linked_str.id].append(new_concept)
 
     # Modify all the Relationships' objects to be the corresponding
     # Concept created above.
@@ -358,11 +404,12 @@ def create_concepts_from_linkings(linked_strs, existing_concepts):
     for concept in existing_concepts:
         for rel in concept.get_relationships():
             rel_graph = schema.get_relationship_from_name(rel.rel_name)
-            linkable = rel_graph.end_node["maps_to"] is not None
-            if not linkable:
+            if rel_graph is None:
+                continue
+            if rel_graph.end_node["links_to"] is None:
                 continue
             try:
-                obj_concept = new_concepts_by_id[rel.object]
+                obj_concepts = new_concepts_by_id[rel.object]
             except KeyError:
                 str_id = rel.object
                 orig_string = linked_strs_by_id[str_id].string
@@ -372,23 +419,31 @@ def create_concepts_from_linkings(linked_strs, existing_concepts):
                     msg = f"{str_id} ({orig_string}) was not linked."
                     logging.warning(msg)
                 continue
-            rel.object = obj_concept
+            # TODO: Copy rel len(obj_concepts) times and set rel.object
+            # to each obj_concept in turn.
+            rel.object = obj_concepts
 
     return existing_concepts + list(new_concepts_by_id.values())
 
 
 def link_concepts(concepts, annotators, schema):
+    ann_names = [ann.name for ann in annotators]
+    logging.info(f"Annotators: {ann_names}")
+    logging.info("LINKING EXISTING CONCEPTS")
     concept_linkables = get_linkables_from_concepts(concepts, schema)
+    logging.info(f"Number of linkables: {len(concept_linkables)}.")
     linkings = link_entities(concept_linkables, annotators)
-    concepts = add_linkings_to_existing_concepts(linkings, concepts)
-    return concepts
-
-
-def link_relationship_objects(concepts, annotators, schema):
-    rel_linkables = get_linkables_from_relationships(concepts, schema)
-    linkings = link_entities(rel_linkables, annotators)
     concepts = create_concepts_from_linkings(linkings, concepts)
+    # concepts = update_relationships(concepts)
     return concepts
+
+
+# def link_relationship_objects(concepts, annotators, schema):
+#     logging.info("LINKING RELATIONSHIP OBJECTS")
+#     rel_linkables = get_linkables_from_relationships(concepts, schema)
+#     linkings = link_entities(rel_linkables, annotators)
+#     concepts = create_concepts_from_linkings(linkings, concepts)
+#     return concepts
 
 
 if __name__ == "__main__":
@@ -406,7 +461,7 @@ if __name__ == "__main__":
     # Create Concept instances for the objects of all Relationships
     # belonging to the existing Concepts, and update the Relationship
     # objects accordingly.
-    concepts = link_relationship_objects(concepts, annotators, schema)
+#    concepts = link_relationship_objects(concepts, annotators, schema)
     with open(args.outfile, 'w') as outF:
         for concept in concepts:
             json.dump(concept.to_dict(), outF)
