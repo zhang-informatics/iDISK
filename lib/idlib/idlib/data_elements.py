@@ -16,13 +16,21 @@ class DataElement(object):
     _counter = 0
     _ui_template = "{0}{1:07}"  # _prefix, _counter
 
-    def __init__(self):
+    def __init__(self, ui=None):
+        # This is distinct from _counter, as it holds the number of this
+        # data element rather than the number of all data elements.
         self._number = 0
         # Containers. None means that it is not implemented for
         # this data element.
         self._atoms = None
         self._attributes = None
         self._relationships = None
+        if ui is None:
+            self._increment_counter()
+            self.ui = self._ui_template.format(self._prefix, self._counter)
+        else:
+            self.ui = ui
+            self.init_counter(int(ui.replace(self._prefix, "")))
 
     def _register(self):
         """
@@ -30,6 +38,48 @@ class DataElement(object):
         in any class that inherits from DataElement.
         """
         self.__refs__[self.__class__].append(weakref.ref(self))
+
+    def __copy__(self):
+        """
+        Return a copy of this data element with a new unique identifier.
+        E.g.
+
+        .. code-block:: python
+
+            from copy import copy
+            a = Atom("ginger", "DSLD", "1", "SY", is_preferred=True)
+            print(a)
+            ('DA0000001' 'ginger' 'SY' 'NMCD' '1' 'True')
+            a2 = copy(a)
+            print(a2)
+            ('DA0000002' 'ginger' 'SY' 'NMCD' '1' 'True')
+
+        :returns: A copy of this data element with a new UI.
+        """
+        all_params = self.__dict__
+        init_params = {}
+        for (param, value) in all_params.items():
+            if param == "_atoms" and value is not None:
+                init_params["atoms"] = value
+            elif not param.startswith('_'):
+                init_params[param] = value
+        new = type(self)(**init_params)
+
+        # Copy over the attributes and relationships.
+        to_add = []
+        if self._attributes is not None:
+            for atr in self.get_attributes():
+                new_atr = atr.__copy__()
+                new_atr.subject = new
+                to_add.append(new_atr)
+        if self._relationships is not None:
+            for rel in self.get_relationships():
+                new_rel = rel.__copy__()
+                new_rel.subject = new
+                to_add.append(new_rel)
+        new.add_elements(to_add)
+
+        return new
 
     @classmethod
     def get_instances(cls):
@@ -164,7 +214,7 @@ class DataElement(object):
             raise AttributeError(msg)
         container.discard(element)
 
-    def get_atoms(self, r_type="object"):
+    def get_atoms(self, atom_name=None, r_type="object"):
         """
         Returns a generator over the atoms of this data element,
         if implemented.
@@ -181,7 +231,10 @@ class DataElement(object):
             raise AttributeError(msg)
         if r_type.lower() not in ["object", "dict"]:
             raise ValueError("rtype must be 'object' or 'dict'.")
-        for atom in self._atoms:
+        return_atoms = self._atoms
+        if atom_name is not None:
+            return_atoms = [a for a in return_atoms if a.term == atom_name]
+        for atom in return_atoms:
             if r_type == "object":
                 yield atom
             elif r_type == "dict":
@@ -201,6 +254,9 @@ class DataElement(object):
         :returns: generator over attributes
         :rtype: generator
         """
+        if self._attributes is None:
+            msg = f"Attributes not implemented for {type(self).__name__}."
+            raise AttributeError(msg)
         if r_type.lower() not in ["object", "dict"]:
             raise ValueError("rtype must be 'object' or 'dict'.")
         return_atrs = self._attributes
@@ -254,18 +310,12 @@ class Atom(DataElement):
     _prefix = "DA"
 
     def __init__(self, term, src, src_id, term_type, is_preferred, ui=None):
-        super().__init__()
+        super().__init__(ui=ui)
         self.term = term  # 5-HTP
         self.src = src  # NMCD
         self.src_id = src_id  # 1234
         self.term_type = term_type  # SN
         self.is_preferred = is_preferred  # True
-        if ui is None:
-            self._increment_counter()
-            self.ui = self._ui_template.format(self._prefix, self._counter)
-        else:
-            self.ui = ui
-            self.init_counter(int(ui.replace("DA", "")))
         self._check_params()
         self._register()
 
@@ -368,15 +418,8 @@ class Concept(DataElement):
     _prefix = "DC"  # The default prefix. Can be changed for each instance.
 
     def __init__(self, concept_type, atoms=None, ui=None):
-        super().__init__()
+        super().__init__(ui=ui)
         self.concept_type = concept_type
-        # Set the UI for this concept
-        if ui is None:
-            self._increment_counter()
-            self.ui = self._ui_template.format(self._prefix, self._counter)
-        else:
-            self.ui = ui
-            self.init_counter(int(ui[-7:]))
         self._preferred_atom = None
         self._atoms = set(atoms) if atoms is not None else set()
         self._attributes = set()
@@ -499,8 +542,10 @@ class Concept(DataElement):
         :returns: Concept instance built from data.
         :rtype: Concept
         """
-        concept = cls(concept_type=data["concept_type"], ui=data["ui"])
         atoms = [Atom.from_dict(syn) for syn in data["synonyms"]]
+        concept = cls(concept_type=data["concept_type"],
+                      atoms=atoms,
+                      ui=data["ui"])
         concept.add_elements(atoms)
         atrs = [Attribute.from_dict(atr, subject=concept)
                 for atr in data["attributes"]]
@@ -546,7 +591,7 @@ class Concept(DataElement):
                     try:
                         obj_concept = ui2concepts[rel.object]
                     except KeyError:
-                        msg = f"Object of {rel.rel_name} '{rel.object}' not found"
+                        msg = f"Object of {rel.rel_name} '{rel.object}' not found"  # noqa
                         logging.warning(msg)
                         continue
                     rel.object = obj_concept
@@ -564,10 +609,9 @@ class Attribute(DataElement):
 
     _prefix = "DAT"
 
-    def __init__(self, subject, atr_name, atr_value, src):
-        super().__init__()
+    def __init__(self, subject, atr_name, atr_value, src, ui=None):
+        super().__init__(ui=ui)
         self._increment_counter()
-        self.ui = self._ui_template.format(self._prefix, self._counter)
         self.subject = subject
         self.atr_name = atr_name
         self.atr_value = atr_value
@@ -576,7 +620,7 @@ class Attribute(DataElement):
         self._register()
 
     def __repr__(self):
-        return str(self.to_dict(return_subject=True))
+        return self.ui
 
     def __str__(self):
         return f"{self.subject} *{self.atr_name}* {self.atr_value}"
@@ -669,7 +713,7 @@ class Relationship(DataElement):
 
     :param Concept subject: The subject of this relationship.
     :param str rel_name: The relation. E.g. "ingredient_of".
-    :param Concept/str obj: The object of this relationship. Can be a
+    :param Concept/str object: The object of this relationship. Can be a
                                     Concept instance or a concept UI.
     :param str src: The source code of where this relationship was found.
     :param list(Attribute) attributes: Any attributes of this relationship.
@@ -677,13 +721,13 @@ class Relationship(DataElement):
 
     _prefix = "DR"
 
-    def __init__(self, subject, rel_name, obj, src):
-        super().__init__()
+    # TODO: Make sure it's really okay to use 'object' here.
+    def __init__(self, subject, rel_name, object, src, ui=None):
+        super().__init__(ui=ui)
         self._increment_counter()
-        self.ui = self._ui_template.format(self._prefix, self._counter)
         self.subject = subject
         self.rel_name = rel_name
-        self.object = obj
+        self.object = object
         self.src = src
         # Relationship attributes
         self._attributes = set()
@@ -819,7 +863,7 @@ class Relationship(DataElement):
 
         rel = cls(subject=subject,
                   rel_name=data["rel_name"],
-                  obj=obj,
+                  object=obj,
                   src=data["src"])
         atrs = [Attribute.from_dict(atr, subject=rel)
                 for atr in data["attributes"]]
