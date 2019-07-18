@@ -64,6 +64,7 @@ class DataElement(object):
             elif not param.startswith('_'):
                 init_params[param] = value
         new = type(self)(**init_params)
+        new._prefix = self._prefix
 
         # Copy over the attributes and relationships.
         to_add = []
