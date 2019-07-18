@@ -572,6 +572,7 @@ class Concept(DataElement):
             for line in inF:
                 concept = Concept.from_dict(json.loads(line))
                 concepts.append(concept)
+        cls.resolve_relationships()
         return concepts
 
     @classmethod
