@@ -183,12 +183,12 @@ class MSKCC_Converter(object):
                 cn = items["common_name"]
                 if len(sn) != 0:
                     sn = self.split_names(sn)
-                    sn_atom = self.generate_atom(sn, True, "SN")
+                    sn_atom = self.generate_atom(sn, False, "SN")
                     herb_atom.extend(sn_atom)
                 # common_name
                 if len(cn) != 0:
                     cn = self.split_names(cn)
-                    cn_atom = self.generate_atom(cn, True, "CN")
+                    cn_atom = self.generate_atom(cn, False, "CN")
                     herb_atom.extend(cn_atom)
                 # build concept from names
                 herb_concept = Concept("SDSI", atoms=herb_atom)
