@@ -170,3 +170,26 @@ make schema
 
 Now, if you go back to Neo4j Desktop and open your graph in the Neo4j browser, you'll see it has been populated. You can
 view the entire schema with the Cypher query `MATCH(n) RETURN(n)`.
+
+
+## Entity Linking
+
+Now that we have the final set of concepts integrated from the various sources
+(created be `make merge`) and the schema (`make schema`), we can run entity linking.
+Any concept or relationship object that we want to link to an existing terminology should have
+a `links_to` attribute in the schema, the value of which is a terminology. Each terminology
+specified this way must also have an entry in `lib/idlib/idlib/entity_linking/annotator.ini`,
+which specifies all `__init__` arguments to a Python class which does the entity linking to 
+that terminology. This class should inherit from `EntityLinker` in
+`lib/idlib/idlib/entity_linking/linkers.py`. For an example, see `MetaMapDriver` in the
+aforementioned file.
+
+Once `annotator.ini` is populated to properly instantiate the corresponding `EntityLinker`
+objects run entity linking
+
+```
+make link_entities
+```
+
+This will likely take a few mintues. Check the progress in the log file at
+`$(VERSION_DIR)/concepts/concepts_linked.jsonl.log`.

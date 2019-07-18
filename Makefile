@@ -7,7 +7,7 @@
 # Your preferred Python.
 PYTHON_INTERPRETER = python3
 # Where iDISK is located.
-IDISK_HOME = /home/zhan1386/vasil024/Projects/dietary_supplements/iDISK
+IDISK_HOME = /Users/vasil024/Projects/InProgressProjects/dietary_supplements_refactor/iDISK
 # The version of iDISK to build.
 IDISK_VERSION = 1.0.0
 # Configuration file specifying how to build the schema.
@@ -123,6 +123,16 @@ schema:
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/schema.py \
 		--schema_version $(SCHEMA_VERSION) \
 		--schema_conf_file $(SCHEMA_CONF_FILE)
+
+## Link concepts to external terminologies
+link_entities:
+	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/entity_linking/run_entity_linking.py \
+		--concepts_file $(VERSION_DIR)/concepts/concepts_merged.jsonl \
+		--outfile $(VERSION_DIR)/concepts/concepts_linked.jsonl \
+		--annotator_conf $(IDISK_HOME)/lib/idlib/idlib/entity_linking/annotator.ini \
+		--uri bolt://localhost:7687 --user neo4j --password password \
+		2> $(VERSION_DIR)/concepts/concepts_linked.jsonl.log
+	@echo "Linked concepts written to $(VERSION_DIR)/concepts/concepts_linked.jsonl" 
 
 
 #################################################################################
