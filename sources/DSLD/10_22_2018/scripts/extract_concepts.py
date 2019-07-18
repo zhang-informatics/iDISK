@@ -342,12 +342,16 @@ def convert_ingredients_to_concepts(dataframe):
     :returns: Generator over SDSI concepts.
     :rtype: generator
     """
+    dont_include = ["header", "fat calories", "polyunsaturated fat"]
+
     Concept.set_ui_prefix("DSLD")
     tty = "SY"  # All DSLD terms have term type SY
     # Create a Concept instance for each row.
     concepts = []
     for row in dataframe.itertuples():
         pref_term = row.group_name
+        if pref_term.lower() in dont_include:
+            continue
         src_id = str(row.group_id)
         pref_atom = Atom(term=pref_term, src="DSLD", src_id=src_id,
                          term_type=tty, is_preferred=True)
