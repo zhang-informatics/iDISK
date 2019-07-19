@@ -1,6 +1,7 @@
 import argparse
 import csv
 import json
+from tqdm import tqdm
 
 from idlib import Concept
 
@@ -21,6 +22,8 @@ def parse_args():
     parser.add_argument("--outfile", type=str, required=True,
                         help="""Where to save the filtered connections
                                 as JSON lines.""")
+    parser.add_argument("--ignore_concept_types", nargs='*',
+                        help="List of concept types to automatically exclude.")
     args = parser.parse_args()
     return args
 
@@ -35,16 +38,6 @@ def read_connections(infile):
             cnx = [int(i) for i in row]
             cnxs.append(cnx)
     return cnxs
-
-
-def read_concepts(infile):
-    concepts = []
-    with open(infile, 'r') as inF:
-        for line in inF:
-            data = json.loads(line)
-            concept = Concept.from_dict(data)
-            concepts.append(concept)
-    return concepts
 
 
 def filter_connections_same(connections, concepts):
@@ -66,18 +59,21 @@ def filter_connections_same(connections, concepts):
     return cnxs
 
 
-def filter_connections_included(connections, concepts):
+def filter_connections_included(connections, concepts, ignore_concept_types):
     """
     Keep connections if the preferred_atom.term for
     one concept is in the atoms of the other concept.
 
     :param list connections: List of candidate connections.
     :param list concepts: List of concepts.
+    :param list ignore_concept_types: List of concept types to exclude.
     :returns: Filtered connections.
     :rtype: list
     """
     cnxs = []
-    for (i, j) in connections:
+    for (i, j) in tqdm(connections):
+        if concepts[i].concept_type.upper() in ignore_concept_types:
+            continue
         i_pt = concepts[i].preferred_atom.term.lower()
         i_terms = [a.term.lower() for a in concepts[i].get_atoms()]
         j_pt = concepts[j].preferred_atom.term.lower()
@@ -88,11 +84,14 @@ def filter_connections_included(connections, concepts):
     return cnxs
 
 
-def main(connections_file, concepts_file, outfile):
+def main(connections_file, concepts_file, outfile, ignore_concept_types):
     candidate_cnxs = read_connections(connections_file)
     print(f"Number of candidate connections: {len(candidate_cnxs)}.")
-    concepts = read_concepts(concepts_file)
-    filtered_cnxs = filter_connections_included(candidate_cnxs, concepts)
+    concepts = Concept.read_jsonl_file(concepts_file)
+    ignore_concept_types = [ct.upper() for ct in ignore_concept_types]
+    print(f"Excluding concepts of types {ignore_concept_types}.")
+    filtered_cnxs = filter_connections_included(candidate_cnxs, concepts,
+                                                ignore_concept_types)
     print(f"Number of filtered connections: {len(filtered_cnxs)}.")
     with open(outfile, 'w') as outF:
         writer = csv.writer(outF, delimiter=',')
@@ -101,4 +100,5 @@ def main(connections_file, concepts_file, outfile):
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.connections_file, args.concepts_file, args.outfile)
+    main(args.connections_file, args.concepts_file,
+         args.outfile, args.ignore_concept_types)
