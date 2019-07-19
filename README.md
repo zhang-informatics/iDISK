@@ -102,54 +102,13 @@ Edit the variables in the PROJECT CONFIGURATION section of the `Makefile` as nec
 make version
 ```
 
-The next step is to generate candidate connections between the concepts in the source files.
-Note that for large numbers of concepts this can take a very long time,
-so it is advisable that you run it in an environment in which you can set it and forget it,
-such as MSI.
+## The iDISK Schema
+
+Firstly, make sure to 
 
 ```
 source activate idisk
-make connections
 ```
-
-These connections can either be used directly, but it is advisable to filter them. Two methods of
-filtering connections are implemented: The first removes connections based on some simple rules; the
-second removes connections using human annotations.
-
-To run the first method:
-
-```
-make filter_connections
-```
-
-To run the second method, follow these instructions:
-iDISK implements the Prodigy annotation tool for classifying connected pairs as one of the following labels:
-
-* Equal
-* Not Equal
-* Parent-Child (i.e. the first concept is a hypernym of the second)
-* Child-Parent (i.e. the first concept is a hyponym of the second)
-
-If you are qualified to use Prodigy (it's not free) and have it installed (in the `idisk` environment),
-you can run the annotation task with:
-
-```
-make run_annotation
-```
-
-Once the annotation is complete, filter the connections according to the annotations with
-
-```
-make filter_connections_ann
-```
-
-Finally, now that we're confident in our connected concepts, we can merge them.
-
-```
-make merge
-```
-
-## The iDISK Schema
 
 iDISK is built using Neo4j, so the first step is to install the latest version of [Neo4j](https://neo4j.com/download/).
 Neo4j is used both to define the iDISK schema as well as to hold the final database. Here, we discuss creating and using
@@ -174,17 +133,15 @@ view the entire schema with the Cypher query `MATCH(n) RETURN(n)`.
 
 ## Entity Linking
 
-Now that we have the final set of concepts integrated from the various sources
-(created be `make merge`) and the schema (`make schema`), we can run entity linking.
 Any concept or relationship object that we want to link to an existing terminology should have
 a `links_to` attribute in the schema, the value of which is a terminology. Each terminology
-specified this way must also have an entry in `lib/idlib/idlib/entity_linking/annotator.ini`,
+specified this way must also have an entry in `lib/idlib/idlib/entity_linking/annotator.conf`,
 which specifies all `__init__` arguments to a Python class which does the entity linking to 
 that terminology. This class should inherit from `EntityLinker` in
 `lib/idlib/idlib/entity_linking/linkers.py`. For an example, see `MetaMapDriver` in the
 aforementioned file.
 
-Once `annotator.ini` is populated to properly instantiate the corresponding `EntityLinker`
+Once `annotator.conf` is populated to properly instantiate the corresponding `EntityLinker`
 objects run entity linking
 
 ```
@@ -193,3 +150,58 @@ make link_entities
 
 This will likely take a few mintues. Check the progress in the log file at
 `$(VERSION_DIR)/concepts/concepts_linked.jsonl.log`.
+
+
+## Merging Synonymous Concepts
+
+The next step is to generate candidate synonymy connections between the concepts in the source files.
+Currently, two concepts are considered synonymous if they share one or more atom terms.
+
+Note that for large numbers of concepts this can take a very long time,
+so it is advisable that you run it in an environment in which you can set it and forget it.
+
+```
+make connections
+```
+
+These connections can be used directly, but it is advisable to filter them. Two methods of
+filtering connections are implemented: The first removes connections based on some simple rules; the
+second removes connections using human annotations.
+
+To run the first method:
+
+```
+make filter_connections
+```
+
+--------------------------
+### Annotating Synonyms
+
+iDISK implements the Prodigy annotation tool for classifying connected pairs as one of the following labels:
+
+* Equal
+* Not Equal
+* Parent-Child (i.e. the first concept is a hypernym of the second)
+* Child-Parent (i.e. the first concept is a hyponym of the second)
+
+If you are qualified to use Prodigy (it's not free) and have it installed (in the `idisk` virtual environment),
+you can run the annotation task with:
+
+```
+make run_annotation
+```
+
+Once the annotation is complete, filter the connections according to the annotations with
+
+
+```
+make filter_connections_ann
+```
+
+--------------------------
+
+Finally, now that we're confident in our connected concepts, we can merge them with
+
+```
+make merge
+```

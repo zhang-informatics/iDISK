@@ -16,7 +16,8 @@ SCHEMA_CONF_FILE := $(IDISK_HOME)/lib/schemas/schemas.ini
 # Paths to the source ingredient concept files.
 SOURCE_FILES := $(IDISK_HOME)/sources/NMCD/11_30_2018/import/concepts.jsonl \
 	        $(IDISK_HOME)/sources/DSLD/10_22_2018/import/concepts.jsonl \
-	        $(IDISK_HOME)/sources/NHP/12_1_2017/import/concepts.jsonl
+	        $(IDISK_HOME)/sources/NHP/12_1_2017/import/concepts.jsonl \
+	        $(IDISK_HOME)/sources/MSKCC/05_29_2019/import/concepts.jsonl
 
 
 #################################################################################
@@ -50,16 +51,45 @@ version:
 	cd $(VERSION_DIR) && ln -s $(IDISK_HOME)/lib .
 
 
-## Find candidate connections between concepts. This requires idlib to be installed.
-## This can take a few hours for a large number of inputs.
-connections:
+## Create the iDISK schema as a neo4j graph
+schema:
+	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/schema.py \
+		--schema_version $(SCHEMA_VERSION) \
+		--schema_conf_file $(SCHEMA_CONF_FILE)
+
+## Link concepts to external terminologies
+link_entities:
 	@echo "cat $(SOURCE_FILES) > $(VERSION_DIR)/concepts/concepts_orig.jsonl" \
 		> $(VERSION_DIR)/concepts/LOG
 	@cat $(SOURCE_FILES) > $(VERSION_DIR)/concepts/concepts_orig.jsonl
-	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/set_functions.py \
-		find_connections \
-		--infiles $(SOURCE_FILES) \
+	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/entity_linking/run_entity_linking.py \
+		--concepts_file $(VERSION_DIR)/concepts/concepts_orig.jsonl \
+		--outfile $(VERSION_DIR)/concepts/concepts_linked.jsonl \
+		--annotator_conf $(IDISK_HOME)/lib/idlib/idlib/entity_linking/annotator.conf \
+		--uri localhost --user neo4j --password password \
+		2> $(VERSION_DIR)/concepts/concepts_linked.jsonl.log &
+	@echo "Running entity linking. Check $(VERSION_DIR)/concepts/concepts_linked.jsonl.log for progress."
+	@echo "Linked concepts will be written to $(VERSION_DIR)/concepts/concepts_linked.jsonl" 
+
+
+## Find candidate connections between concepts. This requires idlib to be installed.
+## This will take a few hours for a large number of inputs.
+connections:
+	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/set_functions.py find_connections \
+		--infiles $(VERSION_DIR)/concepts/concepts_linked.jsonl \
 		--outfile $(VERSION_DIR)/concepts/connections.csv
+
+
+## Filter connections based on simple heuristics
+filter_connections:
+	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/filter_connections_basic.py \
+		--connections_file $(VERSION_DIR)/concepts/connections.csv \
+		--concepts_file $(VERSION_DIR)/concepts/concepts_linked.jsonl \
+		--outfile $(VERSION_DIR)/concepts/connections_new.csv
+	@mv $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv
+	@mv $(VERSION_DIR)/concepts/connections_new.csv $(VERSION_DIR)/concepts/connections.csv
+	@echo "New connections written to \n\t $(VERSION_DIR)/concepts/connections.csv"
+	@echo "Original connections at \n\t $(VERSION_DIR)/concepts/connections_orig.csv"
 
 
 ## Run annotation using Prodigy
@@ -83,18 +113,6 @@ run_annotation:
 		-F $(IDISK_HOME)/lib/annotation/prodigy_resources/recipe.py
 
 
-## Filter connections based on simple heuristics
-filter_connections:
-	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/filter_connections_basic.py \
-		--connections_file $(VERSION_DIR)/concepts/connections.csv \
-		--concepts_file $(VERSION_DIR)/concepts/concepts_orig.jsonl \
-		--outfile $(VERSION_DIR)/concepts/connections_new.csv
-	@mv $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv
-	@mv $(VERSION_DIR)/concepts/connections_new.csv $(VERSION_DIR)/concepts/connections.csv
-	@echo "New connections written to \n\t $(VERSION_DIR)/concepts/connections.csv"
-	@echo "Original connections at \n\t $(VERSION_DIR)/concepts/connections_orig.csv"
-
-
 ## Filter connections according to annotations.
 filter_connections_ann:
 	# Save annotations to a file
@@ -112,27 +130,11 @@ filter_connections_ann:
 ## Merge matched concepts.
 merge:
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/set_functions.py union \
-		--infiles $(VERSION_DIR)/concepts/concepts_orig.jsonl \
+		--infiles $(VERSION_DIR)/concepts/concepts_linked.jsonl \
 		--connections $(VERSION_DIR)/concepts/connections.csv \
 		--outfile $(VERSION_DIR)/concepts/concepts_merged.jsonl
 	@echo "Merged concepts written to $(VERSION_DIR)/concepts/concepts_merged.jsonl"
 
-
-## Create the iDISK schema as a neo4j graph
-schema:
-	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/schema.py \
-		--schema_version $(SCHEMA_VERSION) \
-		--schema_conf_file $(SCHEMA_CONF_FILE)
-
-## Link concepts to external terminologies
-link_entities:
-	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/entity_linking/run_entity_linking.py \
-		--concepts_file $(VERSION_DIR)/concepts/concepts_merged.jsonl \
-		--outfile $(VERSION_DIR)/concepts/concepts_linked.jsonl \
-		--annotator_conf $(IDISK_HOME)/lib/idlib/idlib/entity_linking/annotator.ini \
-		--uri bolt://localhost:7687 --user neo4j --password password \
-		2> $(VERSION_DIR)/concepts/concepts_linked.jsonl.log
-	@echo "Linked concepts written to $(VERSION_DIR)/concepts/concepts_linked.jsonl" 
 
 
 #################################################################################
