@@ -28,8 +28,29 @@ def parse_args():
                                 per line. Assumes that the concepts have
                                 already been concatenated and thus there
                                 is only one infile.""")
+    parser.add_argument("--ignore_concept_types", nargs='*',
+                        help="""Concepts of these types will not be considered
+                                when running the specified set function.""")
     args = parser.parse_args()
     return args
+
+
+def read_concepts_files(*infiles, ignore_concept_types=[]):
+    """
+    Read in the Concepts from the infiles.
+
+    :param list infiles: A list of paths to the concept files.
+    :returns: List of Concepts.
+    :rtype: list
+    """
+    all_concepts = []
+    for fpath in infiles:
+        concepts = Concept.read_jsonl_file(fpath)
+        all_concepts.extend(concepts)
+    if ignore_concept_types != []:
+        all_concepts = [c for c in all_concepts
+                        if c.concept_type not in ignore_concept_types]
+    return all_concepts
 
 
 def read_connections_file(infile):
@@ -51,41 +72,31 @@ def read_connections_file(infile):
     return connections
 
 
-def perform_find_connections(outfile, *infiles):
+def perform_find_connections(concepts, outfile):
     """
     Run find_connections without the set function and write the result
     outfile.
 
-    :param str outfile: The path to the outfile.
-    :param list infiles: A list of paths to the concept files.
+    :param list concepts: A list of Concepts to run over.
+    :param list outfile: Where to save the output.
     """
-    all_concepts = []
-    for fpath in infiles:
-        concepts = Concept.read_jsonl_file(fpath)
-        all_concepts.extend(concepts)
-    logging.info(f"Number of starting concepts: {len(all_concepts)}")
-    cnxs = Union(all_concepts, run_union=False).connections
+    cnxs = Union(concepts, run_union=False).connections
     with open(outfile, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerows(cnxs)
 
 
-def perform_set_function(func, outfile, *infiles, connections=None):
+def perform_set_function(func, concepts, outfile, connections=None):
     """
     Run find_connections without the set function and write the result
     outfile.
 
-    :param Union outfile: The set function to run.
+    :param Union func: The set function to run.
+    :param list concepts: A list of Concepts to run over.
     :param str outfile: The path to the outfile.
-    :param list infiles: A list of paths to the concept files.
     :param list connections: List of int tuples specifying connections.
     """
-    all_concepts = []
-    for fpath in infiles:
-        concepts = Concept.read_jsonl_file(fpath)
-        all_concepts.extend(concepts)
-    logging.info(f"Number of starting concepts: {len(all_concepts)}")
-    result = func(all_concepts, connections=connections).result
+    result = func(concepts, connections=connections).result
     logging.info(f"Number of resulting concepts: {len(result)}")
     with open(outfile, 'w') as outF:
         for concept in result:
@@ -229,6 +240,11 @@ class Union(object):
 
         # Merge relationships, removing duplicates and changing the subject.
         for rel in concept_j.get_relationships():
+            # If the object Concept of this Relationship was merged into
+            # another Concept, it will no longer exist in the parents_map,
+            # so don't include in the merged concept.
+            if rel.object not in self.parents_map.values():
+                continue
             rel.subject = merged
             for a in rel.get_attributes():
                 a.subject = merged
@@ -328,13 +344,15 @@ if __name__ == "__main__":
     args = parse_args()
     cnxs = []
 
+    concepts = read_concepts_files(*args.infiles)
+    logging.info(f"Number of starting concepts: {len(concepts)}")
+
     if args.connections_file is not None:
         cnxs = read_connections_file(args.connections_file)
 
     if args.function == "find_connections":
         # Just find connections, don't compute the union.
-        perform_find_connections(args.outfile, *args.infiles)
+        perform_find_connections(concepts, args.outfile)
     else:
         func = func_table[args.function]
-        perform_set_function(func, args.outfile, *args.infiles,
-                             connections=cnxs)
+        perform_set_function(func, concepts, args.outfile, connections=cnxs)
