@@ -41,6 +41,22 @@ class DataElement(object):
         """
         self.__refs__[self.__class__].append(weakref.ref(self))
 
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
+
+    # TODO: Figure out how to handle recursive copying with Relationships.
+    def __deepcopy__(self, memo):
+        raise NotImplementedError()
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
+
     @classmethod
     def get_instances(cls):
         """
