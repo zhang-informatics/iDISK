@@ -28,14 +28,11 @@ def parse_args():
                                 per line. Assumes that the concepts have
                                 already been concatenated and thus there
                                 is only one infile.""")
-    parser.add_argument("--ignore_concept_types", nargs='*',
-                        help="""Concepts of these types will not be considered
-                                when running the specified set function.""")
     args = parser.parse_args()
     return args
 
 
-def read_concepts_files(*infiles, ignore_concept_types=[]):
+def read_concepts_files(*infiles):
     """
     Read in the Concepts from the infiles.
 
@@ -47,9 +44,6 @@ def read_concepts_files(*infiles, ignore_concept_types=[]):
     for fpath in infiles:
         concepts = Concept.read_jsonl_file(fpath)
         all_concepts.extend(concepts)
-    if ignore_concept_types != []:
-        all_concepts = [c for c in all_concepts
-                        if c.concept_type not in ignore_concept_types]
     return all_concepts
 
 
