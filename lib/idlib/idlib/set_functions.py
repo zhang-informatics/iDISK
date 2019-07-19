@@ -155,12 +155,14 @@ class Union(object):
         self._check_params(concepts, connections)
         self.concepts = concepts
         self.concepts_map = dict(enumerate(self.concepts))
+        self.ui2index = {c.ui: i for (i, c) in self.concepts_map.items()}
         self.parents_map = dict(enumerate(range(len(self.concepts))))
         if connections == []:
             logging.info(f"Finding connections...")
             self.connections = self.find_connections()
         else:
             self.connections = connections
+        logging.info(f"Number of connections: {len(self.connections)}.")
         if run_union is True:
             self.union_find()
             self.result = self.update_relationships()
@@ -239,11 +241,6 @@ class Union(object):
 
         # Merge relationships, removing duplicates and changing the subject.
         for rel in concept_j.get_relationships():
-            # If the object Concept of this Relationship was merged into
-            # another Concept, it will no longer exist in the parents_map,
-            # so don't include in the merged concept.
-            if rel.object not in self.parents_map.values():
-                continue
             rel.subject = merged
             for a in rel.get_attributes():
                 a.subject = merged
@@ -281,7 +278,9 @@ class Union(object):
             pi, pj = pj, pi
             concept_i, concept_j = concept_j, concept_i
         # Merge concept_j into concept_i
-        self.concepts_map[pi] = self._merge(concept_i, concept_j)
+        merged = self._merge(concept_i, concept_j)
+        self.concepts_map[pi] = merged
+        self.ui2index[merged.ui] = pi
         self.parents_map[pj] = pi
 
     def union_find(self):
@@ -294,10 +293,9 @@ class Union(object):
     def update_relationships(self):
         concepts = [self.concepts_map[i]
                     for i in set(self.parents_map.values())]
-        ui2index = {c.ui: i for (i, c) in self.concepts_map.items()}
         for concept in concepts:
             for rel in concept.get_relationships():
-                object_idx = ui2index[rel.object.ui]
+                object_idx = self.ui2index[rel.object.ui]
                 parent_idx = self.parents_map[object_idx]
                 parent_concept = self.concepts_map[parent_idx]
                 rel.object = parent_concept
@@ -355,6 +353,7 @@ if __name__ == "__main__":
     args = parse_args()
     cnxs = []
 
+    logging.info("Loading concepts.")
     concepts = read_concepts_files(*args.infiles)
     logging.info(f"Number of starting concepts: {len(concepts)}")
 
