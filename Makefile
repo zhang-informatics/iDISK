@@ -7,7 +7,7 @@
 # Your preferred Python.
 PYTHON_INTERPRETER = python3
 # Where iDISK is located.
-IDISK_HOME = /Users/vasil024/Projects/InProgressProjects/dietary_supplements_refactor/iDISK
+IDISK_HOME = /home/zhan1386/vasil024/Projects/dietary_supplements/iDISK
 # The version of iDISK to build.
 IDISK_VERSION = 1.0.0
 # Configuration file specifying how to build the schema.
@@ -77,7 +77,8 @@ link_entities:
 connections:
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/set_functions.py find_connections \
 		--infiles $(VERSION_DIR)/concepts/concepts_linked.jsonl \
-		--outfile $(VERSION_DIR)/concepts/connections.csv
+		--outfile $(VERSION_DIR)/concepts/connections.csv \
+		--ignore_concept_types DSP
 
 
 ## Filter connections based on simple heuristics
@@ -85,7 +86,8 @@ filter_connections:
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/filter_connections_basic.py \
 		--connections_file $(VERSION_DIR)/concepts/connections.csv \
 		--concepts_file $(VERSION_DIR)/concepts/concepts_linked.jsonl \
-		--outfile $(VERSION_DIR)/concepts/connections_new.csv
+		--outfile $(VERSION_DIR)/concepts/connections_new.csv \
+		--ignore_concept_types DSP
 	@mv $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv
 	@mv $(VERSION_DIR)/concepts/connections_new.csv $(VERSION_DIR)/concepts/connections.csv
 	@echo "New connections written to \n\t $(VERSION_DIR)/concepts/connections.csv"
