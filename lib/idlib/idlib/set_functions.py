@@ -163,8 +163,7 @@ class Union(object):
             self.connections = connections
         if run_union is True:
             self.union_find()
-            self.result = [self.concepts_map[i]
-                           for i in set(self.parents_map.values())]
+            self.result = self.update_relationships()
 
     def _check_params(self, concepts, connections):
         assert(all([isinstance(c, Concept) for c in concepts]))
@@ -225,7 +224,7 @@ class Union(object):
         :returns: Merged concept.
         :rtype: Concept
         """
-        merged = copy.deepcopy(concept_i)
+        merged = copy.copy(concept_i)
         # Replace the prefix
         new_prefix = _get_prefix(concept_i, concept_j)
         merged._prefix = new_prefix
@@ -291,6 +290,18 @@ class Union(object):
         """
         for (i, j) in tqdm(self.connections):
             self._union(i, j)
+
+    def update_relationships(self):
+        concepts = [self.concepts_map[i]
+                    for i in set(self.parents_map.values())]
+        ui2index = {c.ui: i for (i, c) in self.concepts_map.items()}
+        for concept in concepts:
+            for rel in concept.get_relationships():
+                object_idx = ui2index[rel.object.ui]
+                parent_idx = self.parents_map[object_idx]
+                parent_concept = self.concepts_map[parent_idx]
+                rel.object = parent_concept
+        return concepts
 
 
 class Intersection(Union):
