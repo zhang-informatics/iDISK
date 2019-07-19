@@ -402,7 +402,7 @@ class MetaMapDriver(EntityLinker):
 class QuickUMLSDriver(EntityLinker):
 
     def __init__(self, name="quickumls", quickumls_install="",
-                 min_score=0.7, keep_semtypes=None):
+                 criterion="score", min_score=0.7, keep_semtypes=None):
         """
         Interface to QuickUMLS.
 
@@ -412,6 +412,7 @@ class QuickUMLSDriver(EntityLinker):
         """
         super().__init__(name)
         self.quickumls_install = quickumls_install
+        self.criterion = criterion
         self.min_score = min_score
         self.keep_semtypes = keep_semtypes
         self._log_parameters()
@@ -421,6 +422,7 @@ class QuickUMLSDriver(EntityLinker):
         self._log(f"Staring annotator '{self.name}'")
         self._log(f"{self.name} parameters:")
         self._log(f"  quickumls_install : {self.quickumls_install}")
+        self._log(f"  criterion : {self.criterion}")
         self._log(f"  min_score : {self.min_score}")
         self._log(f"  keep_semtypes : {self.keep_semtypes}")
 
@@ -429,6 +431,7 @@ class QuickUMLSDriver(EntityLinker):
         Instantiate the QuickUMLS matcher.
         """
         self._linker = QuickUMLS(self.quickumls_install,
+                                 overlapping_criteria=self.criterion,
                                  threshold=self.min_score,
                                  accepted_semtypes=self.keep_semtypes)
         self._log("Started")
@@ -447,8 +450,14 @@ class QuickUMLSDriver(EntityLinker):
         links = defaultdict(list)
         for phrase in outputs:
             for match in phrase:
+                try:
+                    candidate_term = match["preferred_term"]
+                    if candidate_term == "":  # No preferred_term found. 
+                        candidate_term = match["term"]
+                except KeyError:
+                    candidate_term = match["term"]
                 candidate = CandidateLink(input_string=match["ngram"],
-                                          candidate_term=match["term"],
+                                          candidate_term=candidate_term,
                                           candidate_source="UMLS",
                                           candidate_id=match["cui"],
                                           # attrs
@@ -620,6 +629,7 @@ class MedDRARuleBased(EntityLinker):
     """
     def __init__(self, name="meddra_soc"):
         super().__init__(name)
+        self._start()
 
     def _start(self):
         self._log(f"Starting {self.name}")
@@ -647,6 +657,8 @@ class MedDRARuleBased(EntityLinker):
                      }
         candidates = []
         socs = soc_table.get(term.lower())
+        if socs is None:
+            return candidates
         for soc in socs:
             matched_str = soc[0]
             if soc[0] == "":

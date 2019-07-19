@@ -70,7 +70,9 @@ def test_quickumls():
         func(msg)
 
     _log("QuickUMLS")
-    qumls = QuickUMLSDriver(quickumls_install="/Users/vasil024/tools/QuickUMLS/",
+    # Uncomment for the vanilla version of QuickUMLS
+    # qumls = QuickUMLSDriver(quickumls_install="/Users/vasil024/tools/QuickUMLS/",
+    qumls = QuickUMLSDriver(quickumls_install="/Users/vasil024/Projects/Code/QuickUMLS/Install",
                             min_score=0.7,
                             keep_semtypes=["T047", "T191", "T184", "T033", "T127"])
 

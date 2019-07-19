@@ -3,7 +3,6 @@ import sys
 import argparse
 import logging
 import json
-from copy import copy
 from collections import defaultdict
 
 from linkers import MetaMapDriver, QuickUMLSDriver, \
@@ -39,9 +38,10 @@ class LinkedString(object):
     :param list candidate_links: (Optional) List of CandidateLink instances
                                  derived from string.
     """
-    def __init__(self, string, concept_type,
+    def __init__(self, string, src, concept_type,
                  terminology, id=None, candidate_links=None):
         self.string = string
+        self.src = src
         self.concept_type = concept_type
         self.terminology = terminology
         self.candidate_links = candidate_links or []
@@ -148,6 +148,7 @@ def get_linkables_from_concepts(concepts, schema):
         if concept_terminology is None:
             continue
         linkable = LinkedString(string=concept.preferred_atom.term,
+                                src=concept.preferred_atom.src,
                                 terminology=concept_terminology,
                                 id=concept.ui,
                                 concept_type=list(concept_node.labels)[0])
@@ -246,7 +247,6 @@ def link_entities(linkables, annotators):
         # in memory.
         del ann
 
-    logging.info(f"Num linked: {total}")
     return linkables
 
 
@@ -276,6 +276,10 @@ def create_concepts_from_linkings(linkings, existing_concepts):
         # "umls.metamap" -> "UMLS"
         link_src = linked_str.terminology.split('.')[0].upper()
         if linked_str.candidate_links == []:
+            try:
+                existing_concepts.remove(concept_lookup[linked_str.id])
+            except ValueError:
+                pass
             continue
         try:
             old_concept = concept_lookup[linked_str.id]
@@ -284,13 +288,24 @@ def create_concepts_from_linkings(linkings, existing_concepts):
         # For each candidate linking...
         for cand in linked_str.candidate_links:
             # Create a Concept for that link
-            new_concept = copy(old_concept)
+            new_concept = Concept.from_concept(old_concept)
             mapped_str_atom = Atom(cand.candidate_term,
                                    src=cand.candidate_source,
                                    src_id=cand.candidate_id,
                                    term_type="SY",
                                    is_preferred=True)
             new_concept.add_elements(mapped_str_atom)
+
+            # If the linker extracted multiple distinct entities
+            # from this linked_str, we don't want to include them
+            # as Atoms of the resulting Concepts.
+            if len(linked_str.candidate_links) > 1:
+                new_concept.rm_elements(old_concept.get_atoms())
+                mapped_from_atr = Attribute(subject=new_concept,
+                                            atr_name="original_context",
+                                            atr_value=linked_str.string,
+                                            src=linked_str.src)
+                new_concept.add_elements(mapped_from_atr)
             # Add any other attributes from the CandidateLink,
             # such as the linking score, UMLS semantic types, etc.
             for (atr_name, atr_values) in cand.attrs.items():
@@ -307,8 +322,9 @@ def create_concepts_from_linkings(linkings, existing_concepts):
             old2new_concepts[old_concept.ui].append(new_concept)
             # Delete the original concept that we mapped from.
             # TODO: I can't figure out why existing_concepts.remove(concept)
-            # doesn't work. concept in existing_concepts returns True.
-            existing_concepts = [c for c in existing_concepts if c != old_concept]
+            # doesn't work. `concept in existing_concepts` returns True.
+            existing_concepts = [c for c in existing_concepts
+                                 if c != old_concept]
 
     # Update the relationships for all the concepts.
     all_concepts = existing_concepts + new_concepts
@@ -317,8 +333,8 @@ def create_concepts_from_linkings(linkings, existing_concepts):
         to_rm = []
         for rel in concept.get_relationships():
             try:
-                new_concepts = old2new_concepts[rel.object]
-            except (KeyError, AttributeError):
+                new_concepts = old2new_concepts[rel.object.ui]
+            except KeyError:
                 continue
             for nc in new_concepts:
                 new_rel = Relationship(subject=concept,
@@ -333,117 +349,17 @@ def create_concepts_from_linkings(linkings, existing_concepts):
     return all_concepts
 
 
-def orig_create_concepts_from_linkings(linked_strs, existing_concepts):
-    """
-    This function creates Concept instances for those Relationship objects
-    that were successfully linked and updates the Relationship objects to
-    be the newly created Concepts.
-
-    :param iterable linked_strs: LinkedString instances to create concepts for.
-    :param iterable existing_concepts: Already existing concepts.
-    :returns: Updated set of concepts.
-    :rtype: list
-    """
-
-    num_existing_atoms = sum([1 for concept in existing_concepts
-                              for atom in concept.get_atoms()])
-    Atom.init_counter(num_existing_atoms)
-    Concept.init_counter(len(existing_concepts))
-
-    existing_concept_uis = [c.ui for c in existing_concepts]
-
-    # Create the Concepts for each entity linked from each Relationship object.
-    # Each Concept has two Atoms, one for the original string, and one for the
-    # linked entity.
-    new_concepts_by_id = defaultdict(list)
-    for linked_str in linked_strs:
-        if linked_str.candidate_links == []:
-            continue
-        if linked_str.id in existing_concept_uis:
-            continue
-        link_src = linked_str.terminology.split('.')[0].upper()
-        for cand in linked_str.candidate_links:
-            orig_str_atom = Atom(linked_str.string,
-                                 src="IDISK",
-                                 src_id=linked_str.id,
-                                 term_type="SY",
-                                 is_preferred=False)
-            mapped_str_atom = Atom(cand.candidate_term,
-                                   src=cand.candidate_source,
-                                   src_id=cand.candidate_id,
-                                   term_type="SY",
-                                   is_preferred=True)
-            new_concept = Concept(concept_type=linked_str.concept_type,
-                                  atoms=[orig_str_atom, mapped_str_atom])
-            matched_atr = Attribute(subject=new_concept,
-                                    atr_name="mapped_from_orig_str",
-                                    atr_value=cand.input_string,
-                                    src="IDISK")
-            new_concept.add_elements(matched_atr)
-            new_concept._prefix = cand.candidate_source
-
-            # Incorporate any attributes from the links into the Concept.
-            for (atr_name, atr_values) in cand.attrs.items():
-                if isinstance(atr_values, str):
-                    atr_values = [atr_values]
-                for val in atr_values:
-                    new_concept.add_elements(
-                            Attribute(subject=new_concept,
-                                      atr_name=atr_name,
-                                      atr_value=val,
-                                      src=link_src)
-                            )
-
-            # TODO: new_concepts_by_id[linked_str.id].append(new_concept)
-            new_concepts_by_id[linked_str.id].append(new_concept)
-
-    # Modify all the Relationships' objects to be the corresponding
-    # Concept created above.
-    already_warned = set()
-    linked_strs_by_id = {ls.id: ls for ls in linked_strs}
-    for concept in existing_concepts:
-        for rel in concept.get_relationships():
-            rel_graph = schema.get_relationship_from_name(rel.rel_name)
-            if rel_graph is None:
-                continue
-            if rel_graph.end_node["links_to"] is None:
-                continue
-            try:
-                obj_concepts = new_concepts_by_id[rel.object]
-            except KeyError:
-                str_id = rel.object
-                orig_string = linked_strs_by_id[str_id].string
-                rel.object = orig_string
-                if str_id not in already_warned:
-                    already_warned.add(str_id)
-                    msg = f"{str_id} ({orig_string}) was not linked."
-                    logging.warning(msg)
-                continue
-            # TODO: Copy rel len(obj_concepts) times and set rel.object
-            # to each obj_concept in turn.
-            rel.object = obj_concepts
-
-    return existing_concepts + list(new_concepts_by_id.values())
-
-
 def link_concepts(concepts, annotators, schema):
-    ann_names = [ann.name for ann in annotators]
+    ann_names = [ann[1]["name"] for ann in annotators.values()]
     logging.info(f"Annotators: {ann_names}")
-    logging.info("LINKING EXISTING CONCEPTS")
+    logging.info("LINKING CONCEPTS")
     concept_linkables = get_linkables_from_concepts(concepts, schema)
     logging.info(f"Number of linkables: {len(concept_linkables)}.")
     linkings = link_entities(concept_linkables, annotators)
+    logging.info("Creating new concepts from linkings.")
     concepts = create_concepts_from_linkings(linkings, concepts)
-    # concepts = update_relationships(concepts)
+    logging.info("COMPLETE")
     return concepts
-
-
-# def link_relationship_objects(concepts, annotators, schema):
-#     logging.info("LINKING RELATIONSHIP OBJECTS")
-#     rel_linkables = get_linkables_from_relationships(concepts, schema)
-#     linkings = link_entities(rel_linkables, annotators)
-#     concepts = create_concepts_from_linkings(linkings, concepts)
-#     return concepts
 
 
 if __name__ == "__main__":
@@ -461,7 +377,7 @@ if __name__ == "__main__":
     # Create Concept instances for the objects of all Relationships
     # belonging to the existing Concepts, and update the Relationship
     # objects accordingly.
-#    concepts = link_relationship_objects(concepts, annotators, schema)
+    logging.info(f"Saving concepts to {args.outfile}")
     with open(args.outfile, 'w') as outF:
         for concept in concepts:
             json.dump(concept.to_dict(), outF)
