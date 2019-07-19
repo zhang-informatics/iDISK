@@ -4,6 +4,8 @@ import logging
 import json
 import numbers
 import numpy as np
+
+from copy import deepcopy
 from collections import OrderedDict, defaultdict
 
 from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES
@@ -38,49 +40,6 @@ class DataElement(object):
         in any class that inherits from DataElement.
         """
         self.__refs__[self.__class__].append(weakref.ref(self))
-
-    def __copy__(self):
-        """
-        Return a copy of this data element with a new unique identifier.
-        E.g.
-
-        .. code-block:: python
-
-            from copy import copy
-            a = Atom("ginger", "DSLD", "1", "SY", is_preferred=True)
-            print(a)
-            ('DA0000001' 'ginger' 'SY' 'NMCD' '1' 'True')
-            a2 = copy(a)
-            print(a2)
-            ('DA0000002' 'ginger' 'SY' 'NMCD' '1' 'True')
-
-        :returns: A copy of this data element with a new UI.
-        """
-        all_params = self.__dict__
-        init_params = {}
-        for (param, value) in all_params.items():
-            if param == "_atoms" and value is not None:
-                init_params["atoms"] = value
-            elif not param.startswith('_'):
-                init_params[param] = value
-        new = type(self)(**init_params)
-        new._prefix = self._prefix
-
-        # Copy over the attributes and relationships.
-        to_add = []
-        if self._attributes is not None:
-            for atr in self.get_attributes():
-                new_atr = atr.__copy__()
-                new_atr.subject = new
-                to_add.append(new_atr)
-        if self._relationships is not None:
-            for rel in self.get_relationships():
-                new_rel = rel.__copy__()
-                new_rel.subject = new
-                to_add.append(new_rel)
-        new.add_elements(to_add)
-
-        return new
 
     @classmethod
     def get_instances(cls):
@@ -205,7 +164,7 @@ class DataElement(object):
                          Relationship: self._relationships}
         element_type = type(element)
         if element_type not in [Atom, Attribute, Relationship]:
-            raise TypeError(f"Can't remove element of type '{element_type}'.")
+            raise TypeError(f"Unknown element of type '{element_type}'.")
         container = container_map[element_type]
         if container is None:
             msg = f"{element_type} not implemented for {type(self).__name__}."
@@ -514,6 +473,34 @@ class Concept(DataElement):
         return d
 
     @classmethod
+    def from_concept(cls, concept):
+        """
+        Create a new Concept instance with the same
+        Atoms, Attributes, and Relationships as this one.
+        Attributes and Relationships are copied and their
+        subjects updated.
+
+        :param Concept concept: The concept to copy from.
+        :returns: New Concept
+        """
+        if not isinstance(concept, cls):
+            raise TypeError("Argument not of type Concept.")
+        new_concept = cls(concept_type=concept.concept_type,
+                          atoms=concept._atoms)
+        to_add = []
+        for atr in concept.get_attributes():
+            new_atr = Attribute.from_attribute(atr)
+            new_atr.subject = new_concept
+            to_add.append(new_atr)
+        for rel in concept.get_relationships():
+            new_rel = Relationship.from_relationship(rel)
+            new_rel.subject = new_concept
+            to_add.append(new_rel)
+        new_concept.add_elements(to_add)
+        new_concept._prefix = concept._prefix
+        return new_concept
+
+    @classmethod
     def from_dict(cls, data):
         """
         Creates a concept from a JSON object. The JSON object must have
@@ -684,6 +671,15 @@ class Attribute(DataElement):
             atr.move_to_end("subject", last=False)  # Make subject first
         return atr
 
+    @classmethod
+    def from_attribute(cls, attribute):
+        new_atr = cls(subject=attribute.subject,
+                      atr_name=attribute.atr_name,
+                      atr_value=attribute.atr_value,
+                      src=attribute.src)
+        new_atr._prefix = attribute._prefix
+        return new_atr
+
     # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data, subject):
@@ -743,8 +739,11 @@ class Relationship(DataElement):
         return f"{self.subject} **{self.rel_name}** {self.object}"
 
     def __hash__(self):
+        obj = self.object
+        if isinstance(obj, Concept):
+            obj = obj.ui
         return hash((self.rel_name,
-                     self.object,
+                     obj,
                      self.src))
 
     def __eq__(self, other):
@@ -778,7 +777,8 @@ class Relationship(DataElement):
 
             {"rel_name": str,
              "object": str,
-             "src": str}
+             "src": str,
+             "attributes": list}
 
         :param bool return_subject: If True, the returned dict contains
                                     a "subject" key.
@@ -828,7 +828,21 @@ class Relationship(DataElement):
             elif r_type == "dict":
                 yield atr.to_dict(return_subject=return_subject)
 
-    # TODO: Check for valid JSON
+    @classmethod
+    def from_relationship(cls, relationship):
+        new_rel = cls(subject=relationship.subject,
+                      rel_name=relationship.rel_name,
+                      object=relationship.object,
+                      src=relationship.src)
+        to_add = []
+        for atr in relationship.get_attributes():
+            new_atr = Attribute.from_attribute(atr)
+            new_atr.subject = new_rel
+            to_add.append(new_atr)
+        new_rel.add_elements(to_add)
+        new_rel._prefix = relationship._prefix
+        return new_rel
+
     @classmethod
     def from_dict(cls, data, subject, concept_mapping=None):
         """
