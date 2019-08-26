@@ -5,6 +5,7 @@ import csv
 
 from idlib import Concept
 
+logging.getLogger().setLevel(logging.INFO)
 
 """
 Create UMLS Metathesaurus style RRF files for the specified concepts.
@@ -52,11 +53,13 @@ def create_metathesaurus_files(concepts, output_dir):
     dsrel_writer = csv.writer(dsrel_fp, delimiter='|')
 
     for concept in concepts:
+        concept._prefix = "DC"
         # MRSTY
         dssty_writer.writerow([concept.ui, concept.concept_type])
 
         # MRCONSO
         for atom in concept.get_atoms():
+            atom._prefix = "DA"
             pref_code = 'Y' if atom.is_preferred is True else 'N'
             dsconso_line = [concept.ui, atom.ui, atom.term, atom.term_type,
                             atom.src, atom.src_id, pref_code]
@@ -64,6 +67,7 @@ def create_metathesaurus_files(concepts, output_dir):
 
         # MRSAT Concepts
         for atr in concept.get_attributes():
+            atr._prefix = "DAT"
             stype = "DSCUI"
             dssat_line = [atr.ui, atr.subject.ui, stype,
                           atr.atr_name, atr.atr_value, atr.src]
@@ -71,12 +75,15 @@ def create_metathesaurus_files(concepts, output_dir):
 
         # MRREL
         for rel in concept.get_relationships():
+            rel._prefix = "DR"
+            rel.object._prefix = "DC"
             dsrel_line = [rel.ui, rel.subject.ui, rel.rel_name,
                           rel.object.ui, rel.src]
             dsrel_writer.writerow(dsrel_line)
 
-            # MRSAT Concepts
+            # MRSAT Relationships
             for relatr in rel.get_attributes():
+                relatr._prefix = "DAT"
                 stype = "DSRUI"
                 dssat_line = [relatr.ui, relatr.subject.ui, stype,
                               relatr.atr_name, relatr.atr_value, relatr.src]
@@ -90,8 +97,9 @@ def create_metathesaurus_files(concepts, output_dir):
 
 if __name__ == "__main__":
     args = parse_args()
-    msg = f"<umls> Reading Concept instances from {args.concepts_file}."
+    msg = f"<rrf> Loading Concept instances from {args.concepts_file}."
     logging.info(msg)
     concepts = Concept.read_jsonl_file(args.concepts_file)
-    logging.info(f"<umls> Populating Metathesaurus files.")
+    logging.info(f"<rrf> Populating Metathesaurus files.")
     create_metathesaurus_files(concepts, args.outdir)
+    logging.info("<rrf> Complete")
