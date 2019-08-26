@@ -140,7 +140,7 @@ def create_ingredient_concepts(dataframe):
         product_id = row["product_id"].replace(".0", '')
         rel = Relationship(subject=concept,
                            rel_name="ingredient_of",
-                           obj=product_id,
+                           object=product_id,
                            src="NHPID")
         concept.add_elements(rel)
 
@@ -220,7 +220,12 @@ def connect_ingredients_to_products(ingredient_concepts, product_concepts):
                 print(f"Missing product {product_id} for ingredient {ing}.")
                 ing.rm_elements(rel)
                 continue
+            ing.rm_elements(rel)
             rel.object = product
+            has_ing_rel = Relationship(subject=product,
+                                       rel_name="has_ingredient",
+                                       object=ing, src="NHPID")
+            product.add_elements(has_ing_rel)
 
     return list(ingredient_concepts) + list(product_concepts)
 

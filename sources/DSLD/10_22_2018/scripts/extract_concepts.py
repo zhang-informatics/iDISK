@@ -170,7 +170,7 @@ def convert_products_to_concepts(json_data):
             ing_id = ing["Ingredient_Group_GRP_ID"]
             has_ing_rel = Relationship(subject=concept,
                                        rel_name="has_ingredient",
-                                       obj=ing_id,
+                                       object=ing_id,
                                        src="DSLD")
             concept.add_elements(has_ing_rel)
 
