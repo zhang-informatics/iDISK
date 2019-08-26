@@ -78,6 +78,7 @@ def perform_find_connections(concepts, outfile):
     with open(outfile, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerows(cnxs)
+    logging.info("Done")
 
 
 def perform_set_function(func, concepts, outfile, connections=None):
@@ -148,15 +149,13 @@ class Union(object):
     def __init__(self, concepts, connections=[], run_union=True):
         self._check_params(concepts, connections)
         self.concepts = concepts
-        self.concepts_map = dict(enumerate(self.concepts))
-        self.ui2index = {c.ui: i for (i, c) in self.concepts_map.items()}
-        self.parents_map = dict(enumerate(range(len(self.concepts))))
+        self.ui2index = {c.ui: i for (i, c) in enumerate(self.concepts)}
+        self.parents = list(range(len(self.concepts)))
         if connections == []:
             logging.info(f"Finding connections...")
             self.connections = self.find_connections()
         else:
             self.connections = connections
-        logging.info(f"Number of connections: {len(self.connections)}.")
         if run_union is True:
             self.union_find()
             self.result = self.update_relationships()
@@ -181,14 +180,14 @@ class Union(object):
         def _cache_atoms(indices):
             # Cache the atoms of each concept to speed things up.
             cache = {i: set([a.term.lower()
-                             for a in self.concepts_map[i].get_atoms()])
+                             for a in self.concepts[i].get_atoms()])
                      for i in indices}
             return cache
 
         def _connected(i, j):
             # Returns True if ci is connected to cj, else False.
-            ci = self.concepts_map[i]
-            cj = self.concepts_map[j]
+            ci = self.concepts[i]
+            cj = self.concepts[j]
             if ci.concept_type != cj.concept_type:
                 return False
             ci_terms = _atom_cache[i]
@@ -196,7 +195,7 @@ class Union(object):
             overlap = ci_terms.intersection(cj_terms)
             return bool(overlap)
 
-        idxs = list(range(len(self.concepts_map)))
+        idxs = list(range(len(self.concepts)))
         _atom_cache = _cache_atoms(idxs)
 
         combos = combinations(idxs, 2)
@@ -206,9 +205,11 @@ class Union(object):
         for (count, (i, j)) in enumerate(combos):
             if count % 1000000 == 0:
                 logging.info(f"{count}/{n_combos} : # cnxs {n_connections}")
-            if _connected(i, j):
+            if _connected(i, j) is True:
                 n_connections += 1
                 yield (i, j)
+
+        logging.info(f"# cnxs {n_connections}")
 
     def _merge(self, concept_i, concept_j):
         """
@@ -249,9 +250,9 @@ class Union(object):
         :returns: The root of concept i
         :rtype: int
         """
-        if i != self.parents_map[i]:  # If this is not a root node
-            self.parents_map[i] = self._find(self.parents_map[i])
-        return self.parents_map[i]
+        if i != self.parents[i]:  # If this is not a root node
+            self.parents[i] = self._find(self.parents[i])
+        return self.parents[i]
 
     def _union(self, i, j):
         """
@@ -265,17 +266,17 @@ class Union(object):
         pj = self._find(j)
         if pi == pj:
             return
-        concept_i = self.concepts_map[pi]
-        concept_j = self.concepts_map[pj]
+        concept_i = self.concepts[pi]
+        concept_j = self.concepts[pj]
         # Merge the smaller concept into the bigger.
         if len(concept_i._atoms) < len(concept_j._atoms):
             pi, pj = pj, pi
             concept_i, concept_j = concept_j, concept_i
         # Merge concept_j into concept_i
         merged = self._merge(concept_i, concept_j)
-        self.concepts_map[pi] = merged
+        self.concepts[pi] = merged
         self.ui2index[merged.ui] = pi
-        self.parents_map[pj] = pi
+        self.parents[pj] = pi
 
     def union_find(self):
         """
@@ -285,13 +286,15 @@ class Union(object):
             self._union(i, j)
 
     def update_relationships(self):
-        concepts = [self.concepts_map[i]
-                    for i in set(self.parents_map.values())]
+        # Make sure we find the parent of any concepts we did not
+        # update in _union.
+        _ = [self._find(i) for i in range(len(self.concepts))]
+        concepts = [self.concepts[i] for i in set(self.parents)]
         for concept in concepts:
             for rel in concept.get_relationships():
                 object_idx = self.ui2index[rel.object.ui]
-                parent_idx = self.parents_map[object_idx]
-                parent_concept = self.concepts_map[parent_idx]
+                parent_idx = self.parents[object_idx]
+                parent_concept = self.concepts[parent_idx]
                 rel.object = parent_concept
         return concepts
 
@@ -311,8 +314,8 @@ class Intersection(Union):
     """
     def __init__(self, concepts, connections=[]):
         super().__init__(concepts, connections, run_union=True)
-        parent_idxs = [v for (k, v) in self.parents_map.items() if k != v]
-        self.result = [self.concepts_map[i] for i in set(parent_idxs)]
+        parent_idxs = [c for (i, c) in enumerate(self.parents) if i != c]
+        self.result = [self.concepts[i] for i in set(parent_idxs)]
 
 
 class Difference(Union):
@@ -333,11 +336,11 @@ class Difference(Union):
         # The unmatched concepts correspond to those indices that only occur
         # once in parents_map
         from collections import Counter
-        idx_counts = Counter(self.parents_map.values())
+        idx_counts = Counter(self.parents)
         parent_idxs = [k for (k, v) in idx_counts.items() if v == 1]
         # and which have no parent
-        parent_idxs = [k for k in parent_idxs if k == self.parents_map[k]]
-        self.result = [self.concepts_map[i] for i in parent_idxs]
+        parent_idxs = [k for k in parent_idxs if k == self.parents[k]]
+        self.result = [self.concepts[i] for i in parent_idxs]
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
 import argparse
 import csv
-import json
 from tqdm import tqdm
 
 from idlib import Concept
@@ -74,13 +73,15 @@ def filter_connections_included(connections, concepts, ignore_concept_types):
     for (i, j) in tqdm(connections):
         if concepts[i].concept_type.upper() in ignore_concept_types:
             continue
-        i_pt = concepts[i].preferred_atom.term.lower()
+        i_pts = [a.term.lower() for a in concepts[i].get_atoms()
+                 if a.is_preferred is True]
         i_terms = [a.term.lower() for a in concepts[i].get_atoms()]
-        j_pt = concepts[j].preferred_atom.term.lower()
+        j_pts = [a.term.lower() for a in concepts[j].get_atoms()
+                 if a.is_preferred is True]
         j_terms = [a.term.lower() for a in concepts[j].get_atoms()]
-        
-        if i_pt in j_terms or j_pt in i_terms:
-            cnxs.append((i,j))
+
+        if len(set(i_pts) & set(j_pts)) > 0:
+            cnxs.append((i, j))
     return cnxs
 
 

@@ -45,7 +45,7 @@ CREATE (s:SS {preferred_name: "Preferred Name",
 // ===== RELATIONSHIPS =====
 
 // Ingredient of
-CREATE (i) -[:INGREDIENT_OF]-> (p)
+CREATE (p) -[:HAS_INGREDIENT]-> (i)
 
 // Interacts with
 CREATE (i) -[:INTERACTS_WITH {rating: "Rating", severity: "Severity"}]-> (r)
