@@ -285,13 +285,15 @@ class Atom(DataElement):
 
     _prefix = "DA"
 
-    def __init__(self, term, src, src_id, term_type, is_preferred, ui=None):
+    def __init__(self, term, src, src_id, term_type, is_preferred,
+                 ui=None, **attrs):
         super().__init__(ui=ui)
         self.term = term  # 5-HTP
         self.src = src  # NMCD
         self.src_id = src_id  # 1234
         self.term_type = term_type  # SN
         self.is_preferred = is_preferred  # True
+        self._attrs = attrs
         self._check_params()
         self._register()
 
@@ -321,7 +323,8 @@ class Atom(DataElement):
         return all([self.term.lower() == other.term.lower(),
                     self.src == other.src,
                     self.src_id == other.src_id,
-                    self.term_type == other.term_type])
+                    self.term_type == other.term_type,
+                    self.attrs == other.attrs])
 
     def _check_params(self):
         assert isinstance(self.term, str)
@@ -335,6 +338,10 @@ class Atom(DataElement):
         assert isinstance(self.is_preferred, bool)
         assert isinstance(self.ui, (type(None), str))
 
+    @property
+    def attrs(self):
+        return self._attrs
+
     def to_dict(self):
         """
         Return this atom as a dict. The output format is:
@@ -345,13 +352,15 @@ class Atom(DataElement):
              "src": str,
              "src_id": str,
              "term_type": str,
-             "is_preferred": bool}
+             "is_preferred": bool,
+             **attrs}
         """
         data = {"term": self.term,
                 "src": self.src,
                 "src_id": self.src_id,
                 "term_type": self.term_type,
-                "is_preferred": self.is_preferred}
+                "is_preferred": self.is_preferred,
+                **self.attrs}
         return data
 
     # TODO: Check for valid JSON
@@ -367,17 +376,14 @@ class Atom(DataElement):
              "src": str,
              "src_id": str,
              "term_type": str,
-             "is_preferred": bool}
+             "is_preferred": bool,
+             **attrs}
 
         :param dict data: The JSON data to load.
         :returns: Atom instance of data.
         :rtype: Atom
         """
-        return cls(term=data["term"],
-                   src=data["src"],
-                   src_id=data["src_id"],
-                   term_type=data["term_type"],
-                   is_preferred=data["is_preferred"])
+        return cls(**data)
 
 
 class Concept(DataElement):

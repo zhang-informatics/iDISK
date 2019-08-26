@@ -20,7 +20,7 @@ logging.getLogger().setLevel(logging.INFO)
 
 class LinkedString(object):
     """
-    A LinkedString is a single str some substring or substrings of
+    A LinkedString is a single string, some substring or substrings of
     which can be linked to an external terminology. For example,
 
     "... is helpful for headaches and toothaches"
@@ -102,6 +102,7 @@ def get_annotators(annotator_conf, schema):
     :rtype: dict
     """
     annotator_map = {"umls.metamap": MetaMapDriver,
+                     "umls.metamap.spd": MetaMapDriver,
                      "umls.quickumls.dis": QuickUMLSDriver,
                      "umls.quickumls.sdsi": QuickUMLSDriver,
                      "umls.quickumls.spd": QuickUMLSDriver,
@@ -272,7 +273,9 @@ def create_concepts_from_linkings(linkings, existing_concepts):
 
     new_concepts = []
     old2new_concepts = defaultdict(list)
-    for linked_str in linkings:
+    for (i, linked_str) in enumerate(linkings):
+        if i % 500 == 0:
+            logging.info(f"{i}/{len(linkings)}")
         # "umls.metamap" -> "UMLS"
         link_src = linked_str.terminology.split('.')[0].upper()
         if linked_str.candidate_links == []:
@@ -293,7 +296,10 @@ def create_concepts_from_linkings(linkings, existing_concepts):
                                    src=cand.candidate_source,
                                    src_id=cand.candidate_id,
                                    term_type="SY",
-                                   is_preferred=True)
+                                   is_preferred=True,
+                                   original_context=linked_str.string,
+                                   linked_string=cand.input_string,
+                                   linking_score=cand.linking_score)
             new_concept.add_elements(mapped_str_atom)
 
             # If the linker extracted multiple distinct entities
@@ -319,6 +325,7 @@ def create_concepts_from_linkings(linkings, existing_concepts):
                                       src=link_src)
                             )
             new_concepts.append(new_concept)
+
             old2new_concepts[old_concept.ui].append(new_concept)
             # Delete the original concept that we mapped from.
             # TODO: I can't figure out why existing_concepts.remove(concept)
@@ -337,10 +344,15 @@ def create_concepts_from_linkings(linkings, existing_concepts):
             except KeyError:
                 continue
             for nc in new_concepts:
-                new_rel = Relationship(subject=concept,
-                                       rel_name=rel.rel_name,
-                                       object=nc,
-                                       src=rel.src)
+                new_rel = Relationship.from_relationship(rel)
+                new_rel.object = nc
+
+                # Attach the original_context to the relationship
+                # rather than the concept.
+                orig_context_attrs = list(nc.get_attributes("original_context"))  # noqa
+                new_rel.add_elements(orig_context_attrs)
+                nc.rm_elements(orig_context_attrs)
+
                 to_add.append(new_rel)
             to_rm.append(rel)
         concept.add_elements(to_add)
@@ -368,6 +380,7 @@ if __name__ == "__main__":
     schema = Schema(args.uri, args.user, args.password,
                     cypher_file=args.schema_file)
     # Load in the Concept instances
+    logging.info("Loading Concepts.")
     concepts = Concept.read_jsonl_file(args.concepts_file)
     # Load the annotators, e.g. MetaMap.
     annotators = get_annotators(args.annotator_conf, schema)

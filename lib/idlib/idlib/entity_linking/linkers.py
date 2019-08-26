@@ -31,12 +31,13 @@ class CandidateLink(object):
                   about this linking. For example, the CandidateScore from
                   the output of MetaMap.
     """
-    def __init__(self, input_string, candidate_term,
-                 candidate_source, candidate_id, **attrs):
+    def __init__(self, input_string, candidate_term, candidate_source,
+                 candidate_id, linking_score=0.0, **attrs):
         self.input_string = input_string
         self.candidate_term = candidate_term
         self.candidate_source = candidate_source
         self.candidate_id = candidate_id
+        self.linking_score = linking_score
         self._attrs = attrs
 
     def __str__(self):
@@ -120,8 +121,9 @@ class EntityLinker(object):
         cleaned = []
         for (i, q) in queries:
             if ascii_only is True:
-                q = re.sub(r'[^\x00-\x7F]+', " ", q)
-            q = re.sub(r" ?\([^)]+\)", "", q)
+                q = re.sub(r'[^\x00-\x7F]+', ' ', q)
+            q = re.sub(r' ?\([^)]+\)', '', q)
+            q = re.sub(r'\s+', ' ', q)
             cleaned.append((i, q))
         return cleaned
 
@@ -284,9 +286,8 @@ class MetaMapDriver(EntityLinker):
                                  candidate_term=pref_term,
                                  candidate_source="UMLS",
                                  candidate_id=candidate["CandidateCUI"],
-                                 # attrs
-                                 linked_string=input_string,
                                  linking_score=candidate["CandidateScore"],
+                                 # attrs
                                  umls_semantic_type=candidate["SemTypes"])
 
         all_mappings = {}
@@ -386,7 +387,7 @@ class MetaMapDriver(EntityLinker):
                 best_score = float("-inf")
                 best_candidate = None
                 for c in candidates:
-                    score = abs(int(c["linking_score"]))
+                    score = abs(int(c.linking_score))
                     if score > best_score and score > min_score:
                         best_score = score
                         best_candidate = c
@@ -460,9 +461,8 @@ class QuickUMLSDriver(EntityLinker):
                                           candidate_term=candidate_term,
                                           candidate_source="UMLS",
                                           candidate_id=match["cui"],
-                                          # attrs
-                                          linked_string=match["ngram"],
                                           linking_score=match["similarity"],
+                                          # attrs
                                           umls_semantic_type=match["semtypes"])
                 links[match["ngram"]].append(candidate)
         return links
@@ -507,7 +507,7 @@ class QuickUMLSDriver(EntityLinker):
             phrase2candidate = {}
             for (matched_str, candidates) in candidate_links[qid].items():
                 best = sorted(candidates,
-                              key=lambda c: c["linking_score"],
+                              key=lambda c: c.linking_score,
                               reverse=True)[0]
                 phrase2candidate[matched_str] = best
             best_links[qid] = phrase2candidate
