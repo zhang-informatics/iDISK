@@ -33,32 +33,13 @@ def read_connections(infile):
         reader = csv.reader(inF, delimiter=',')
         for (i, row) in enumerate(reader):
             if len(row) != 2:
-                raise ValueError("Improperly formatting CSV at line {i+1}.")
+                raise ValueError("Improperly formatted CSV at line {i+1}.")
             cnx = [int(i) for i in row]
             cnxs.append(cnx)
     return cnxs
 
 
-def filter_connections_same(connections, concepts):
-    """
-    Keep connections if the preferred_atom.term for
-    both concepts is the same.
-
-    :param list connections: List of candidate connections.
-    :param list concepts: List of concepts.
-    :returns: Filtered connections.
-    :rtype: list
-    """
-    cnxs = []
-    for (i, j) in connections:
-        i_term = concepts[i].preferred_atom.term
-        j_term = concepts[j].preferred_atom.term
-        if i_term.lower() == j_term.lower():
-            cnxs.append((i, j))
-    return cnxs
-
-
-def filter_connections_included(connections, concepts, ignore_concept_types):
+def filter_connections(connections, concepts, ignore_concept_types):
     """
     Keep connections if the preferred_atom.term for
     one concept is in the atoms of the other concept.
@@ -71,17 +52,27 @@ def filter_connections_included(connections, concepts, ignore_concept_types):
     """
     cnxs = []
     for (i, j) in tqdm(connections):
+
         if concepts[i].concept_type.upper() in ignore_concept_types:
             continue
-        i_pts = [a.term.lower() for a in concepts[i].get_atoms()
-                 if a.is_preferred is True]
-        i_terms = [a.term.lower() for a in concepts[i].get_atoms()]
-        j_pts = [a.term.lower() for a in concepts[j].get_atoms()
-                 if a.is_preferred is True]
-        j_terms = [a.term.lower() for a in concepts[j].get_atoms()]
+
+        # TODO: Don't hardcode the linking terminologies.
+        i_pref_atoms = [a for a in concepts[i].get_atoms()
+                        if a.is_preferred is True]
+        i_pts = [a.term.lower() for a in i_pref_atoms]
+        i_linked_ids = [a.src_id for a in i_pref_atoms
+                        if a.src in ["UMLS", "MEDDRA"]]
+
+        j_pref_atoms = [a for a in concepts[j].get_atoms()
+                        if a.is_preferred is True]
+        j_pts = [a.term.lower() for a in j_pref_atoms]
+        j_linked_ids = [a.src_id for a in j_pref_atoms
+                        if a.src in ["UMLS", "MEDDRA"]]
 
         if len(set(i_pts) & set(j_pts)) > 0:
-            cnxs.append((i, j))
+            if len(set(i_linked_ids) & set(j_linked_ids)) > 0:
+                cnxs.append((i, j))
+
     return cnxs
 
 
@@ -91,8 +82,8 @@ def main(connections_file, concepts_file, outfile, ignore_concept_types):
     concepts = Concept.read_jsonl_file(concepts_file)
     ignore_concept_types = [ct.upper() for ct in ignore_concept_types]
     print(f"Excluding concepts of types {ignore_concept_types}.")
-    filtered_cnxs = filter_connections_included(candidate_cnxs, concepts,
-                                                ignore_concept_types)
+    filtered_cnxs = filter_connections(candidate_cnxs, concepts,
+                                       ignore_concept_types)
     print(f"Number of filtered connections: {len(filtered_cnxs)}.")
     with open(outfile, 'w') as outF:
         writer = csv.writer(outF, delimiter=',')

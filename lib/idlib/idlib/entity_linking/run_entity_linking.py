@@ -289,31 +289,20 @@ def create_concepts_from_linkings(linkings, existing_concepts):
         except KeyError:
             continue
         # For each candidate linking...
-        for cand in linked_str.candidate_links:
-            # Create a Concept for that link
+        for (i, cand) in enumerate(linked_str.candidate_links):
+            # Create a Concept for this link
             new_concept = Concept.from_concept(old_concept)
             mapped_str_atom = Atom(cand.candidate_term,
                                    src=cand.candidate_source,
                                    src_id=cand.candidate_id,
                                    term_type="SY",
                                    is_preferred=True,
-                                   original_context=linked_str.string,
                                    linked_string=cand.input_string,
                                    linking_score=cand.linking_score)
             new_concept.add_elements(mapped_str_atom)
 
-            # If the linker extracted multiple distinct entities
-            # from this linked_str, we don't want to include them
-            # as Atoms of the resulting Concepts.
-            if len(linked_str.candidate_links) > 1:
-                new_concept.rm_elements(old_concept.get_atoms())
-                mapped_from_atr = Attribute(subject=new_concept,
-                                            atr_name="original_context",
-                                            atr_value=linked_str.string,
-                                            src=linked_str.src)
-                new_concept.add_elements(mapped_from_atr)
             # Add any other attributes from the CandidateLink,
-            # such as the linking score, UMLS semantic types, etc.
+            # such as the UMLS semantic types, etc.
             for (atr_name, atr_values) in cand.attrs.items():
                 if not isinstance(atr_values, (list, set)):
                     atr_values = [atr_values]
@@ -346,13 +335,6 @@ def create_concepts_from_linkings(linkings, existing_concepts):
             for nc in new_concepts:
                 new_rel = Relationship.from_relationship(rel)
                 new_rel.object = nc
-
-                # Attach the original_context to the relationship
-                # rather than the concept.
-                orig_context_attrs = list(nc.get_attributes("original_context"))  # noqa
-                new_rel.add_elements(orig_context_attrs)
-                nc.rm_elements(orig_context_attrs)
-
                 to_add.append(new_rel)
             to_rm.append(rel)
         concept.add_elements(to_add)
@@ -384,6 +366,8 @@ if __name__ == "__main__":
     concepts = Concept.read_jsonl_file(args.concepts_file)
     # Load the annotators, e.g. MetaMap.
     annotators = get_annotators(args.annotator_conf, schema)
+    if annotators == []:
+        raise ValueError("No annotators found. Check your schema.")
     # Link the Concept instances to existing terminologies,
     # and add any relevant attributes.
     concepts = link_concepts(concepts, annotators, schema)
