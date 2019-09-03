@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>idlib.base &mdash; idlib 0.0.1 documentation</title>
+  <title>idlib.data_elements &mdash; idlib 0.0.1 documentation</title>
   
 
   
@@ -131,7 +131,7 @@
         
           <li><a href="../index.html">Module code</a> &raquo;</li>
         
-      <li>idlib.base</li>
+      <li>idlib.data_elements</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -146,20 +146,249 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <h1>Source code for idlib.base</h1><div class="highlight"><pre>
+  <h1>Source code for idlib.data_elements</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">weakref</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
 
 <span class="kn">from</span> <span class="nn">idlib.config</span> <span class="k">import</span> <span class="n">SOURCES</span><span class="p">,</span> <span class="n">TERM_TYPES</span><span class="p">,</span> <span class="n">CONCEPT_TYPES</span>
 
 
-<div class="viewcode-block" id="Atom"><a class="viewcode-back" href="../../source/base.html#idlib.base.Atom">[docs]</a><span class="k">class</span> <span class="nc">Atom</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">DataElement</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="n">__refs__</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># Holds all instances of each class</span>
+    <span class="n">_prefix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">_counter</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">_ui_template</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{0}{1:07}</span><span class="s2">&quot;</span>  <span class="c1"># _prefix, _counter</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_number</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Containers. None means that it is not implemented for</span>
+        <span class="c1"># this data element.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_attributes</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_relationships</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_register</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add this instance to __refs__. To be called at the end of __init__</span>
+<span class="sd">        in any class that inherits from DataElement.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__refs__</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_instances</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get all instances of the Concept class.</span>
+
+<span class="sd">        :returns: Generator over Concept instances.</span>
+<span class="sd">        :rtype: generator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">inst_ref</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__refs__</span><span class="p">[</span><span class="bp">cls</span><span class="p">]:</span>
+            <span class="n">inst</span> <span class="o">=</span> <span class="n">inst_ref</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">inst</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">inst</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">set_ui_prefix</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the string to prepend to the UI of each instance.</span>
+
+<span class="sd">        :param str prefix: The prefix to set.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">prefix</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">init_counter</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the unique identifier counter with the given number.</span>
+
+<span class="sd">        :param int num: The number to initialize with.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">=</span> <span class="n">num</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_increment_counter</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Increment the unique identifier counter by 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ui</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The unique identifier is always dynamically determined by the</span>
+<span class="sd">        values of self._prefix and self._number.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_number</span><span class="p">)</span>
+
+    <span class="nd">@ui</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">ui</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The unique identifier is always dynamically determined by the</span>
+<span class="sd">        values of self._prefix and self._number. However, the values of these</span>
+<span class="sd">        hidden variables can be modified by using the UI setter.</span>
+
+<span class="sd">        :param str value: The new unique identifier.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;.+[0-9]</span><span class="si">{7}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;UI must match the regex &#39;.+[0-9]</span><span class="si">{7}</span><span class="s2">&#39;. E.g. DC0000001.&quot;</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="o">-</span><span class="mi">7</span><span class="p">:])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">value</span><span class="p">[:</span><span class="o">-</span><span class="mi">7</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">add_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a collection of elements to this data element if it does not</span>
+<span class="sd">        already belong to it. Each element must be an Atom, Attribute,</span>
+<span class="sd">        or Relationship.</span>
+
+<span class="sd">        :param iterable elements: The elements to add.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="s2">&quot;__iter__&quot;</span><span class="p">):</span>
+            <span class="n">elements</span> <span class="o">=</span> <span class="p">[</span><span class="n">elements</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_add_single_element</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">rm_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove a collection of elements from this data element.</span>
+<span class="sd">        Each element must be an Atom, Attribute, or Relationship.</span>
+
+<span class="sd">        :param iterable elements: The elements to remove.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="s2">&quot;__iter__&quot;</span><span class="p">):</span>
+            <span class="n">elements</span> <span class="o">=</span> <span class="p">[</span><span class="n">elements</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rm_single_element</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_single_element</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a single Atom, Attribute, or Relationship to this data element</span>
+<span class="sd">        if it does not already belong to it.</span>
+
+<span class="sd">        :param element: Element to add. Must be of type Atom,</span>
+<span class="sd">                        Attribute, or Relationship.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Maps element types to their containers.</span>
+        <span class="n">container_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">Atom</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span><span class="p">,</span>
+                         <span class="n">Attribute</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attributes</span><span class="p">,</span>
+                         <span class="n">Relationship</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relationships</span><span class="p">}</span>
+        <span class="n">element_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">element_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Atom</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Can&#39;t add element of type &#39;</span><span class="si">{element_type}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+        <span class="n">container</span> <span class="o">=</span> <span class="n">container_map</span><span class="p">[</span><span class="n">element_type</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">container</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{element_type}</span><span class="s2"> not implemented for {type(self).__name__}.&quot;</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">element</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">container</span><span class="p">:</span>
+            <span class="n">container</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_rm_single_element</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove a single Atom, Attribute, or Relationship from this</span>
+<span class="sd">        data element.</span>
+
+<span class="sd">        :param element: The element to remove. Must be of type Atom,</span>
+<span class="sd">                        Attribute, or Relationship.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Maps element types to their containers.</span>
+        <span class="n">container_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">Atom</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span><span class="p">,</span>
+                         <span class="n">Attribute</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attributes</span><span class="p">,</span>
+                         <span class="n">Relationship</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relationships</span><span class="p">}</span>
+        <span class="n">element_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">element_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="n">Atom</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Can&#39;t remove element of type &#39;</span><span class="si">{element_type}</span><span class="s2">&#39;.&quot;</span><span class="p">)</span>
+        <span class="n">container</span> <span class="o">=</span> <span class="n">container_map</span><span class="p">[</span><span class="n">element_type</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">container</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{element_type}</span><span class="s2"> not implemented for {type(self).__name__}.&quot;</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">element</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">container</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{element}</span><span class="s2"> not found in </span><span class="si">{self}</span><span class="s2">&quot;</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="n">container</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a generator over the atoms of this data element,</span>
+<span class="sd">        if implemented.</span>
+
+<span class="sd">        :param str r_type: How to yield each atom. Possible values</span>
+<span class="sd">                           are [&quot;object&quot;, &quot;dict&quot;]. If &quot;object&quot;, yields</span>
+<span class="sd">                           Atom instances. If &quot;dict&quot;, yields dicts from</span>
+<span class="sd">                           the Atom.to_dict() method.</span>
+<span class="sd">        :returns: generator over atoms</span>
+<span class="sd">        :rtype: generator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;Atoms not implemented for {type(self).__name__}.&quot;</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">r_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;rtype must be &#39;object&#39; or &#39;dict&#39;.&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">atom</span>
+            <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">atom</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atr_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a generator over the attributes of this data element,</span>
+<span class="sd">        if implemented.</span>
+
+<span class="sd">        :param str atr_name: If not None (default), return only those</span>
+<span class="sd">                             attributes of type atr_name.</span>
+<span class="sd">        :param str r_type: How to yield each attribute. Possible values</span>
+<span class="sd">                           are [&quot;object&quot;, &quot;dict&quot;]. If &quot;object&quot;, yields</span>
+<span class="sd">                           Attribute instances. If &quot;dict&quot;, yields dicts</span>
+<span class="sd">                           from the Attribute.to_dict() method.</span>
+<span class="sd">        :returns: generator over attributes</span>
+<span class="sd">        :rtype: generator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">r_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;rtype must be &#39;object&#39; or &#39;dict&#39;.&quot;</span><span class="p">)</span>
+        <span class="n">return_atrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attributes</span>
+        <span class="k">if</span> <span class="n">atr_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">return_atrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">return_atrs</span> <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">atr_name</span> <span class="o">==</span> <span class="n">atr_name</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">return_atrs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">atr</span>
+            <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">atr</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rel_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a generator over the relationships of this concept.</span>
+
+<span class="sd">        :param str rel_name: If not None (default), return only those</span>
+<span class="sd">                             relationships of type rel_name.</span>
+<span class="sd">        :param str r_type: How to yield each relationship. Possible values</span>
+<span class="sd">                           are [&quot;object&quot;, &quot;dict&quot;]. If &quot;object&quot;, yields</span>
+<span class="sd">                           Relationship instances. If &quot;dict&quot;, yields dicts</span>
+<span class="sd">                           from the Relationship.to_dict() method.</span>
+<span class="sd">        :returns: generator over relationships</span>
+<span class="sd">        :rtype: generator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">r_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;rtype must be &#39;object&#39; or &#39;dict&#39;.&quot;</span><span class="p">)</span>
+        <span class="n">return_rels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relationships</span>
+        <span class="k">if</span> <span class="n">rel_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">return_rels</span> <span class="o">=</span> <span class="p">[</span><span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">return_rels</span> <span class="k">if</span> <span class="n">r</span><span class="o">.</span><span class="n">rel_name</span> <span class="o">==</span> <span class="n">rel_name</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">return_rels</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">rel</span>
+            <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">rel</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="Atom"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Atom">[docs]</a><span class="k">class</span> <span class="nc">Atom</span><span class="p">(</span><span class="n">DataElement</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    An atom is an instance of a concept with a unique string, source,</span>
-<span class="sd">    source ID, and term type.</span>
+<span class="sd">    An Atom is an a unique string, source, source ID, and term type.</span>
+<span class="sd">    A collection of Atoms is a Concept.</span>
 
 <span class="sd">    :param str term: The string of this atom.</span>
 <span class="sd">    :param str src: The source code of where this atom was found.</span>
@@ -170,22 +399,23 @@
 <span class="sd">    :param str ui: The iDISK unique identifier of this atom. Optional.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">_counter</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">_ui_template</span> <span class="o">=</span> <span class="s2">&quot;DA</span><span class="si">{0:07}</span><span class="s2">&quot;</span>
+    <span class="n">_prefix</span> <span class="o">=</span> <span class="s2">&quot;DA&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">src_id</span><span class="p">,</span> <span class="n">term_type</span><span class="p">,</span> <span class="n">is_preferred</span><span class="p">,</span> <span class="n">ui</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">src_id</span><span class="p">,</span> <span class="n">term_type</span><span class="p">,</span> <span class="n">is_preferred</span><span class="p">,</span> <span class="n">ui</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">term</span> <span class="o">=</span> <span class="n">term</span>  <span class="c1"># 5-HTP</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">src</span> <span class="o">=</span> <span class="n">src</span>  <span class="c1"># NMCD</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">src_id</span> <span class="o">=</span> <span class="n">src_id</span>  <span class="c1"># 1234</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span> <span class="o">=</span> <span class="n">term_type</span>  <span class="c1"># SN</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">is_preferred</span> <span class="o">=</span> <span class="n">is_preferred</span>  <span class="c1"># True</span>
         <span class="k">if</span> <span class="n">ui</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_increment</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_counter</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_increment_counter</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counter</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="n">ui</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">init_counter</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ui</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;DA&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_register</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="c1"># Verbose representation.</span>
@@ -195,6 +425,12 @@
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.term}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">term</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">src_id</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -209,20 +445,21 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">src_id</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">src_id</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">term_type</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">src_id</span><span class="p">,</span> <span class="n">term_type</span><span class="p">,</span> <span class="n">is_preferred</span><span class="p">,</span> <span class="n">ui</span><span class="p">):</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">src</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SOURCES</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">src_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">TERM_TYPES</span>
-        <span class="k">if</span> <span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;PN&quot;</span><span class="p">:</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Term type PN (preferred name) is deprecated. Use PT (preferred term) instead.&quot;</span>  <span class="c1"># noqa</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">is_preferred</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ui</span><span class="p">,</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="nb">str</span><span class="p">))</span>
+    <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SOURCES</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">src_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">TERM_TYPES</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;PN&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;PT&quot;</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Term types PN (preferred name) and PT (preferred term) are </span><span class="se">\</span>
+<span class="s2">                   deprecated. Set is_preffered=True.&quot;</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_preferred</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="p">,</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="nb">str</span><span class="p">))</span>
 
-<div class="viewcode-block" id="Atom.to_dict"><a class="viewcode-back" href="../../source/base.html#idlib.base.Atom.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Atom.to_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Atom.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Return this atom as a JSON object. The output format is:</span>
+<span class="sd">        Return this atom as a dict. The output format is:</span>
 
 <span class="sd">        .. code-block:: json</span>
 
@@ -239,24 +476,8 @@
                 <span class="s2">&quot;is_preferred&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_preferred</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-<div class="viewcode-block" id="Atom.init_counter"><a class="viewcode-back" href="../../source/base.html#idlib.base.Atom.init_counter">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">init_counter</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the unique identifier counter with the given number.</span>
-
-<span class="sd">        :param int num: The number to initialize with.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">=</span> <span class="n">num</span></div>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">_increment</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Increment the UI counter by 1.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-
     <span class="c1"># TODO: Check for valid JSON</span>
-<div class="viewcode-block" id="Atom.from_dict"><a class="viewcode-back" href="../../source/base.html#idlib.base.Atom.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Atom.from_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Atom.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create an Atom instance from a JSON string.</span>
@@ -281,7 +502,7 @@
                    <span class="n">is_preferred</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;is_preferred&quot;</span><span class="p">])</span></div></div>
 
 
-<div class="viewcode-block" id="Concept"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept">[docs]</a><span class="k">class</span> <span class="nc">Concept</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Concept"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept">[docs]</a><span class="k">class</span> <span class="nc">Concept</span><span class="p">(</span><span class="n">DataElement</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An iDISK concept.</span>
 
@@ -292,35 +513,34 @@
 <span class="sd">    :param str ui: the iDISK CUI for this concept. Optional.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">__refs__</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># Holds all instances of this class</span>
-    <span class="n">_counter</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">_prefix</span> <span class="o">=</span> <span class="s2">&quot;DC&quot;</span>  <span class="c1"># The default prefix. Can be changed for each instance.</span>
-    <span class="n">_ui_template</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{0}{1:07}</span><span class="s2">&quot;</span>  <span class="c1"># Prefix, number</span>
-    <span class="n">_source_rank</span> <span class="o">=</span> <span class="n">SOURCES</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concept_type</span><span class="p">,</span> <span class="n">atoms</span><span class="o">=</span><span class="p">[],</span>
-                 <span class="n">attributes</span><span class="o">=</span><span class="p">[],</span> <span class="n">relationships</span><span class="o">=</span><span class="p">[],</span> <span class="n">ui</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">(</span><span class="n">concept_type</span><span class="p">,</span> <span class="n">atoms</span><span class="p">,</span> <span class="n">attributes</span><span class="p">,</span>
-                           <span class="n">relationships</span><span class="p">,</span> <span class="n">ui</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concept_type</span><span class="p">,</span> <span class="n">atoms</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ui</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">concept_type</span> <span class="o">=</span> <span class="n">concept_type</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="n">attributes</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">relationships</span> <span class="o">=</span> <span class="n">relationships</span>
         <span class="c1"># Set the UI for this concept</span>
         <span class="k">if</span> <span class="n">ui</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_increment</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_increment_counter</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counter</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="n">ui</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">init_counter</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">ui</span><span class="p">[</span><span class="o">-</span><span class="mi">7</span><span class="p">:]))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_preferred_atom</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__refs__</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span> <span class="k">if</span> <span class="n">atoms</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_attributes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_relationships</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_register</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.preferred_atom}</span><span class="s2"> (</span><span class="si">{self.ui}</span><span class="s2"> </span><span class="si">{self.concept_type}</span><span class="s2">)&quot;</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.ui}</span><span class="s2">: </span><span class="si">{self.preferred_atom}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">concept_type</span><span class="p">,</span>
+                     <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span><span class="p">)))</span>
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -329,40 +549,14 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Concept</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
         <span class="k">return</span> <span class="nb">all</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">concept_type</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">concept_type</span><span class="p">,</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">atoms</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">atoms</span><span class="p">])</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_atoms</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concept_type</span><span class="p">,</span> <span class="n">atoms</span><span class="p">,</span> <span class="n">attributes</span><span class="p">,</span>
-                      <span class="n">relationships</span><span class="p">,</span> <span class="n">ui</span><span class="p">):</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">concept_type</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="n">concept_type</span> <span class="ow">in</span> <span class="n">CONCEPT_TYPES</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">Atom</span><span class="p">)</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">atoms</span><span class="p">])</span>
-        <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">atr</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">)</span> <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">])</span>
-        <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">)</span> <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">relationships</span><span class="p">])</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ui</span><span class="p">,</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="nb">str</span><span class="p">))</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">ui</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        The unique identifier is always dynamically determined by the </span>
-<span class="sd">        values of self._prefix and self._num.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num</span><span class="p">)</span>
-
-    <span class="nd">@ui</span><span class="o">.</span><span class="n">setter</span>
-    <span class="k">def</span> <span class="nf">ui</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        The unique identifier is always dynamically determined by the </span>
-<span class="sd">        values of self._prefix and self._num. However, the values of these</span>
-<span class="sd">        hidden variables can be modified by using the UI setter.</span>
-
-<span class="sd">        :param str value: The new unique identifier.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;.+[0-9]</span><span class="si">{7}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;UI must match the regex &#39;.+[0-9]</span><span class="si">{7}</span><span class="s2">&#39;. E.g. DC0000001.&quot;</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_num</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="o">-</span><span class="mi">7</span><span class="p">:])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">value</span><span class="p">[:</span><span class="o">-</span><span class="mi">7</span><span class="p">]</span>
+    <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concept_type</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_type</span> <span class="ow">in</span> <span class="n">CONCEPT_TYPES</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span><span class="p">,</span> <span class="s2">&quot;__iter__&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">Atom</span><span class="p">)</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span><span class="p">])</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="p">,</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="nb">str</span><span class="p">))</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">preferred_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -374,73 +568,16 @@
 
 <span class="sd">        :rtype: Atom</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">atoms</span> <span class="o">==</span> <span class="p">[]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="o">==</span> <span class="p">[]:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preferred_atom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">atoms</span> <span class="o">=</span> <span class="p">[</span><span class="n">atom</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">atoms</span> <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">is_preferred</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">]</span>
-            <span class="n">atom_rank</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_source_rank</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">atom</span><span class="o">.</span><span class="n">src</span><span class="p">)</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">atoms</span><span class="p">]</span>
+            <span class="n">atoms</span> <span class="o">=</span> <span class="p">[</span><span class="n">atom</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">is_preferred</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">]</span>
+            <span class="n">atom_rank</span> <span class="o">=</span> <span class="p">[</span><span class="n">SOURCES</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">atom</span><span class="o">.</span><span class="n">src</span><span class="p">)</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">atoms</span><span class="p">]</span>
             <span class="n">pref</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">atom_rank</span><span class="p">)]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_preferred_atom</span> <span class="o">=</span> <span class="n">pref</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preferred_atom</span>
 
-<div class="viewcode-block" id="Concept.get_atoms"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.get_atoms">[docs]</a>    <span class="k">def</span> <span class="nf">get_atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns a generator over the atoms of this concept.</span>
-
-<span class="sd">        :param str r_type: How to yield each atom. Possible values</span>
-<span class="sd">                           are [&quot;object&quot;, &quot;dict&quot;]. If &quot;object&quot;, yields</span>
-<span class="sd">                           Atom instances. If &quot;dict&quot;, yields dicts from</span>
-<span class="sd">                           the Atom.to_dict() method.</span>
-<span class="sd">        :returns: generator over atoms</span>
-<span class="sd">        :rtype: generator</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">r_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">]:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;rtype must be &#39;object&#39; or &#39;dict&#39;.&quot;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">atoms</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">atom</span>
-            <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">atom</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span></div>
-
-<div class="viewcode-block" id="Concept.get_attributes"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.get_attributes">[docs]</a>    <span class="k">def</span> <span class="nf">get_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns a generator over the attributes of this concept.</span>
-
-<span class="sd">        :param str r_type: How to yield each attribute. Possible values</span>
-<span class="sd">                           are [&quot;object&quot;, &quot;dict&quot;]. If &quot;object&quot;, yields</span>
-<span class="sd">                           Attribute instances. If &quot;dict&quot;, yields dicts</span>
-<span class="sd">                           from the Attribute.to_dict() method.</span>
-<span class="sd">        :returns: generator over attributes</span>
-<span class="sd">        :rtype: generator</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">r_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">]:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;rtype must be &#39;object&#39; or &#39;dict&#39;.&quot;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">atr</span>
-            <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">atr</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span></div>
-
-<div class="viewcode-block" id="Concept.get_relationships"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.get_relationships">[docs]</a>    <span class="k">def</span> <span class="nf">get_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Returns a generator over the relationships of this concept.</span>
-
-<span class="sd">        :param str r_type: How to yield each relationship. Possible values</span>
-<span class="sd">                           are [&quot;object&quot;, &quot;dict&quot;]. If &quot;object&quot;, yields</span>
-<span class="sd">                           Relationship instances. If &quot;dict&quot;, yields dicts</span>
-<span class="sd">                           from the Relationship.to_dict() method.</span>
-<span class="sd">        :returns: generator over relationships</span>
-<span class="sd">        :rtype: generator</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">r_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="s2">&quot;dict&quot;</span><span class="p">]:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;rtype must be &#39;object&#39; or &#39;dict&#39;.&quot;</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">relationships</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">rel</span>
-            <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">rel</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span></div>
-
-<div class="viewcode-block" id="Concept.to_dict"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Concept.to_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return this concept as an OrderedDict in the iDISK JSON format.</span>
 
@@ -477,67 +614,7 @@
                          <span class="s2">&quot;relationships&quot;</span><span class="p">:</span> <span class="n">rels</span><span class="p">})</span>
         <span class="k">return</span> <span class="n">d</span></div>
 
-<div class="viewcode-block" id="Concept.get_instances"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.get_instances">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_instances</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get all instances of the Concept class.</span>
-
-<span class="sd">        :returns: Generator over Concept instances.</span>
-<span class="sd">        :rtype: generator</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">inst_ref</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__refs__</span><span class="p">[</span><span class="bp">cls</span><span class="p">]:</span>
-            <span class="n">inst</span> <span class="o">=</span> <span class="n">inst_ref</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">inst</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">inst</span></div>
-
-<div class="viewcode-block" id="Concept.set_ui_prefix"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.set_ui_prefix">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">set_ui_prefix</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Set the string to prepend to the UI of each concept.</span>
-
-<span class="sd">        :param str prefix: The prefix to set.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">prefix</span></div>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">_increment</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Increment the UI counter by 1.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-
-<div class="viewcode-block" id="Concept.init_counter"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.init_counter">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">init_counter</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the unique identifier counter with the given number.</span>
-
-<span class="sd">        :param int num: The number to initialize with.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">=</span> <span class="n">num</span></div>
-
-<div class="viewcode-block" id="Concept.from_atoms"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.from_atoms">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_atoms</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">atoms</span><span class="p">,</span> <span class="n">concept_type</span><span class="p">,</span> <span class="n">attributes</span><span class="o">=</span><span class="p">[],</span> <span class="n">relationships</span><span class="o">=</span><span class="p">[]):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Create a Concept instance from a collection of Atom instances.</span>
-
-<span class="sd">        :param list(Atom) atoms: Atom instances that comprise this concept.</span>
-<span class="sd">        :param str concept_type: The iDISK type of this concept. E.g. &#39;SDSI&#39;.</span>
-<span class="sd">        :param list(Attribute) attributes: Attributes of this concept.</span>
-<span class="sd">                                           Optional.</span>
-<span class="sd">        :param list(Relationship) relationships: Relationships of this concept.</span>
-<span class="sd">                                                 Optional.</span>
-<span class="sd">        :returns: Concept made up of the specified atoms.</span>
-<span class="sd">        :rtype: Concept</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">Atom</span><span class="p">)</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">atoms</span><span class="p">])</span>
-        <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">atr</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">)</span> <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">])</span>
-        <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">)</span> <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">relationships</span><span class="p">])</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">concept_type</span><span class="o">=</span><span class="n">concept_type</span><span class="p">,</span>
-                   <span class="n">atoms</span><span class="o">=</span><span class="n">atoms</span><span class="p">,</span> <span class="n">attributes</span><span class="o">=</span><span class="n">attributes</span><span class="p">,</span>
-                   <span class="n">relationships</span><span class="o">=</span><span class="n">relationships</span><span class="p">)</span></div>
-
-    <span class="c1"># TODO: Check for valid JSON</span>
-<div class="viewcode-block" id="Concept.from_dict"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Concept.from_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates a concept from a JSON object. The JSON object must have</span>
@@ -569,21 +646,37 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">concept</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">concept_type</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;concept_type&quot;</span><span class="p">],</span> <span class="n">ui</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;ui&quot;</span><span class="p">])</span>
         <span class="n">atoms</span> <span class="o">=</span> <span class="p">[</span><span class="n">Atom</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">syn</span><span class="p">)</span> <span class="k">for</span> <span class="n">syn</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;synonyms&quot;</span><span class="p">]]</span>
-        <span class="n">concept</span><span class="o">.</span><span class="n">atoms</span> <span class="o">=</span> <span class="n">atoms</span>
+        <span class="n">concept</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span>
         <span class="n">atrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">Attribute</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">atr</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="n">concept</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">]]</span>
-        <span class="n">concept</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="n">atrs</span>
+        <span class="n">concept</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">atrs</span><span class="p">)</span>
         <span class="c1"># Because we do not have a concept mapping yet, these relationships</span>
         <span class="c1"># will have concept UIs as their objects. This can be resolved via</span>
         <span class="c1"># Concept.resolve_relationships()</span>
         <span class="n">rels</span> <span class="o">=</span> <span class="p">[</span><span class="n">Relationship</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="n">concept</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;relationships&quot;</span><span class="p">]]</span>
-        <span class="n">concept</span><span class="o">.</span><span class="n">relationships</span> <span class="o">=</span> <span class="n">rels</span>
+        <span class="n">concept</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">rels</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">concept</span></div>
+
+<div class="viewcode-block" id="Concept.read_jsonl_file"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept.read_jsonl_file">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">read_jsonl_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filepath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a concept for each line in the JSON lines file.</span>
+
+<span class="sd">        :param str filepath: Path to the JSON lines file containing concepts.</span>
+<span class="sd">        :returns: Generator over Concept instances</span>
+<span class="sd">        :rtype: generator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">concepts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">inF</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">inF</span><span class="p">:</span>
+                <span class="n">concept</span> <span class="o">=</span> <span class="n">Concept</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+                <span class="n">concepts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">concept</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">concepts</span></div>
 
     <span class="c1"># TODO: Refactor this to deal with strings that are mapped to multiple</span>
     <span class="c1"># concepts. E.g. &quot;aspirin and ibuprofen&quot; |--&gt; &quot;aspirin&quot;, &quot;ibuprofen&quot;.</span>
-<div class="viewcode-block" id="Concept.resolve_relationships"><a class="viewcode-back" href="../../source/base.html#idlib.base.Concept.resolve_relationships">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Concept.resolve_relationships"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept.resolve_relationships">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">resolve_relationships</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        When multiple Concept instances are created from a JSON lines file</span>
@@ -595,18 +688,18 @@
         <span class="n">concepts</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get_instances</span><span class="p">()</span>
         <span class="n">ui2concepts</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">c</span><span class="o">.</span><span class="n">ui</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">concepts</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">ui2concepts</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-            <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">relationships</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">_relationships</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rel</span><span class="o">.</span><span class="n">object</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
                     <span class="k">try</span><span class="p">:</span>
                         <span class="n">obj_concept</span> <span class="o">=</span> <span class="n">ui2concepts</span><span class="p">[</span><span class="n">rel</span><span class="o">.</span><span class="n">object</span><span class="p">]</span>
                     <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
                         <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;Relationship object &#39;</span><span class="si">{rel.object}</span><span class="s2">&#39; not found&quot;</span>
-                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
                         <span class="k">continue</span>
                     <span class="n">rel</span><span class="o">.</span><span class="n">object</span> <span class="o">=</span> <span class="n">obj_concept</span></div></div>
 
 
-<div class="viewcode-block" id="Attribute"><a class="viewcode-back" href="../../source/base.html#idlib.base.Attribute">[docs]</a><span class="k">class</span> <span class="nc">Attribute</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Attribute"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Attribute">[docs]</a><span class="k">class</span> <span class="nc">Attribute</span><span class="p">(</span><span class="n">DataElement</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An attribute of a concept or relationship.</span>
 
@@ -616,23 +709,29 @@
 <span class="sd">    :param str src: The source code of where this attribute was found.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">_counter</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">_ui_template</span> <span class="o">=</span> <span class="s2">&quot;DAT</span><span class="si">{0:07}</span><span class="s2">&quot;</span>
+    <span class="n">_prefix</span> <span class="o">=</span> <span class="s2">&quot;DAT&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subject</span><span class="p">,</span> <span class="n">atr_name</span><span class="p">,</span> <span class="n">atr_value</span><span class="p">,</span> <span class="n">src</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">(</span><span class="n">subject</span><span class="p">,</span> <span class="n">atr_name</span><span class="p">,</span> <span class="n">atr_value</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_increment</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_counter</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_increment_counter</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counter</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">subject</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">atr_name</span> <span class="o">=</span> <span class="n">atr_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">atr_value</span> <span class="o">=</span> <span class="n">atr_value</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">src</span> <span class="o">=</span> <span class="n">src</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_register</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">return_subject</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.subject}</span><span class="s2"> *</span><span class="si">{self.atr_name}</span><span class="s2">* </span><span class="si">{self.atr_value}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">atr_name</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">atr_value</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -648,13 +747,13 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">atr_value</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">atr_value</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">src</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">src</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subject</span><span class="p">,</span> <span class="n">atr_name</span><span class="p">,</span> <span class="n">atr_value</span><span class="p">,</span> <span class="n">src</span><span class="p">):</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">subject</span><span class="p">,</span> <span class="p">(</span><span class="n">Concept</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">))</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atr_name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atr_value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span> <span class="p">(</span><span class="n">Concept</span><span class="p">,</span> <span class="n">Relationship</span><span class="p">))</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">atr_name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">atr_value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Attribute.to_dict"><a class="viewcode-back" href="../../source/base.html#idlib.base.Attribute.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_subject</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_subject</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Attribute.to_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Attribute.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_subject</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose_subject</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Output this attribute as a dictionary, optionally with a subject.</span>
 <span class="sd">        The subject is optional to accord with the iDISK JSON format.</span>
@@ -686,24 +785,8 @@
             <span class="n">atr</span><span class="o">.</span><span class="n">move_to_end</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># Make subject first</span>
         <span class="k">return</span> <span class="n">atr</span></div>
 
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">_increment</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Increment the UI counter by 1.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-
-<div class="viewcode-block" id="Attribute.init_counter"><a class="viewcode-back" href="../../source/base.html#idlib.base.Attribute.init_counter">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">init_counter</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the unique identifier counter with the given number.</span>
-
-<span class="sd">        :param int num: The number to initialize with.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">=</span> <span class="n">num</span></div>
-
     <span class="c1"># TODO: Check for valid JSON</span>
-<div class="viewcode-block" id="Attribute.from_dict"><a class="viewcode-back" href="../../source/base.html#idlib.base.Attribute.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Attribute.from_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Attribute.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">subject</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create an Attribute instance from data.</span>
@@ -727,7 +810,7 @@
         <span class="k">return</span> <span class="n">atr</span></div></div>
 
 
-<div class="viewcode-block" id="Relationship"><a class="viewcode-back" href="../../source/base.html#idlib.base.Relationship">[docs]</a><span class="k">class</span> <span class="nc">Relationship</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="Relationship"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Relationship">[docs]</a><span class="k">class</span> <span class="nc">Relationship</span><span class="p">(</span><span class="n">DataElement</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A relationship between two concepts.</span>
 
@@ -739,25 +822,31 @@
 <span class="sd">    :param list(Attribute) attributes: Any attributes of this relationship.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">_counter</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">_ui_template</span> <span class="o">=</span> <span class="s2">&quot;DR</span><span class="si">{0:07}</span><span class="s2">&quot;</span>
+    <span class="n">_prefix</span> <span class="o">=</span> <span class="s2">&quot;DR&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subject</span><span class="p">,</span> <span class="n">rel_name</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">attributes</span><span class="o">=</span><span class="p">[]):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">(</span><span class="n">subject</span><span class="p">,</span> <span class="n">rel_name</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">attributes</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_increment</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_counter</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subject</span><span class="p">,</span> <span class="n">rel_name</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">src</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_increment_counter</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ui</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ui_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counter</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">subject</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">rel_name</span> <span class="o">=</span> <span class="n">rel_name</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">object</span> <span class="o">=</span> <span class="n">obj</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">src</span> <span class="o">=</span> <span class="n">src</span>
         <span class="c1"># Relationship attributes</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="n">attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_attributes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_params</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_register</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.subject}</span><span class="s2"> **</span><span class="si">{self.rel_name}</span><span class="s2">** </span><span class="si">{self.object}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_name</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">object</span><span class="p">,</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -774,16 +863,14 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">object</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">object</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">src</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">src</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subject</span><span class="p">,</span> <span class="n">rel_name</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">attributes</span><span class="p">):</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">subject</span><span class="p">,</span> <span class="n">Concept</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rel_name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span> <span class="n">Concept</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
         <span class="c1"># Object can be a concept or a concept UI.</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="p">(</span><span class="n">Concept</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
-        <span class="k">assert</span> <span class="n">src</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SOURCES</span>
-        <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">attributes</span><span class="p">:</span>
-            <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">atr</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object</span><span class="p">,</span> <span class="p">(</span><span class="n">Concept</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SOURCES</span>
 
-<div class="viewcode-block" id="Relationship.to_dict"><a class="viewcode-back" href="../../source/base.html#idlib.base.Relationship.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_subject</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Relationship.to_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Relationship.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_subject</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Output this relationship as a dictionary, optionally with a subject.</span>
 <span class="sd">        The subject is optional to accord with the iDISK JSON format.</span>
@@ -823,7 +910,7 @@
             <span class="n">rel</span><span class="o">.</span><span class="n">move_to_end</span><span class="p">(</span><span class="s2">&quot;subject&quot;</span><span class="p">,</span> <span class="n">last</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># Put the subject first</span>
         <span class="k">return</span> <span class="n">rel</span></div>
 
-<div class="viewcode-block" id="Relationship.get_attributes"><a class="viewcode-back" href="../../source/base.html#idlib.base.Relationship.get_attributes">[docs]</a>    <span class="k">def</span> <span class="nf">get_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="n">return_subject</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="Relationship.get_attributes"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Relationship.get_attributes">[docs]</a>    <span class="k">def</span> <span class="nf">get_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="n">return_subject</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return a generator over attributes of this relationship.</span>
 
@@ -836,30 +923,14 @@
 <span class="sd">        :returns: Generator over attributes</span>
 <span class="sd">        :rtype: generator</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attributes</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attributes</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
                 <span class="k">yield</span> <span class="n">atr</span>
             <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
                 <span class="k">yield</span> <span class="n">atr</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">return_subject</span><span class="o">=</span><span class="n">return_subject</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="Relationship.init_counter"><a class="viewcode-back" href="../../source/base.html#idlib.base.Relationship.init_counter">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">init_counter</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Initialize the unique identifier counter with the given number.</span>
-
-<span class="sd">        :param int num: The number to initialize with.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">=</span> <span class="n">num</span></div>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">_increment</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Increment the UI counter by 1.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-
     <span class="c1"># TODO: Check for valid JSON</span>
-<div class="viewcode-block" id="Relationship.from_dict"><a class="viewcode-back" href="../../source/base.html#idlib.base.Relationship.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="Relationship.from_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Relationship.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">subject</span><span class="p">,</span> <span class="n">concept_mapping</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create an Relationship instance from data.</span>
@@ -899,7 +970,7 @@
                   <span class="n">src</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;src&quot;</span><span class="p">])</span>
         <span class="n">atrs</span> <span class="o">=</span> <span class="p">[</span><span class="n">Attribute</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">atr</span><span class="p">,</span> <span class="n">subject</span><span class="o">=</span><span class="n">rel</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">atr</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;attributes&quot;</span><span class="p">]]</span>
-        <span class="n">rel</span><span class="o">.</span><span class="n">attributes</span> <span class="o">=</span> <span class="n">atrs</span>
+        <span class="n">rel</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">atrs</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">rel</span></div></div>
 </pre></div>

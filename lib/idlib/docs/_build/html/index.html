@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="idlib.base" href="source/base.html" /> 
+    <link rel="next" title="idlib.data_elements" href="source/data_elements.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -81,9 +81,10 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="source/base.html">idlib.base</a></li>
+<li class="toctree-l1"><a class="reference internal" href="source/data_elements.html">idlib.data_elements</a></li>
 <li class="toctree-l1"><a class="reference internal" href="source/set_functions.html">idlib.set_functions</a></li>
 <li class="toctree-l1"><a class="reference internal" href="source/config.html">idlib.config</a></li>
+<li class="toctree-l1"><a class="reference internal" href="source/entity_linking.html">idlib.entity_linking</a></li>
 </ul>
 
             
@@ -153,11 +154,11 @@
 <div class="toctree-wrapper compound">
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="source/base.html">idlib.base</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="source/base.html#atom">Atom</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/base.html#concept">Concept</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/base.html#attribute">Attribute</a></li>
-<li class="toctree-l2"><a class="reference internal" href="source/base.html#relationship">Relationship</a></li>
+<li class="toctree-l1"><a class="reference internal" href="source/data_elements.html">idlib.data_elements</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/data_elements.html#atom">Atom</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/data_elements.html#concept">Concept</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/data_elements.html#attribute">Attribute</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/data_elements.html#relationship">Relationship</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="source/set_functions.html">idlib.set_functions</a><ul>
@@ -170,6 +171,11 @@
 <li class="toctree-l2"><a class="reference internal" href="source/config.html#sources">SOURCES</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/config.html#term-types">TERM_TYPES</a></li>
 <li class="toctree-l2"><a class="reference internal" href="source/config.html#concept-types">CONCEPT_TYPES</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="source/entity_linking.html">idlib.entity_linking</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="source/entity_linking.html#running-entity-linking">Running Entity Linking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="source/entity_linking.html#linkers">Linkers</a></li>
 </ul>
 </li>
 </ul>
@@ -190,23 +196,23 @@ make idlib
 <span class="gp">&gt;&gt;&gt; </span><span class="n">terms</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;vitamin c&quot;</span><span class="p">,</span> <span class="s2">&quot;ascorbic acid&quot;</span><span class="p">,</span> <span class="s2">&quot;vitC&quot;</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">atoms</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">term</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">terms</span><span class="p">):</span>
-<span class="gp">... </span>   <span class="n">pref</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">term</span> <span class="o">==</span> <span class="s2">&quot;ascorbic acid&quot;</span> <span class="k">else</span> <span class="kc">False</span>
-<span class="gp">... </span>   <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;NMCD&quot;</span><span class="p">,</span> <span class="n">src_id</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">term_type</span><span class="o">=</span><span class="s2">&quot;SY&quot;</span><span class="p">,</span> <span class="n">is_preferred</span><span class="o">=</span><span class="n">pref</span><span class="p">)</span>
-<span class="gp">... </span>   <span class="n">atoms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">concept</span> <span class="o">=</span> <span class="n">Concept</span><span class="o">.</span><span class="n">from_atoms</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">concept_type</span><span class="o">=</span><span class="s2">&quot;SDSI&quot;</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">pref</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">term</span> <span class="o">==</span> <span class="s2">&quot;ascorbic acid&quot;</span> <span class="k">else</span> <span class="kc">False</span>
+<span class="gp">... </span>    <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;NMCD&quot;</span><span class="p">,</span> <span class="n">src_id</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">term_type</span><span class="o">=</span><span class="s2">&quot;SY&quot;</span><span class="p">,</span> <span class="n">is_preferred</span><span class="o">=</span><span class="n">pref</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">atoms</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">concept</span> <span class="o">=</span> <span class="n">Concept</span><span class="p">(</span><span class="n">concept_type</span><span class="o">=</span><span class="s2">&quot;SDSI&quot;</span><span class="p">,</span> <span class="n">atoms</span><span class="o">=</span><span class="n">atoms</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">concept</span><span class="p">)</span>
 <span class="go">DC0000001: ascorbic acid</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Give this concept an attribute.</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">atr</span> <span class="o">=</span> <span class="n">Attribute</span><span class="p">(</span><span class="n">concept</span><span class="p">,</span> <span class="n">atr_name</span><span class="o">=</span><span class="s2">&quot;information&quot;</span><span class="p">,</span>
-<span class="gp">... </span>           <span class="n">atr_value</span><span class="o">=</span><span class="s2">&quot;Found in oranges!&quot;</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;NMCD&quot;</span><span class="p">)</span>
+<span class="gp">... </span>                <span class="n">atr_value</span><span class="o">=</span><span class="s2">&quot;Found in oranges!&quot;</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;NMCD&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">atr</span><span class="p">)</span>
 <span class="go">DC0000001: ascorbic acid *info* Found in oranges</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">concept</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atr</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">concept</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">atr</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a synonymous concept2 and link them with a &quot;same_as&quot; relation.</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">concept2</span> <span class="o">=</span> <span class="n">Concept</span><span class="o">.</span><span class="n">from_atoms</span><span class="p">(</span><span class="n">atoms</span><span class="p">[:</span><span class="mi">2</span><span class="p">],</span> <span class="n">concept_type</span><span class="o">=</span><span class="s2">&quot;SDSI&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">concept2</span> <span class="o">=</span> <span class="n">Concept</span><span class="p">(</span><span class="n">concept_type</span><span class="o">=</span><span class="s2">&quot;SDSI&quot;</span><span class="p">,</span> <span class="n">atoms</span><span class="o">=</span><span class="n">atoms</span><span class="p">[:</span><span class="mi">2</span><span class="p">])</span>
 <span class="go">DC0000002: ascorbic acid</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">rel</span> <span class="o">=</span> <span class="n">Relationship</span><span class="p">(</span><span class="n">subject</span><span class="o">=</span><span class="n">concept</span><span class="p">,</span> <span class="n">obj</span><span class="o">=</span><span class="n">concept2</span><span class="p">,</span> <span class="n">rel_name</span><span class="o">=</span><span class="s2">&quot;same_as&quot;</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;NMCD&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">concept</span><span class="o">.</span><span class="n">relationships</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rel</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">concept</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">rel</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rel</span><span class="p">)</span>
 <span class="go">DC0000001: ascorbic acid *same_as* DC0000002: ascorbic acid</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Note that the obj of a Relationship can be a str.</span>
@@ -214,12 +220,12 @@ make idlib
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">rel_str</span><span class="p">)</span>
 <span class="go">DC0000001: ascorbic acid *found_in* Orange</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Relationships can also have attributes</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">rel_atr</span> <span class="o">=</span> <span class="n">Attribute</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="n">atr_name</span><span class="o">=</span><span class="s2">&quot;confidence&quot;</span><span class="p">,</span> <span class="n">atr_value</span><span class="o">=</span><span class="s2">&quot;Good&quot;</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;NMCD&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">rel_str</span><span class="o">.</span><span class="n">attributes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rel_atr</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rel_attr</span> <span class="o">=</span> <span class="n">Attribute</span><span class="p">(</span><span class="n">rel</span><span class="p">,</span> <span class="n">atr_name</span><span class="o">=</span><span class="s2">&quot;confidence&quot;</span><span class="p">,</span> <span class="n">atr_value</span><span class="o">=</span><span class="s2">&quot;High&quot;</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;NMCD&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rel_str</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">rel_attr</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>It is often the case that there are synonymous concepts, i.e. two or more concepts
-that have overlapping atom terms. The <code class="docutils literal notranslate"><span class="pre">set_functions</span></code> module can be used to compute
+that have overlapping atom terms. The <cite>set_functions</cite> module can be used to compute
 the union of some lists of concepts. For example:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">idlib</span> <span class="k">import</span> <span class="n">Atom</span><span class="p">,</span> <span class="n">Concept</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">,</span> <span class="n">Relationship</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">idlib.set_functions</span> <span class="k">import</span> <span class="n">Union</span>
@@ -230,19 +236,19 @@ the union of some lists of concepts. For example:</p>
 <span class="gp">... </span>    <span class="n">pref</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">term</span> <span class="o">==</span> <span class="s2">&quot;vitC&quot;</span> <span class="k">else</span> <span class="kc">False</span>
 <span class="gp">... </span>    <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;NMCD&quot;</span><span class="p">,</span> <span class="n">src_id</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">term_type</span><span class="o">=</span><span class="s2">&quot;SY&quot;</span><span class="p">,</span> <span class="n">is_preferred</span><span class="o">=</span><span class="n">pref</span><span class="p">)</span>
 <span class="gp">... </span>    <span class="n">atoms1</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">concept1</span> <span class="o">=</span> <span class="n">Concept</span><span class="o">.</span><span class="n">from_atoms</span><span class="p">(</span><span class="n">atoms1</span><span class="p">,</span> <span class="n">concept_type</span><span class="o">=</span><span class="s2">&quot;SDSI&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">concept1</span> <span class="o">=</span> <span class="n">Concept</span><span class="p">(</span><span class="n">concept_type</span><span class="o">=</span><span class="s2">&quot;SDSI&quot;</span><span class="p">,</span> <span class="n">atoms</span><span class="o">=</span><span class="n">atoms1</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">terms2</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;vitamin c&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;vitC&quot;</span><span class="p">,</span> <span class="s2">&quot;Orange Juice&quot;</span><span class="p">]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">atoms2</span> <span class="o">=</span> <span class="p">[]</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">term</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">terms2</span><span class="p">):</span>
 <span class="gp">... </span>    <span class="n">pref</span> <span class="o">=</span> <span class="kc">True</span> <span class="k">if</span> <span class="n">term</span> <span class="o">==</span> <span class="s2">&quot;vitC&quot;</span> <span class="k">else</span> <span class="kc">False</span>
 <span class="gp">... </span>    <span class="n">atom</span> <span class="o">=</span> <span class="n">Atom</span><span class="p">(</span><span class="n">term</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;NMCD&quot;</span><span class="p">,</span> <span class="n">src_id</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">term_type</span><span class="o">=</span><span class="s2">&quot;SY&quot;</span><span class="p">,</span> <span class="n">is_preferred</span><span class="o">=</span><span class="n">pref</span><span class="p">)</span>
 <span class="gp">... </span>    <span class="n">atoms2</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">concept2</span> <span class="o">=</span> <span class="n">Concept</span><span class="o">.</span><span class="n">from_atoms</span><span class="p">(</span><span class="n">atoms2</span><span class="p">,</span> <span class="n">concept_type</span><span class="o">=</span><span class="s2">&quot;SDSI&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">concept1</span><span class="o">.</span><span class="n">atoms</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">concept2</span> <span class="o">=</span> <span class="n">Concept</span><span class="p">(</span><span class="n">concept_type</span><span class="o">=</span><span class="s2">&quot;SDSI&quot;</span><span class="p">,</span> <span class="n">atoms</span><span class="o">=</span><span class="n">atoms2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">concept1</span><span class="o">.</span><span class="n">get_atoms</span><span class="p">()))</span>
 <span class="go">[(&#39;DA0000001&#39; &#39;vitamin c&#39; &#39;SY&#39; &#39;NMCD&#39; &#39;0&#39; &#39;False&#39;),</span>
 <span class="go"> (&#39;DA0000002&#39; &#39;ascorbic acid&#39; &#39;SY&#39; &#39;NMCD&#39; &#39;1&#39; &#39;False&#39;),</span>
 <span class="go"> (&#39;DA0000003&#39; &#39;vitC&#39; &#39;SY&#39; &#39;NMCD&#39; &#39;2&#39; &#39;True&#39;)]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">concept2</span><span class="o">.</span><span class="n">atoms</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">concept2</span><span class="o">.</span><span class="n">get_atoms</span><span class="p">()))</span>
 <span class="go">[(&#39;DA0000001&#39; &#39;vitamin c&#39; &#39;SY&#39; &#39;NMCD&#39; &#39;0&#39; &#39;False&#39;),</span>
 <span class="go"> (&#39;DA0000002&#39; &#39;C&#39; &#39;SY&#39; &#39;NMCD&#39; &#39;1&#39; &#39;False&#39;),</span>
 <span class="go"> (&#39;DA0000003&#39; &#39;vitC&#39; &#39;SY&#39; &#39;NMCD&#39; &#39;2&#39; &#39;True&#39;),</span>
@@ -250,10 +256,10 @@ the union of some lists of concepts. For example:</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Compute the union of these two concepts.</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Since the concepts share atoms, this should result in a single concept.</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="c1"># Note that if two concepts match (share one or more atom terms), they are merged.</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">u</span> <span class="o">=</span> <span class="n">Union</span><span class="p">([</span><span class="n">concepts1</span><span class="p">,</span> <span class="n">concepts2</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">u</span> <span class="o">=</span> <span class="n">Union</span><span class="p">([</span><span class="n">concept1</span><span class="p">,</span> <span class="n">concept2</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">result</span><span class="p">))</span>
 <span class="go">1</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">atoms</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_atoms</span><span class="p">()))</span>
 <span class="go">[(&#39;DA0000008&#39; &#39;vitamin C&#39; &#39;SY&#39; &#39;NMCD&#39; &#39;0&#39; &#39;False&#39;),</span>
 <span class="go"> (&#39;DA0000009&#39; &#39;C&#39; &#39;SY&#39; &#39;NMCD&#39; &#39;1&#39; &#39;False&#39;),</span>
 <span class="go"> (&#39;DA0000010&#39; &#39;vitC&#39; &#39;SY&#39; &#39;NMCD&#39; &#39;2&#39; &#39;True&#39;),</span>
@@ -266,7 +272,7 @@ the union of some lists of concepts. For example:</p>
 <div class="section" id="indices-and-tables">
 <h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 </ul>
 </div>
 
@@ -278,7 +284,7 @@ the union of some lists of concepts. For example:</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="source/base.html" class="btn btn-neutral float-right" title="idlib.base" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="source/data_elements.html" class="btn btn-neutral float-right" title="idlib.data_elements" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
     </div>

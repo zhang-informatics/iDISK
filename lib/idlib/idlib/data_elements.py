@@ -1,94 +1,83 @@
 import re
 import weakref
-import warnings
+import logging
+import json
+import numbers
 import numpy as np
+
+from copy import deepcopy
 from collections import OrderedDict, defaultdict
 
 from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES
 
 
-class Atom(object):
-    """
-    An atom is an instance of a concept with a unique string, source,
-    source ID, and term type.
+class DataElement(object):
 
-    :param str term: The string of this atom.
-    :param str src: The source code of where this atom was found.
-    :param str src_id: The ID of this atom in its source.
-    :param str term_type: The type of term. E.g. "SY" for synonym.
-    :param bool is_preferred: Whether this string is the preferred name
-                              in its source.
-    :param str ui: The iDISK unique identifier of this atom. Optional.
-    """
-
+    __refs__ = defaultdict(list)  # Holds all instances of each class
+    _prefix = ""
     _counter = 0
-    _ui_template = "DA{0:07}"
+    _ui_template = "{0}{1:07}"  # _prefix, _counter
 
-    def __init__(self, term, src, src_id, term_type, is_preferred, ui=None):
-        self.term = term  # 5-HTP
-        self.src = src  # NMCD
-        self.src_id = src_id  # 1234
-        self.term_type = term_type  # SN
-        self.is_preferred = is_preferred  # True
+    def __init__(self, ui=None):
+        # This is distinct from _counter, as it holds the number of this
+        # data element rather than the number of all data elements.
+        self._number = 0
+        # Containers. None means that it is not implemented for
+        # this data element.
+        self._atoms = None
+        self._attributes = None
+        self._relationships = None
         if ui is None:
-            self._increment()
-            self.ui = self._ui_template.format(self._counter)
+            self._increment_counter()
+            self.ui = self._ui_template.format(self._prefix, self._counter)
         else:
             self.ui = ui
-            self.init_counter(int(ui.replace("DA", "")))
-        self._check_params()
+            self.init_counter(int(ui.replace(self._prefix, "")))
 
-    def __repr__(self):
-        # Verbose representation.
-        template = "('{}' '{}' '{}' '{}' '{}' '{}')"
-        return template.format(self.ui, self.term, self.term_type,
-                               self.src, self.src_id, self.is_preferred)
-
-    def __str__(self):
-        return f"{self.term}"
-
-    def __eq__(self, other):
+    def _register(self):
         """
-        Test if this atom is equal to other.
-
-        :param Atom other: The atom to test equivalence to.
+        Add this instance to __refs__. To be called at the end of __init__
+        in any class that inherits from DataElement.
         """
-        if not isinstance(other, Atom):
-            return False
-        return all([self.term.lower() == other.term.lower(),
-                    self.src == other.src,
-                    self.src_id == other.src_id,
-                    self.term_type == other.term_type])
+        self.__refs__[self.__class__].append(weakref.ref(self))
 
-    def _check_params(self):
-        assert isinstance(self.term, str)
-        assert self.src.upper() in SOURCES
-        assert isinstance(self.src_id, str)
-        assert self.term_type.upper() in TERM_TYPES
-        if self.term_type.upper() == "PN":
-            msg = "Term type PN (preferred name) is deprecated. Use PT (preferred term) instead."  # noqa
-            warnings.warn(msg, DeprecationWarning)
-        assert isinstance(self.is_preferred, bool)
-        assert isinstance(self.ui, (type(None), str))
+    def __copy__(self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        return result
 
-    def to_dict(self):
+    # TODO: Figure out how to handle recursive copying with Relationships.
+    def __deepcopy__(self, memo):
+        raise NotImplementedError()
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, deepcopy(v, memo))
+        return result
+
+    @classmethod
+    def get_instances(cls):
         """
-        Return this atom as a JSON object. The output format is:
+        Get all instances of the Concept class.
 
-        .. code-block:: json
-
-            {"term": str,
-             "src": str,
-             "src_id": str,
-             "term_type": str,
-             "is_preferred": bool}
+        :returns: Generator over Concept instances.
+        :rtype: generator
         """
-        data = {"term": self.term,
-                "src": self.src,
-                "src_id": self.src_id,
-                "term_type": self.term_type,
-                "is_preferred": self.is_preferred}
-        return data
+        for inst_ref in cls.__refs__[cls]:
+            inst = inst_ref()
+            if inst is not None:
+                yield inst
+
+    @classmethod
+    def set_ui_prefix(cls, prefix):
+        """
+        Set the string to prepend to the UI of each instance.
+
+        :param str prefix: The prefix to set.
+        """
+        cls._prefix = prefix
 
     @classmethod
     def init_counter(cls, num):
@@ -100,110 +89,25 @@ class Atom(object):
         cls._counter = num
 
     @classmethod
-    def _increment(cls):
+    def _increment_counter(cls):
         """
-        Increment the UI counter by 1.
+        Increment the unique identifier counter by 1.
         """
         cls._counter += 1
-
-    # TODO: Check for valid JSON
-    @classmethod
-    def from_dict(cls, data):
-        """
-        Create an Atom instance from a JSON string.
-        The JSON must be formatted:
-
-        .. code-block:: json
-
-            {"term": str,
-             "src": str,
-             "src_id": str,
-             "term_type": str,
-             "is_preferred": bool}
-
-        :param dict data: The JSON data to load.
-        :returns: Atom instance of data.
-        :rtype: Atom
-        """
-        return cls(term=data["term"],
-                   src=data["src"],
-                   src_id=data["src_id"],
-                   term_type=data["term_type"],
-                   is_preferred=data["is_preferred"])
-
-
-class Concept(object):
-    """
-    An iDISK concept.
-
-    :param str concept_type: The iDISK type of this concept.
-                             E.g. "SDSI".
-    :param list atoms: List of synonyms for this concept. Each member
-                       must be an instance of Atom. Optional.
-    :param str ui: the iDISK CUI for this concept. Optional.
-    """
-
-    __refs__ = defaultdict(list)  # Holds all instances of this class
-    _counter = 0
-    _prefix = "DC"  # The default prefix. Can be changed for each instance.
-    _ui_template = "{0}{1:07}"  # Prefix, number
-    _source_rank = SOURCES
-
-    def __init__(self, concept_type, atoms=None, attributes=None,
-                 relationships=None, ui=None):
-        self.concept_type = concept_type
-        self.atoms = atoms or []
-        self.attributes = attributes or []
-        self.relationships = relationships or []
-        # Set the UI for this concept
-        if ui is None:
-            self._increment()
-            self.ui = self._ui_template.format(self._prefix, self._counter)
-        else:
-            self.ui = ui
-            self.init_counter(int(ui[-7:]))
-        self._preferred_atom = None
-        self.__refs__[self.__class__].append(weakref.ref(self))
-        self._check_params()
-
-    def __repr__(self):
-        return f"{self.preferred_atom} ({self.ui} {self.concept_type})"
-
-    def __str__(self):
-        return f"{self.ui}: {self.preferred_atom}"
-
-    def __eq__(self, other):
-        """
-        Concept equivalence does not consider attributes or relationships.
-        """
-        if not isinstance(other, Concept):
-            return False
-        return all([self.concept_type == other.concept_type,
-                    self.atoms == other.atoms])
-
-    def _check_params(self):
-        assert isinstance(self.concept_type, str)
-        assert self.concept_type in CONCEPT_TYPES
-        assert isinstance(self.atoms, list)
-        assert all([isinstance(atom, Atom) for atom in self.atoms])
-        assert all([isinstance(atr, Attribute) for atr in self.attributes])
-        assert all([isinstance(rel, Relationship)
-                    for rel in self.relationships])
-        assert isinstance(self.ui, (type(None), str))
 
     @property
     def ui(self):
         """
         The unique identifier is always dynamically determined by the
-        values of self._prefix and self._num.
+        values of self._prefix and self._number.
         """
-        return self._ui_template.format(self._prefix, self._num)
+        return self._ui_template.format(self._prefix, self._number)
 
     @ui.setter
     def ui(self, value):
         """
         The unique identifier is always dynamically determined by the
-        values of self._prefix and self._num. However, the values of these
+        values of self._prefix and self._number. However, the values of these
         hidden variables can be modified by using the UI setter.
 
         :param str value: The new unique identifier.
@@ -211,31 +115,85 @@ class Concept(object):
         if not re.match(r'.+[0-9]{7}', value):
             msg = "UI must match the regex '.+[0-9]{7}'. E.g. DC0000001."
             raise ValueError(msg)
-        self._num = int(value[-7:])
+        self._number = int(value[-7:])
         self._prefix = value[:-7]
 
-    @property
-    def preferred_atom(self):
+    def add_elements(self, elements):
         """
-        The preferred term for this concept is the preferred term
-        from the highest ranking source. That is, the atom such that
-        atom["src"] is the closest to the top of the SOURCES list
-        and atom["is_preferred"] is True.
+        Add a collection of elements to this data element if it does not
+        already belong to it. Each element must be an Atom, Attribute,
+        or Relationship.
 
-        :rtype: Atom
+        :param iterable elements: The elements to add.
         """
-        if self.atoms == []:
-            return None
-        if self._preferred_atom is None:
-            atoms = [atom for atom in self.atoms if atom.is_preferred is True]
-            atom_rank = [self._source_rank.index(atom.src) for atom in atoms]
-            pref = atoms[np.argmin(atom_rank)]
-            self._preferred_atom = pref
-        return self._preferred_atom
+        if not hasattr(elements, "__iter__"):
+            elements = [elements]
+        for e in elements:
+            self._add_single_element(e)
 
-    def get_atoms(self, r_type="object"):
+    def rm_elements(self, elements):
         """
-        Returns a generator over the atoms of this concept.
+        Remove a collection of elements from this data element.
+        Each element must be an Atom, Attribute, or Relationship.
+
+        :param iterable elements: The elements to remove.
+        """
+        if not hasattr(elements, "__iter__"):
+            elements = [elements]
+        for e in elements:
+            self._rm_single_element(e)
+
+    def _add_single_element(self, element):
+        """
+        Add a single Atom, Attribute, or Relationship to this data element
+        if it does not already belong to it.
+
+        :param element: Element to add. Must be of type Atom,
+                        Attribute, or Relationship.
+        """
+        # Maps element types to their containers.
+        container_map = {Atom: self._atoms,
+                         Attribute: self._attributes,
+                         Relationship: self._relationships}
+        element_type = type(element)
+        if element_type not in [Atom, Attribute, Relationship]:
+            raise TypeError(f"Can't add element of type '{element_type}'.")
+        container = container_map[element_type]
+        if container is None:
+            msg = f"{element_type} not implemented for {type(self).__name__}."
+            raise AttributeError(msg)
+
+        if element not in container:
+            container.add(element)
+
+    def _rm_single_element(self, element):
+        """
+        Remove a single Atom, Attribute, or Relationship from this
+        data element.
+
+        :param element: The element to remove. Must be of type Atom,
+                        Attribute, or Relationship.
+        """
+        # Maps element types to their containers.
+        container_map = {Atom: self._atoms,
+                         Attribute: self._attributes,
+                         Relationship: self._relationships}
+        element_type = type(element)
+        if element_type not in [Atom, Attribute, Relationship]:
+            raise TypeError(f"Unknown element of type '{element_type}'.")
+        container = container_map[element_type]
+        if container is None:
+            msg = f"{element_type} not implemented for {type(self).__name__}."
+            raise AttributeError(msg)
+        if element not in container:
+            msg = f"{element} not found in {self}"
+            raise AttributeError(msg)
+        container.discard(element)
+
+    def get_atoms(self, atom_name=None, r_type="object"):
+        """
+        Returns a generator over the atoms of this data element,
+        if implemented.
 
         :param str r_type: How to yield each atom. Possible values
                            are ["object", "dict"]. If "object", yields
@@ -244,9 +202,15 @@ class Concept(object):
         :returns: generator over atoms
         :rtype: generator
         """
+        if self._atoms is None:
+            msg = f"Atoms not implemented for {type(self).__name__}."
+            raise AttributeError(msg)
         if r_type.lower() not in ["object", "dict"]:
             raise ValueError("rtype must be 'object' or 'dict'.")
-        for atom in self.atoms:
+        return_atoms = self._atoms
+        if atom_name is not None:
+            return_atoms = [a for a in return_atoms if a.term == atom_name]
+        for atom in return_atoms:
             if r_type == "object":
                 yield atom
             elif r_type == "dict":
@@ -254,7 +218,8 @@ class Concept(object):
 
     def get_attributes(self, atr_name=None, r_type="object"):
         """
-        Returns a generator over the attributes of this concept.
+        Returns a generator over the attributes of this data element,
+        if implemented.
 
         :param str atr_name: If not None (default), return only those
                              attributes of type atr_name.
@@ -265,9 +230,12 @@ class Concept(object):
         :returns: generator over attributes
         :rtype: generator
         """
+        if self._attributes is None:
+            msg = f"Attributes not implemented for {type(self).__name__}."
+            raise AttributeError(msg)
         if r_type.lower() not in ["object", "dict"]:
             raise ValueError("rtype must be 'object' or 'dict'.")
-        return_atrs = self.attributes
+        return_atrs = self._attributes
         if atr_name is not None:
             return_atrs = [a for a in return_atrs if a.atr_name == atr_name]
         for atr in return_atrs:
@@ -291,7 +259,7 @@ class Concept(object):
         """
         if r_type.lower() not in ["object", "dict"]:
             raise ValueError("rtype must be 'object' or 'dict'.")
-        return_rels = self.relationships
+        return_rels = self._relationships
         if rel_name is not None:
             return_rels = [r for r in return_rels if r.rel_name == rel_name]
         for rel in return_rels:
@@ -299,6 +267,195 @@ class Concept(object):
                 yield rel
             elif r_type == "dict":
                 yield rel.to_dict()
+
+
+class Atom(DataElement):
+    """
+    An Atom is an a unique string, source, source ID, and term type.
+    A collection of Atoms is a Concept.
+
+    :param str term: The string of this atom.
+    :param str src: The source code of where this atom was found.
+    :param str src_id: The ID of this atom in its source.
+    :param str term_type: The type of term. E.g. "SY" for synonym.
+    :param bool is_preferred: Whether this string is the preferred name
+                              in its source.
+    :param str ui: The iDISK unique identifier of this atom. Optional.
+    """
+
+    _prefix = "DA"
+
+    def __init__(self, term, src, src_id, term_type, is_preferred,
+                 ui=None, **attrs):
+        super().__init__(ui=ui)
+        self.term = term  # 5-HTP
+        self.src = src  # NMCD
+        self.src_id = src_id  # 1234
+        self.term_type = term_type  # SN
+        self.is_preferred = is_preferred  # True
+        self._attrs = attrs
+        self._check_params()
+        self._register()
+
+    def __repr__(self):
+        # Verbose representation.
+        template = "('{}' '{}' '{}' '{}' '{}' '{}')"
+        return template.format(self.ui, self.term, self.term_type,
+                               self.src, self.src_id, self.is_preferred)
+
+    def __str__(self):
+        return f"{self.term}"
+
+    def __hash__(self):
+        return hash((self.term.lower(),
+                     self.src,
+                     self.src_id,
+                     self.term_type))
+
+    def __eq__(self, other):
+        """
+        Test if this atom is equal to other.
+
+        :param Atom other: The atom to test equivalence to.
+        """
+        if not isinstance(other, Atom):
+            return False
+        return all([self.term.lower() == other.term.lower(),
+                    self.src == other.src,
+                    self.src_id == other.src_id,
+                    self.term_type == other.term_type,
+                    self.attrs == other.attrs])
+
+    def _check_params(self):
+        assert isinstance(self.term, str)
+        assert self.src.upper() in SOURCES
+        assert isinstance(self.src_id, str)
+        assert self.term_type.upper() in TERM_TYPES
+        if self.term_type.upper() == "PN" or self.term_type.upper() == "PT":
+            msg = "Term types PN (preferred name) and PT (preferred term) are \
+                   deprecated. Set is_preffered=True."
+            logging.warning(msg, DeprecationWarning)
+        assert isinstance(self.is_preferred, bool)
+        assert isinstance(self.ui, (type(None), str))
+
+    @property
+    def attrs(self):
+        return self._attrs
+
+    def to_dict(self):
+        """
+        Return this atom as a dict. The output format is:
+
+        .. code-block:: json
+
+            {"term": str,
+             "src": str,
+             "src_id": str,
+             "term_type": str,
+             "is_preferred": bool,
+             **attrs}
+        """
+        data = {"term": self.term,
+                "src": self.src,
+                "src_id": self.src_id,
+                "term_type": self.term_type,
+                "is_preferred": self.is_preferred,
+                **self.attrs}
+        return data
+
+    # TODO: Check for valid JSON
+    @classmethod
+    def from_dict(cls, data):
+        """
+        Create an Atom instance from a JSON string.
+        The JSON must be formatted:
+
+        .. code-block:: json
+
+            {"term": str,
+             "src": str,
+             "src_id": str,
+             "term_type": str,
+             "is_preferred": bool,
+             **attrs}
+
+        :param dict data: The JSON data to load.
+        :returns: Atom instance of data.
+        :rtype: Atom
+        """
+        return cls(**data)
+
+
+class Concept(DataElement):
+    """
+    An iDISK concept.
+
+    :param str concept_type: The iDISK type of this concept.
+                             E.g. "SDSI".
+    :param list atoms: List of synonyms for this concept. Each member
+                       must be an instance of Atom. Optional.
+    :param str ui: the iDISK CUI for this concept. Optional.
+    """
+
+    _prefix = "DC"  # The default prefix. Can be changed for each instance.
+
+    def __init__(self, concept_type, atoms=None, ui=None):
+        super().__init__(ui=ui)
+        self.concept_type = concept_type
+        self._preferred_atom = None
+        self._atoms = set(atoms) if atoms is not None else set()
+        self._attributes = set()
+        self._relationships = set()
+        self._check_params()
+        self._register()
+
+    def __repr__(self):
+        return f"{self.preferred_atom} ({self.ui} {self.concept_type})"
+
+    def __str__(self):
+        return f"{self.ui}: {self.preferred_atom}"
+
+    def __hash__(self):
+        return hash((self.concept_type,
+                     tuple(self._atoms)))
+
+    def __eq__(self, other):
+        """
+        Concept equivalence does not consider attributes or relationships.
+        """
+        if not isinstance(other, Concept):
+            return False
+        return all([self.concept_type == other.concept_type,
+                    self._atoms == other._atoms])
+
+    def _check_params(self):
+        if self._atoms == set():
+            raise AssertionError("Concept must have at least one Atom.")
+        assert all([isinstance(atom, Atom) for atom in self._atoms])
+        assert isinstance(self.concept_type, str)
+        assert self.concept_type in CONCEPT_TYPES
+        assert isinstance(self.ui, (type(None), str))
+
+    @property
+    def preferred_atom(self):
+        """
+        The preferred term for this concept is the preferred term
+        from the highest ranking source. That is, the atom such that
+        atom["src"] is the closest to the top of the SOURCES list
+        and atom["is_preferred"] is True.
+
+        :rtype: Atom
+        """
+        if self._atoms == []:
+            return None
+        if self._preferred_atom is None:
+            atoms = [atom for atom in self._atoms if atom.is_preferred is True]
+            if atoms == []:
+                atoms = list(self.get_atoms())
+            atom_rank = [SOURCES.index(atom.src) for atom in atoms]
+            pref = atoms[np.argmin(atom_rank)]
+            self._preferred_atom = pref
+        return self._preferred_atom
 
     def to_dict(self):
         """
@@ -338,44 +495,33 @@ class Concept(object):
         return d
 
     @classmethod
-    def get_instances(cls):
+    def from_concept(cls, concept):
         """
-        Get all instances of the Concept class.
+        Create a new Concept instance with the same
+        Atoms, Attributes, and Relationships as this one.
+        Attributes and Relationships are copied and their
+        subjects updated.
 
-        :returns: Generator over Concept instances.
-        :rtype: generator
+        :param Concept concept: The concept to copy from.
+        :returns: New Concept
         """
-        for inst_ref in cls.__refs__[cls]:
-            inst = inst_ref()
-            if inst is not None:
-                yield inst
+        if not isinstance(concept, cls):
+            raise TypeError("Argument not of type Concept.")
+        new_concept = cls(concept_type=concept.concept_type,
+                          atoms=concept._atoms)
+        to_add = []
+        for atr in concept.get_attributes():
+            new_atr = Attribute.from_attribute(atr)
+            new_atr.subject = new_concept
+            to_add.append(new_atr)
+        for rel in concept.get_relationships():
+            new_rel = Relationship.from_relationship(rel)
+            new_rel.subject = new_concept
+            to_add.append(new_rel)
+        new_concept.add_elements(to_add)
+        new_concept._prefix = concept._prefix
+        return new_concept
 
-    @classmethod
-    def set_ui_prefix(cls, prefix):
-        """
-        Set the string to prepend to the UI of each concept.
-
-        :param str prefix: The prefix to set.
-        """
-        cls._prefix = prefix
-
-    @classmethod
-    def _increment(cls):
-        """
-        Increment the UI counter by 1.
-        """
-        cls._counter += 1
-
-    @classmethod
-    def init_counter(cls, num):
-        """
-        Initialize the unique identifier counter with the given number.
-
-        :param int num: The number to initialize with.
-        """
-        cls._counter = num
-
-    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data):
         """
@@ -406,22 +552,39 @@ class Concept(object):
         :returns: Concept instance built from data.
         :rtype: Concept
         """
-        concept = cls(concept_type=data["concept_type"], ui=data["ui"])
         atoms = [Atom.from_dict(syn) for syn in data["synonyms"]]
-        concept.atoms = atoms
+        concept = cls(concept_type=data["concept_type"],
+                      atoms=atoms,
+                      ui=data["ui"])
+        concept.add_elements(atoms)
         atrs = [Attribute.from_dict(atr, subject=concept)
                 for atr in data["attributes"]]
-        concept.attributes = atrs
+        concept.add_elements(atrs)
         # Because we do not have a concept mapping yet, these relationships
         # will have concept UIs as their objects. This can be resolved via
         # Concept.resolve_relationships()
         rels = [Relationship.from_dict(rel, subject=concept)
                 for rel in data["relationships"]]
-        concept.relationships = rels
+        concept.add_elements(rels)
         return concept
 
-    # TODO: Refactor this to deal with strings that are mapped to multiple
-    # concepts. E.g. "aspirin and ibuprofen" |--> "aspirin", "ibuprofen".
+    @classmethod
+    def read_jsonl_file(cls, filepath):
+        """
+        Creates a concept for each line in the JSON lines file.
+
+        :param str filepath: Path to the JSON lines file containing concepts.
+        :returns: Generator over Concept instances
+        :rtype: generator
+        """
+        concepts = []
+        with open(filepath, 'r') as inF:
+            for line in inF:
+                concept = Concept.from_dict(json.loads(line))
+                concepts.append(concept)
+        cls.resolve_relationships()
+        return concepts
+
     @classmethod
     def resolve_relationships(cls):
         """
@@ -434,18 +597,18 @@ class Concept(object):
         concepts = cls.get_instances()
         ui2concepts = dict([(c.ui, c) for c in concepts])
         for c in ui2concepts.values():
-            for rel in c.relationships:
+            for rel in c._relationships:
                 if isinstance(rel.object, str):
                     try:
                         obj_concept = ui2concepts[rel.object]
                     except KeyError:
-                        msg = f"Relationship object '{rel.object}' not found"
-                        warnings.warn(msg)
+                        msg = f"Object of {rel.rel_name} '{rel.object}' not found"  # noqa
+                        logging.warning(msg)
                         continue
                     rel.object = obj_concept
 
 
-class Attribute(object):
+class Attribute(DataElement):
     """
     An attribute of a concept or relationship.
 
@@ -455,23 +618,28 @@ class Attribute(object):
     :param str src: The source code of where this attribute was found.
     """
 
-    _counter = 0
-    _ui_template = "DAT{0:07}"
+    _prefix = "DAT"
 
-    def __init__(self, subject, atr_name, atr_value, src):
-        self._increment()
-        self.ui = self._ui_template.format(self._counter)
+    def __init__(self, subject, atr_name, atr_value, src, ui=None):
+        super().__init__(ui=ui)
+        self._increment_counter()
         self.subject = subject
         self.atr_name = atr_name
         self.atr_value = atr_value
         self.src = src
         self._check_params()
+        self._register()
 
     def __repr__(self):
-        return str(self.to_dict(return_subject=True))
+        return self.ui
 
     def __str__(self):
         return f"{self.subject} *{self.atr_name}* {self.atr_value}"
+
+    def __hash__(self):
+        return hash((self.atr_name,
+                     self.atr_value,
+                     self.src))
 
     def __eq__(self, other):
         """
@@ -490,7 +658,7 @@ class Attribute(object):
     def _check_params(self):
         assert isinstance(self.subject, (Concept, Relationship))
         assert isinstance(self.atr_name, str)
-        assert isinstance(self.atr_value, str)
+        assert isinstance(self.atr_value, (str, numbers.Number))
         assert isinstance(self.src, str)
 
     def to_dict(self, return_subject=False, verbose_subject=False):
@@ -526,20 +694,13 @@ class Attribute(object):
         return atr
 
     @classmethod
-    def _increment(cls):
-        """
-        Increment the UI counter by 1.
-        """
-        cls._counter += 1
-
-    @classmethod
-    def init_counter(cls, num):
-        """
-        Initialize the unique identifier counter with the given number.
-
-        :param int num: The number to initialize with.
-        """
-        cls._counter = num
+    def from_attribute(cls, attribute):
+        new_atr = cls(subject=attribute.subject,
+                      atr_name=attribute.atr_name,
+                      atr_value=attribute.atr_value,
+                      src=attribute.src)
+        new_atr._prefix = attribute._prefix
+        return new_atr
 
     # TODO: Check for valid JSON
     @classmethod
@@ -566,37 +727,46 @@ class Attribute(object):
         return atr
 
 
-class Relationship(object):
+class Relationship(DataElement):
     """
     A relationship between two concepts.
 
     :param Concept subject: The subject of this relationship.
     :param str rel_name: The relation. E.g. "ingredient_of".
-    :param Concept/str obj: The object of this relationship. Can be a
+    :param Concept/str object: The object of this relationship. Can be a
                                     Concept instance or a concept UI.
     :param str src: The source code of where this relationship was found.
     :param list(Attribute) attributes: Any attributes of this relationship.
     """
 
-    _counter = 0
-    _ui_template = "DR{0:07}"
+    _prefix = "DR"
 
-    def __init__(self, subject, rel_name, obj, src, attributes=None):
-        self._increment()
-        self.ui = self._ui_template.format(self._counter)
+    # TODO: Make sure it's really okay to use 'object' here.
+    def __init__(self, subject, rel_name, object, src, ui=None):
+        super().__init__(ui=ui)
+        self._increment_counter()
         self.subject = subject
         self.rel_name = rel_name
-        self.object = obj
+        self.object = object
         self.src = src
         # Relationship attributes
-        self.attributes = attributes or []
+        self._attributes = set()
         self._check_params()
+        self._register()
 
     def __repr__(self):
         return self.ui
 
     def __str__(self):
         return f"{self.subject} **{self.rel_name}** {self.object}"
+
+    def __hash__(self):
+        obj = self.object
+        if isinstance(obj, Concept):
+            obj = obj.ui
+        return hash((self.rel_name,
+                     obj,
+                     self.src))
 
     def __eq__(self, other):
         """
@@ -619,8 +789,6 @@ class Relationship(object):
         # Object can be a concept or a concept UI.
         assert isinstance(self.object, (Concept, str))
         assert self.src.upper() in SOURCES
-        for atr in self.attributes:
-            assert isinstance(atr, Attribute)
 
     def to_dict(self, return_subject=False, verbose=False):
         """
@@ -631,7 +799,8 @@ class Relationship(object):
 
             {"rel_name": str,
              "object": str,
-             "src": str}
+             "src": str,
+             "attributes": list}
 
         :param bool return_subject: If True, the returned dict contains
                                     a "subject" key.
@@ -675,29 +844,27 @@ class Relationship(object):
         :returns: Generator over attributes
         :rtype: generator
         """
-        for atr in self.attributes:
+        for atr in self._attributes:
             if r_type == "object":
                 yield atr
             elif r_type == "dict":
                 yield atr.to_dict(return_subject=return_subject)
 
     @classmethod
-    def init_counter(cls, num):
-        """
-        Initialize the unique identifier counter with the given number.
+    def from_relationship(cls, relationship):
+        new_rel = cls(subject=relationship.subject,
+                      rel_name=relationship.rel_name,
+                      object=relationship.object,
+                      src=relationship.src)
+        to_add = []
+        for atr in relationship.get_attributes():
+            new_atr = Attribute.from_attribute(atr)
+            new_atr.subject = new_rel
+            to_add.append(new_atr)
+        new_rel.add_elements(to_add)
+        new_rel._prefix = relationship._prefix
+        return new_rel
 
-        :param int num: The number to initialize with.
-        """
-        cls._counter = num
-
-    @classmethod
-    def _increment(cls):
-        """
-        Increment the UI counter by 1.
-        """
-        cls._counter += 1
-
-    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data, subject, concept_mapping=None):
         """
@@ -734,10 +901,10 @@ class Relationship(object):
 
         rel = cls(subject=subject,
                   rel_name=data["rel_name"],
-                  obj=obj,
+                  object=obj,
                   src=data["src"])
         atrs = [Attribute.from_dict(atr, subject=rel)
                 for atr in data["attributes"]]
-        rel.attributes = atrs
+        rel.add_elements(atrs)
 
         return rel

@@ -1,0 +1,30 @@
+{"umls.metamap": {
+	  "mm_bin": "/path/to/public_mm/bin"
+	  "data_year": "2018AA",
+	  "data_version": "Base",
+	  "min_score": 700,
+	  "keep_semtypes": [
+	       "phsu", "mobd", "neop", "plnt", "vita", "hops", "acab", "anab",
+               "clnd", "phpr", "moft", "comd", "food", "dsyn", "aapp", "phsf",
+               "npop", "inpo", "bact", "bodm", "bacs", "chem", "elii", "fngs",
+               "biof", "horm", "celf", "antb", "fish", "imft", "menp", "patf",
+               "enzy", "cgab", "nnon", "orch", "inch", "fndg"]
+	  },
+ "umls.quickumls": {
+	  "quickumls_install": "/path/to/quickumls/installation/dir"
+	  "min_score": 0.7,
+	  "keep_semtypes": ["T116", "T020", "T190", "T195", "T123", "T007", "T038",
+			    "T122", "T043", "T019", "T103", "T200", "T049", "T047",
+			    "T196", "T126", "T013", "T004", "T168", "T131", "T125",
+			    "T129", "T197", "T037", "T041", "T048", "T044", "T191",
+			    "T114", "T070", "T109", "T046", "T067", "T039", "T121",
+			    "T002", "T127", "T033"]
+	  },
+ "meddra.bioportal": {
+	    "rest_url": "http://data.bioontology.org",
+	    "query_url": "/annotator?ontologies=http://data.bioontology.org/ontologies/MEDDRA&text=",
+	    "query_options": "&longest_only=true&exclude_numbers=false&whole_word_only=true&exclude_synonyms=true",
+	    "api_key": "your-api-key-here"
+ 	   },
+ "meddra.rulebased": {}
+}

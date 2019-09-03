@@ -13,7 +13,7 @@ CREATE (i:SDSI {preferred_name: "Preferred Name",
 		background: "Background",
 		safety: "Safety",
 		mechanism_of_action: "Mechanism of Action",
-		maps_to: "umls"})
+		links_to: "umls.quickumls.sdsi"})
 
 // Dietary supplement product
 CREATE (p:DSP {preferred_name: "Preferred Name",
@@ -21,29 +21,31 @@ CREATE (p:DSP {preferred_name: "Preferred Name",
 
 // Pharmacological drug
 CREATE (r:SPD {preferred_name: "Preferred Name",
-	       maps_to: "umls"})
+	       links_to: "umls.quickumls.spd"})
 
 // Disease
 CREATE (d:DIS {preferred_name: "Preferred Name",
-	       maps_to: "umls"})
+	       links_to: "umls.quickumls.dis"})
 
 // Therapeutic class
 CREATE (t:TC {preferred_name: "Preferred Name",
-	      maps_to: "umls"})
+	      links_to: "umls.quickumls.tc"})
 
 // System organ class
 CREATE (c:SOC {preferred_name: "Preferred Name",
-	       maps_to: "meddra"})
+	       links_to: "meddra.rulebased"})
 
 // Signs / Symptoms
+// MedDRA BioPortal doesn't work as well as QuickUMLS.
 CREATE (s:SS {preferred_name: "Preferred Name",
-	      maps_to: "meddra"})
+	      links_to: "umls.quickumls.ss"})
+//	      links_to: "meddra.bioportal"})
 
 
 // ===== RELATIONSHIPS =====
 
 // Ingredient of
-CREATE (i) -[:INGREDIENT_OF]-> (p)
+CREATE (p) -[:HAS_INGREDIENT]-> (i)
 
 // Interacts with
 CREATE (i) -[:INTERACTS_WITH {rating: "Rating", severity: "Severity"}]-> (r)
@@ -55,7 +57,7 @@ CREATE (i) -[:IS_EFFECTIVE_FOR {rating: "Rating"}]-> (d)
 CREATE (i) -[:HAS_THERAPEUTIC_CLASS]-> (t)
 
 // Adverse effect on
-CREATE (i) -[:ADVERSE_EFFECT_ON]-> (c)
+CREATE (i) -[:HAS_ADVERSE_EFFECT_ON]-> (c)
 
 // Has adverse reaction
 CREATE (i) -[:HAS_ADVERSE_REACTION]-> (s)

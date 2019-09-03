@@ -9,12 +9,10 @@ import/
 manual_review/
 build/
 playground/
-umls.py
+lib/idlib/idlib/umls.py
 NMCD
-<<<<<<< HEAD
 *.jsonl
 *.csv
 *.log
-=======
-versions
->>>>>>> 587464510207aa78175a6da0f778305dc900ee0e
+versions/
+lib/idlib/idlib/entity_linking/annotator.conf

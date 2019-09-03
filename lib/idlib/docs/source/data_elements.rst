@@ -1,11 +1,11 @@
-idlib.base
-==========
+idlib.data_elements
+===================
 
 
 Atom
 ----
 
-.. autoclass:: idlib.base.Atom
+.. autoclass:: idlib.data_elements.Atom
     :members:
     :show-inheritance:
 
@@ -13,7 +13,7 @@ Atom
 Concept
 -------
 
-.. autoclass:: idlib.base.Concept
+.. autoclass:: idlib.data_elements.Concept
     :members:
     :undoc-members:
     :show-inheritance:
@@ -22,7 +22,7 @@ Concept
 Attribute
 ---------
 
-.. autoclass:: idlib.base.Attribute
+.. autoclass:: idlib.data_elements.Attribute
     :members:
     :undoc-members:
     :show-inheritance:
@@ -31,7 +31,7 @@ Attribute
 Relationship
 ------------
 
-.. autoclass:: idlib.base.Relationship
+.. autoclass:: idlib.data_elements.Relationship
     :members:
     :undoc-members:
     :show-inheritance:

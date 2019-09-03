@@ -1,3 +1,4 @@
+import logging
 import argparse
 import json
 import re
@@ -5,7 +6,7 @@ import pandas as pd
 from collections import OrderedDict
 from nltk.corpus import stopwords
 
-from idlib import Atom, Concept
+from idlib import Atom, Concept, Attribute, Relationship
 
 """
 Obtains all the synonyms of the DSLD manual download
@@ -15,10 +16,13 @@ and saves them as a JSON lines file.
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--infile", type=str, required=True,
-                        help="File containing DSLD ingredients and synonyms.")
+    parser.add_argument("--ingredients_file", type=str, required=True,
+                        help="""CSV file containing DSLD ingredients
+                                and synonyms.""")
+    parser.add_argument("--products_file", type=str, required=True,
+                        help="JSON lines file containing DSLD products.")
     parser.add_argument("--outfile", type=str, required=True,
-                        help="Where to save the synonyms.")
+                        help="Where to save the concepts as JSON lines.")
     parser.add_argument("--filter_words", type=str, default=None,
                         help="""Path to file containing words to filter,
                                 one per line. Note that this script filters
@@ -31,13 +35,10 @@ def parse_args():
 def main():
     args = parse_args()
 
-    ingredients_data = pd.read_csv(args.infile,
-                                   dtype={"Ingredient - Group ID": int})
-    ingredients_data = ingredients_data[["Ingredient - Group ID",
-                                         "Ingredient - Group Name",
-                                         "Synonyms/Sources"]]
-    ingredients_data.drop_duplicates(inplace=True)
-    ingredients_data.columns = ["group_id", "group_name", "synonyms"]
+    # ======================================
+    # Process the ingredients data
+    # ======================================
+    ingredients_data = read_ingredients_data(args.ingredients_file)
 
     # Split the list of synonyms for each ingredient group into multiple rows.
     # E.g. 1,Ginseng,"Ginseng;ginsang;ginseng panax" -->
@@ -67,11 +68,114 @@ def main():
     # Merge multiple synonyms for the same group name into a single row.
     ingredients_split = merge_groups(ingredients_split)
 
-    print(ingredients_split.shape[0])
+    # Create the ingredient concepts
+    ingredient_concepts = convert_ingredients_to_concepts(ingredients_split)
+
+    # ======================================
+    # Process the products data
+    # ======================================
+    products_data = read_products_data(args.products_file)
+    product_concepts = convert_products_to_concepts(products_data)
+
+    all_concepts = connect_products_to_ingredients(product_concepts,
+                                                   ingredient_concepts)
+
     with open(args.outfile, 'w') as outF:
-        for concept in to_concepts(ingredients_split):
+        for concept in all_concepts:
             json.dump(concept.to_dict(), outF)
             outF.write("\n")
+
+
+def read_ingredients_data(infile):
+    """
+    Read the ingredients data from the CSV file at infile
+    into a pandas DataFrame.
+
+    :param str infile: The CSV file to read.
+    :returns: ingredients data
+    :rtype: pandas.DataFrame
+    """
+    ingredients_data = pd.read_csv(infile,
+                                   dtype={"Ingredient - Group ID": int})
+    ingredients_data = ingredients_data[["Ingredient - Group ID",
+                                         "Ingredient - Group Name",
+                                         "Synonyms/Sources"]]
+    ingredients_data.drop_duplicates(inplace=True)
+    ingredients_data.columns = ["group_id", "group_name", "synonyms"]
+    return ingredients_data
+
+
+def read_products_data(infile):
+    """
+    Read the products data from the JSON lines file at infile
+    and return the result as a list of dicts.
+
+    :param str infile: JSON lines file to read.
+    :returns: products data
+    :rtype: list
+    """
+    products_data = [json.loads(line.strip()) for line in open(infile, 'r')]
+    return products_data
+
+
+def connect_products_to_ingredients(product_concepts, ingredient_concepts):
+    """
+    Given a set of ingredient and product Concept instances, update the object
+    of the has_ingredient Relationships to be the ingredient instances.
+
+    :param list product_concepts: List of Concepts of type DSP.
+    :param list ingredient_concepts: List of Concepts of type SDSI.
+    :returns: List of both product and ingredient concepts, with
+              ingredient_of Relationships.
+    :rtype: list
+    """
+    id2ingredient = dict([(c.preferred_atom.src_id, c)
+                          for c in ingredient_concepts])
+    num_missing_ingredients = 0
+    for (i, product) in enumerate(product_concepts):
+        print(f"{i+1}/{len(product_concepts)}\r", end='')
+        for rel in product.get_relationships("has_ingredient"):
+            ingredient_id = rel.object
+            try:
+                ingredient_concept = id2ingredient[ingredient_id]
+                rel.object = ingredient_concept
+            except KeyError:
+                logging.warning(f"Unable to find ingredient {ingredient_id} of product {product}.")  # noqa
+                num_missing_ingredients += 1
+                product.rm_elements(rel)
+                continue
+
+    logging.warning(f"Couldn't find {num_missing_ingredients} ingredients.")
+    return ingredient_concepts + product_concepts
+
+
+def convert_products_to_concepts(json_data):
+    Concept.set_ui_prefix("DSLD")
+    concepts = []
+    for line in json_data:
+        atom = Atom(term=line["Product_Name"],
+                    src="DSLD", src_id=line["DSLD_ID"],
+                    term_type="SY", is_preferred=True)
+        concept = Concept(concept_type="DSP", atoms=[atom])
+
+        # LanguaL Product Type attribute
+        if line["LanguaL_Product_Type"]:
+            atr = Attribute(subject=concept,
+                            atr_name="langual_type",
+                            atr_value=line["LanguaL_Product_Type"],
+                            src="DSLD")
+            concept.add_elements(atr)
+
+        for ing in line["ingredients"]:
+            ing_id = ing["Ingredient_Group_GRP_ID"]
+            has_ing_rel = Relationship(subject=concept,
+                                       rel_name="has_ingredient",
+                                       object=ing_id,
+                                       src="DSLD")
+            concept.add_elements(has_ing_rel)
+
+        concepts.append(concept)
+    return concepts
 
 
 def split_synonyms(dataframe):
@@ -229,7 +333,7 @@ def merge_groups(dataframe):
     return dataframe
 
 
-def to_concepts(dataframe):
+def convert_ingredients_to_concepts(dataframe):
     """
     Each row in dataframe corresponds to an ingredient concept.
     Create a Concept instance for each row.
@@ -238,12 +342,17 @@ def to_concepts(dataframe):
     :returns: Generator over SDSI concepts.
     :rtype: generator
     """
+    dont_include = ["header", "fat calories", "polyunsaturated fat"]
+
     Concept.set_ui_prefix("DSLD")
     tty = "SY"  # All DSLD terms have term type SY
     # Create a Concept instance for each row.
+    concepts = []
     for row in dataframe.itertuples():
         pref_term = row.group_name
-        src_id = row.group_id
+        if pref_term.lower() in dont_include:
+            continue
+        src_id = str(row.group_id)
         pref_atom = Atom(term=pref_term, src="DSLD", src_id=src_id,
                          term_type=tty, is_preferred=True)
         # The Atoms for this concept are its preferred term plus all synonyms.
@@ -259,8 +368,9 @@ def to_concepts(dataframe):
             atoms.append(atom)
             seen.add(syn.lower())
 
-        concept = Concept.from_atoms(atoms, concept_type="SDSI")
-        yield concept
+        concept = Concept(concept_type="SDSI", atoms=atoms)
+        concepts.append(concept)
+    return concepts
 
 
 if __name__ == "__main__":
