@@ -1,3 +1,4 @@
+import os
 import json
 import argparse
 import re
@@ -41,6 +42,9 @@ class MSKCC_Converter(object):
         """
         # raw MSKCC data file path
         self.content_file = content_file
+        if os.path.exists(idisk_format_output):
+            msg = f"Output file '{idisk_format_output}' already exists."
+            raise OSError(msg)
         self.idisk_format_output = idisk_format_output
 
     def remove_useless_for_HDI(self, content):
@@ -144,7 +148,7 @@ class MSKCC_Converter(object):
         :param list seen_id: concept ids that have beed processed
         :param Concept concept: the concept to be written in the local file
         """
-        with open(self.idisk_format_output, "a") as outf:
+        with open(self.idisk_format_output, 'a') as outf:
             json.dump(concept.to_dict(), outf)
             outf.write("\n")
 
@@ -159,8 +163,7 @@ class MSKCC_Converter(object):
         scientific_name         Scientific Name         Atom                    None  # noqa
         common_name             Synonym                 Atom                    None  # noqa
         clinical_summary        Background              Attribute               None  # noqa
-        purported_uses          Diseases                Concept                 effects_on  # noqa
-                                                                                inverse_effects_on
+        purported_uses          Diseases                Concept                 is_effective_for  # noqa
         mechanism_of_action     Mechanism of Action     Attribute               None  # noqa
         warnings                Safety                  Attribute               None  # noqa
         adverse_reactions       Signs                   Concept                 has_adverse_reaction  # noqa
@@ -195,22 +198,22 @@ class MSKCC_Converter(object):
                 # clinical_summary
                 cs = items["clinical_summary"]
                 herb_concept = self.generate_attr(herb_concept,
-                                                  "Background", cs)
+                                                  "background", cs)
                 # mechanism_of_action
                 moa = items["mechanism_of_action"]
                 herb_concept = self.generate_attr(herb_concept,
-                                                  "Mechanism of Action", moa)
+                                                  "mechanism_of_action", moa)
                 # warnings
                 warn = items["warnings"]
                 herb_concept = self.generate_attr(herb_concept,
-                                                  "Safety", warn)
+                                                  "safety", warn)
                 # purported_uses
                 pu = items["purported_uses"]
                 pu = self.split_content(pu)
                 for each in pu:
                     herb_concept = self.generate_idisk_schema(
                                     each, "SY", False,
-                                    "DIS", "effects_on",
+                                    "DIS", "is_effective_for",
                                     herb_concept)
                 # adverse_reactions
                 ar = items["adverse_reactions"]
@@ -249,6 +252,8 @@ class MSKCC_Converter(object):
         atoms = []
         if isinstance(content, list):
             for each in content:
+                # Normalize whitespace
+                each = re.sub(r'\s+', ' ', each).strip()
                 if self.is_valid_content(each):
                     atom = Atom(each, src="MSKCC", src_id="0",
                                 term_type=term_type,
@@ -258,6 +263,7 @@ class MSKCC_Converter(object):
                     pass
         else:
             if self.is_valid_content(content):
+                content = re.sub(r'\s+', ' ', content).strip()
                 atom = Atom(content, src="MSKCC", src_id="0",
                             term_type=term_type,
                             is_preferred=prefer_label)
@@ -282,14 +288,17 @@ class MSKCC_Converter(object):
                 if self.is_valid_content(each):
                     concated_value.append(each)
             attr_value = " ".join(concated_value)
+            # Normalize whitespace
+            attr_value = re.sub(r'\s+', ' ', attr_value).strip()
             atr = Attribute(herb_concept,
                             attr_name, attr_value, src="MSKCC")
-            herb_concept.attributes.append(atr)
+            herb_concept.add_elements(atr)
         else:
             if self.is_valid_content(attr_value):
+                attr_value = re.sub(r'\s+', ' ', attr_value).strip()
                 atr = Attribute(herb_concept,
                                 attr_name, attr_value, src="MSKCC")
-                herb_concept.attributes.append(atr)
+                herb_concept.add_elements(atr)
         return herb_concept
 
     def generate_rel(self, from_concept, to_concept,
@@ -303,9 +312,9 @@ class MSKCC_Converter(object):
         :return: the subject and object Concept of this Relationship
         :rtype: tuple
         """
-        rel = Relationship(subject=from_concept, obj=to_concept,
+        rel = Relationship(subject=from_concept, object=to_concept,
                            rel_name=rel_name, src="MSKCC")
-        from_concept.relationships.append(rel)
+        from_concept.add_elements(rel)
         return (from_concept, to_concept)
 
     def generate_idisk_schema(self, value, value_type, prefer_label,

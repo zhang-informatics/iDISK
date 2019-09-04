@@ -7,7 +7,7 @@
 CREATE (i:SDSI {preferred_name: "Preferred Name",
 		synonym: "Synonym",
 		scientific_name: "Scientific Name",
-		source: "Source",
+		source_material: "Source Material",
 		umls_semantic_type: "UMLS Semantic Type",
 		ingredient_category: "Ingredient Category",
 		background: "Background",

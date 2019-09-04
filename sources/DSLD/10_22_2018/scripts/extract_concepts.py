@@ -369,6 +369,14 @@ def convert_ingredients_to_concepts(dataframe):
             seen.add(syn.lower())
 
         concept = Concept(concept_type="SDSI", atoms=atoms)
+
+        if row["CATEGORY"]:
+            category = row["CATEGORY"].strip()
+            a = Attribute(subject=concept,
+                          atr_name="ingredient_category",
+                          atr_value=category,
+                          src="DSLD")
+            concept.add_elements(a)
         concepts.append(concept)
     return concepts
 

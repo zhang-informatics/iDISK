@@ -4,7 +4,7 @@ import re
 import string
 import pandas as pd
 
-from idlib import Atom, Concept, Relationship
+from idlib import Atom, Concept, Attribute, Relationship
 
 """
 Formats product and ingredient information from NHP
@@ -56,6 +56,82 @@ def extract_concepts(ingredients_csv, products_csv, outjsonl):
             outF.write('\n')
 
 
+def create_ingredient_concepts(dataframe):
+    """
+    Given a Pandas dataframe of ingredient data, create a concept
+    for each row.
+
+    :param pandas.DataFrame dataframe: Dataframe containing ingredient data.
+    :returns: Generator over concepts created from the dataframe.
+    """
+    Concept.set_ui_prefix("NHPID")
+
+    concepts = []
+
+    dataframe = dataframe[["ingredient_id", "product_id",
+                           "proper_name", "proper_name_f",
+                           "common_name", "common_name_f",
+                           "source_material", "source_material_f"]].copy()
+    dataframe.dropna(subset=["proper_name"], axis=0, inplace=True)
+    dataframe.drop_duplicates(inplace=True)
+    dataframe.fillna("", inplace=True)
+    synonym_cols = ["proper_name_f", "common_name", "common_name_f"]
+
+    seen = set()
+    for (i, row) in enumerate(dataframe.itertuples()):
+        print(f"{i}/{dataframe.shape[0]}\r", end='')
+        row = row._asdict()
+        pref_term = row["proper_name"]
+        pref_term = re.sub(r'\s+', ' ', pref_term).strip()
+        src_id = row["ingredient_id"].replace(".0", '')
+        if invalid_ingredient_name(pref_term):
+            print(f"Removing invalid ingredient with name '{pref_term}'")
+            continue
+
+        pref_atom = Atom(term=pref_term, src="NHPID", src_id=src_id,
+                         term_type="SN", is_preferred=True)
+        atoms = [pref_atom]
+        # Extract the synonyms, removing any empty strings
+        # or duplicate string-termtype pairs.
+        seen.add((pref_term, "SN"))
+        for column in synonym_cols:
+            term = row[column]
+            term = re.sub(r'\s+', ' ', term).strip()
+            tty = "SN" if column == "proper_name_f" else "SY"
+            if not term or (term, tty) in seen:
+                continue
+            seen.add((term, tty))
+            atom = Atom(term=term, src="NHPID", src_id=src_id,
+                        term_type=tty, is_preferred=False)
+            atoms.append(atom)
+
+        # Create the ingredient Concept
+        concept = Concept(concept_type="SDSI", atoms=atoms)
+
+        # Create the source attribute, if available.
+        atr_val = None
+        if row["source_material"]:
+            atr_val = row["source_material"].strip()
+        elif row["source_material_f"]:  # French translation of the above.
+            atr_val = row["source_material_f"].strip()
+        if atr_val is not None:
+            a = Attribute(subject=concept,
+                          atr_name="source_material",
+                          atr_value=atr_val,
+                          src="NHPID")
+            concept.add_elements(a)
+
+        product_id = row["product_id"].replace(".0", '')
+        rel = Relationship(subject=concept,
+                           rel_name="ingredient_of",
+                           object=product_id,
+                           src="NHPID")
+        concept.add_elements(rel)
+
+        concepts.append(concept)
+    return concepts
+
+
 def merge_duplicate_concepts(concepts):
     """
     NHP has many duplicate ingredients in the raw data. During
@@ -87,65 +163,6 @@ def merge_duplicate_concepts(concepts):
         else:
             _merge(seen[src_id], concept)  # Changes seen[src_id] in place
     return seen.values()
-
-
-def create_ingredient_concepts(dataframe):
-    """
-    Given a Pandas dataframe of ingredient data, create a concept
-    for each row.
-
-    :param pandas.DataFrame dataframe: Dataframe containing ingredient data.
-    :returns: Generator over concepts created from the dataframe.
-    """
-    Concept.set_ui_prefix("NHPID")
-
-    concepts = []
-
-    dataframe = dataframe[["ingredient_id", "product_id",
-                           "proper_name", "proper_name_f",
-                           "common_name", "common_name_f"]].copy()
-    dataframe.dropna(subset=["proper_name"], axis=0, inplace=True)
-    dataframe.drop_duplicates(inplace=True)
-    dataframe.fillna("", inplace=True)
-    synonym_cols = ["proper_name_f", "common_name", "common_name_f"]
-
-    seen = set()
-    for (i, row) in enumerate(dataframe.itertuples()):
-        print(f"{i}/{dataframe.shape[0]}\r", end='')
-        row = row._asdict()
-        pref_term = row["proper_name"]
-        src_id = row["ingredient_id"].replace(".0", '')
-        if invalid_ingredient_name(pref_term):
-            print(f"Removing invalid ingredient with name '{pref_term}'")
-            continue
-
-        pref_atom = Atom(term=pref_term, src="NHPID", src_id=src_id,
-                         term_type="SN", is_preferred=True)
-        atoms = [pref_atom]
-        # Extract the synonyms, removing any empty strings
-        # or duplicate string-termtype pairs.
-        seen.add((pref_term, "SN"))
-        for column in synonym_cols:
-            term = row[column]
-            tty = "SN" if column == "proper_name_f" else "SY"
-            if not term or (term, tty) in seen:
-                continue
-            seen.add((term, tty))
-            atom = Atom(term=term, src="NHPID", src_id=src_id,
-                        term_type=tty, is_preferred=False)
-            atoms.append(atom)
-
-        concept = Concept(concept_type="SDSI", atoms=atoms)
-
-        product_id = row["product_id"].replace(".0", '')
-        rel = Relationship(subject=concept,
-                           rel_name="ingredient_of",
-                           object=product_id,
-                           src="NHPID")
-        concept.add_elements(rel)
-
-        concepts.append(concept)
-    return concepts
 
 
 def invalid_ingredient_name(name):
@@ -188,7 +205,9 @@ def create_product_concepts(dataframe):
         print(f"{i}/{dataframe.shape[0]}\r", end='')
         row = row._asdict()
         src_id = row["product_id"].replace(".0", '')
-        atom = Atom(term=str(row["product_name"]), src="NHPID",
+        term = str(row["product_name"])
+        term = re.sub(r'\s+', ' ', term).strip()
+        atom = Atom(term=term, src="NHPID",
                     src_id=src_id, term_type="SY",
                     is_preferred=True)
         concept = Concept(concept_type="DSP", atoms=[atom])
