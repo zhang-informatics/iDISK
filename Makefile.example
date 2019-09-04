@@ -55,6 +55,11 @@ schema:
 		--schema_version $(SCHEMA_VERSION) \
 		--schema_conf_file $(SCHEMA_CONF_FILE)
 
+## Check the input data to ensure proper formatting
+check_contents:
+	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/check_content.py \
+		--concept_files $(SOURCE_FILES)
+
 ## Link concepts to external terminologies
 link_entities:
 	@echo "cat $(SOURCE_FILES) > $(VERSION_DIR)/concepts/concepts_orig.jsonl" \

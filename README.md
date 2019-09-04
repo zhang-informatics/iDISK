@@ -53,10 +53,6 @@ versions/
 After cloning this repository, install `idlib`, the iDISK API library.
 `idlib` is bundled with iDISK. Go to `lib/idlib` and follow the instructions in the README.
 
-All source data for iDISK resides in the `sources/` directory. 
-The rest of this guide assumes you have *properly* populated the `sources/` directory.
-You can find a detailed example of how to do this at `sources/example_src`.
-
 Edit the `PYTHON_INTERPRETER`, `IDISK_HOME`, and `IDISK_VERSION` variables in the
 Project Configuration section of the `Makefile` as necessary for your installation. Then run,
 
@@ -91,6 +87,24 @@ make schema
 
 Now, if you go back to Neo4j Desktop and open your graph in the Neo4j browser, you'll see it has been populated. You can
 view the entire schema with the Cypher query `MATCH(n) RETURN(n)`.
+
+
+## Source Data
+
+All source data for iDISK resides in the `sources/` directory. 
+The rest of this guide assumes you have *properly* populated the `sources/` directory.
+You can find a detailed example of how to do this at `sources/example_src`.
+
+We'll check that the source data (i.e. the files belonging to the `SOURCE_FILES` variable
+in the `Makefile`) is formatted properly. With the schema graph running, 
+
+```
+make check_contents
+```
+
+This will check each file against the schema to make sure all concepts, attributes, relationships, etc.
+are properly formatted. This script will print out the number of found issues for each source data file
+and write any issues to a a log file at `${source_file}.error`.
 
 
 ## Entity Linking
