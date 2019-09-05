@@ -20,26 +20,29 @@ CREATE (p:DSP {preferred_name: "Preferred Name",
 	       langual_type: "LanguaL Product Type"})
 
 // Pharmacological drug
-CREATE (r:SPD {preferred_name: "Preferred Name",
-	       links_to: "umls.quickumls.spd"})
+CREATE (r:PD {preferred_name: "Preferred Name",
+	      umls_semantic_type: "UMLS Semantic Type",
+	      links_to: "umls.quickumls.pd"})
 
 // Disease
 CREATE (d:DIS {preferred_name: "Preferred Name",
+	       umls_semantic_type: "UMLS Semantic Type",
 	       links_to: "umls.quickumls.dis"})
 
 // Therapeutic class
 CREATE (t:TC {preferred_name: "Preferred Name",
+	      umls_semantic_type: "UMLS Semantic Type",
 	      links_to: "umls.quickumls.tc"})
 
 // System organ class
 CREATE (c:SOC {preferred_name: "Preferred Name",
+	       umls_semantic_type: "UMLS Semantic Type",
 	       links_to: "meddra.rulebased"})
 
 // Signs / Symptoms
-// MedDRA BioPortal doesn't work as well as QuickUMLS.
 CREATE (s:SS {preferred_name: "Preferred Name",
+	      umls_semantic_type: "UMLS Semantic Type",
 	      links_to: "umls.quickumls.ss"})
-//	      links_to: "meddra.bioportal"})
 
 
 // ===== RELATIONSHIPS =====

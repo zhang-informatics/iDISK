@@ -231,7 +231,7 @@ class MSKCC_Converter(object):
                 for each in hdi:
                     herb_concept = self.generate_idisk_schema(
                                     each, "SY", False,
-                                    "SPD", "interacts_with",
+                                    "PD", "interacts_with",
                                     herb_concept)
                 # write all concepts to local file
                 self.write_to_local_file(herb_concept)
