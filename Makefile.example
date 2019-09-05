@@ -46,7 +46,6 @@ annotation_clean:
 version:
 	mkdir -p $(VERSION_DIR)/concepts/
 	mkdir -p $(VERSION_DIR)/build/{Neo4j,RRF}/
-	cd $(VERSION_DIR) && ln -s $(IDISK_HOME)/lib .
 
 
 ## Create the iDISK schema as a neo4j graph
