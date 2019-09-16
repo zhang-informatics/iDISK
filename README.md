@@ -203,7 +203,13 @@ an emtpy Neo4j graph. Then run
 make neo4j
 ```
 
-This command will populate the graph with the iDISK data elements. It will take a few minutes. 
+This command will populate the graph with the iDISK data elements. It will take a few minutes. Once the database is populated it can be exported by running
+
+```
+bin/neo4j-admin dump --database=graph.db --to=<destination_path>
+```
+
+In the Neo4j Terminal tab.
 
 ### RRF
 
