@@ -2,7 +2,8 @@
 
 ## Overview
 iDISK is a comprehensive knowledge base of dietary supplement ingredients, products, and related concepts.
-This repository contains the source code required for building the knowledge base.
+This repository contains the source code required for building the knowledge base. The current version of the
+knowledge base, in both Neo4j and RRF formats, is available for download at <https://doi.org/10.13020/d6bm3v>.
 
 
 ## Directory Structure
