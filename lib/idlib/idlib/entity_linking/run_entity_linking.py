@@ -102,10 +102,10 @@ def get_annotators(annotator_conf, schema):
     :rtype: dict
     """
     annotator_map = {"umls.metamap": MetaMapDriver,
-                     "umls.metamap.spd": MetaMapDriver,
+                     "umls.metamap.pd": MetaMapDriver,
                      "umls.quickumls.dis": QuickUMLSDriver,
                      "umls.quickumls.sdsi": QuickUMLSDriver,
-                     "umls.quickumls.spd": QuickUMLSDriver,
+                     "umls.quickumls.pd": QuickUMLSDriver,
                      "umls.quickumls.ss": QuickUMLSDriver,
                      "umls.quickumls.tc": QuickUMLSDriver,
                      "meddra.bioportal": BioPortalDriver,
