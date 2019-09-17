@@ -60,17 +60,17 @@ def filter_connections(connections, concepts, ignore_concept_types):
         i_pref_atoms = [a for a in concepts[i].get_atoms()
                         if a.is_preferred is True]
         i_pts = [a.term.lower() for a in i_pref_atoms]
-        i_linked_ids = [a.src_id for a in i_pref_atoms
-                        if a.src in ["UMLS", "MEDDRA"]]
+        i_linked_terms = [a.term.lower() for a in i_pref_atoms
+                          if a.src in ["UMLS", "MEDDRA"]]
 
         j_pref_atoms = [a for a in concepts[j].get_atoms()
                         if a.is_preferred is True]
         j_pts = [a.term.lower() for a in j_pref_atoms]
-        j_linked_ids = [a.src_id for a in j_pref_atoms
-                        if a.src in ["UMLS", "MEDDRA"]]
+        j_linked_terms = [a.term.lower() for a in j_pref_atoms
+                          if a.src in ["UMLS", "MEDDRA"]]
 
         if len(set(i_pts) & set(j_pts)) > 0:
-            if len(set(i_linked_ids) & set(j_linked_ids)) > 0:
+            if len(set(i_linked_terms) & set(j_linked_terms)) > 0:
                 cnxs.append((i, j))
 
     return cnxs
