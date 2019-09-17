@@ -45,7 +45,8 @@ def main():
     # 1,Ginseng,"ginseng"
     # 1,Ginseng,"ginsang"
     # 1,Ginseng,"ginseng panax"
-    # Column names are now "group_id", "group_name", "synonym".
+    # Column names are now "group_id", "group_name",
+    #                      "synonym", "ingredient_category".
     ingredients_split = split_synonyms(ingredients_data)
 
     # Apply a series of regular expressions to normalize the synonyms.
@@ -99,9 +100,10 @@ def read_ingredients_data(infile):
                                    dtype={"Ingredient - Group ID": int})
     ingredients_data = ingredients_data[["Ingredient - Group ID",
                                          "Ingredient - Group Name",
-                                         "Synonyms/Sources"]]
+                                         "Synonyms/Sources", "CATEGORY"]]
     ingredients_data.drop_duplicates(inplace=True)
-    ingredients_data.columns = ["group_id", "group_name", "synonyms"]
+    ingredients_data.columns = ["group_id", "group_name",
+                                "synonyms", "ingredient_category"]
     return ingredients_data
 
 
@@ -191,7 +193,8 @@ def split_synonyms(dataframe):
         for syn in syns:
             line = OrderedDict({"group_name": row.group_name,
                                 "group_id": str(row.group_id),
-                                "synonym": syn})
+                                "synonym": syn,
+                                "ingredient_category": row.ingredient_category})  # noqa
             new_df.append(line)
     return pd.DataFrame(new_df)
 
@@ -308,13 +311,15 @@ def expand_ingredients(dataframe):
         syn = ' '.join(syn.strip().split())
         new_rows.append(OrderedDict({"group_name": row.group_name,
                                      "group_id": row.group_id,
-                                     "synonym": syn}))
+                                     "synonym": syn,
+                                     "ingredient_category": row.ingredient_category})) # noqa
         if new_syns != []:
             for ns in new_syns:
                 ns = re.sub(r'[\(\)]', '', ns)
-                new_rows.append({"group_name": row.group_name,
-                                 "group_id": row.group_id,
-                                 "synonym": ns})
+                new_rows.append(OrderedDict({"group_name": row.group_name,
+                                             "group_id": row.group_id,
+                                             "synonym": ns,
+                                             "ingredient_category": row.ingredient_category})) # noqa
     new_df = pd.DataFrame(new_rows)
     new_df = new_df.drop_duplicates()
     return new_df
@@ -327,9 +332,11 @@ def merge_groups(dataframe):
     becomes
     Acai, [acai juice, euterpe oleracea]
     """
-    grouped = dataframe.groupby(["group_name", "group_id"])
+    grouped = dataframe.groupby(["group_name", "group_id",
+                                 "ingredient_category"])
     dataframe = grouped["synonym"].apply(list).reset_index()
-    dataframe.columns = ["group_name", "group_id", "synonyms"]
+    dataframe.columns = ["group_name", "group_id",
+                         "ingredient_category", "synonyms"]
     return dataframe
 
 
@@ -370,8 +377,8 @@ def convert_ingredients_to_concepts(dataframe):
 
         concept = Concept(concept_type="SDSI", atoms=atoms)
 
-        if row["CATEGORY"]:
-            category = row["CATEGORY"].strip()
+        if row.ingredient_category:
+            category = row.ingredient_category.strip()
             a = Attribute(subject=concept,
                           atr_name="ingredient_category",
                           atr_value=category,
