@@ -3,6 +3,7 @@ import re
 import argparse
 import json
 import logging
+from tqdm import tqdm
 
 from idlib import Schema
 
@@ -74,7 +75,7 @@ def main(infiles, schema):
             except json.JSONDecodeError:
                 warnings.add(f"Bad JSON at line {i}. Skipping...")
 
-        for concept in data:
+        for concept in tqdm(data):
             # Check the concept type
             label = concept["concept_type"]
             node = schema.get_node_from_label(label)
@@ -88,7 +89,7 @@ def main(infiles, schema):
                     warnings.add(msg)
 
             # Check the UI format
-            if not re.match(r'[a-zA-Z]+[0-9]{7}', concept["ui"]):
+            if not re.match(r'[a-zA-Z_]+[0-9]{7}', concept["ui"]):
                 warnings.add(f"Improperly formatted UI: '{concept['ui']}'")
 
             # Check the attributes
