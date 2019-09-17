@@ -5,6 +5,13 @@ from tqdm import tqdm
 from idlib import Concept
 
 
+"""
+Deletes all atoms, attributes, and relationships
+from the specified source. If all of a concept's atoms
+are deleted, it is deleted as well.
+"""
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--concepts_file", type=str, required=True,
@@ -19,10 +26,6 @@ def parse_args():
 
 def remove_source(concepts, source_code):
     """
-    Deletes all atoms, attributes, and relationships
-    from the specified source. If all of a concept's atoms
-    are deleted, it is deleted as well.
-
     :param list concepts: List of Concept instances to search through.
     :param str source_code: The source code of the data to delete.
     :returns: List of Concept instances with the source_code data deleted.
