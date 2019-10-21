@@ -37,7 +37,7 @@ The valid Concept types in iDISK. These are
 
 * SDSI: Semantic Dietary Supplement Ingredient
 * DSP: Dietary Supplement Product
-* SPD: Semantic Pharmacological Drug
+* PD: Pharmacological Drug
 * DIS: Disease
 * TC: Therapeutic Class
 * SOC: System Organ Class

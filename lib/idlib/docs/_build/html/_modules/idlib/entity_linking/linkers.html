@@ -152,7 +152,13 @@
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">urllib</span>
+<span class="kn">import</span> <span class="nn">urllib.parse</span>
+<span class="kn">import</span> <span class="nn">urllib.request</span>
+
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="k">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">quickumls</span> <span class="k">import</span> <span class="n">QuickUMLS</span>
 
 
 <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
@@ -174,12 +180,13 @@
 <span class="sd">                  about this linking. For example, the CandidateScore from</span>
 <span class="sd">                  the output of MetaMap.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_string</span><span class="p">,</span> <span class="n">candidate_term</span><span class="p">,</span>
-                 <span class="n">candidate_source</span><span class="p">,</span> <span class="n">candidate_id</span><span class="p">,</span> <span class="o">**</span><span class="n">attrs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_string</span><span class="p">,</span> <span class="n">candidate_term</span><span class="p">,</span> <span class="n">candidate_source</span><span class="p">,</span>
+                 <span class="n">candidate_id</span><span class="p">,</span> <span class="n">linking_score</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">**</span><span class="n">attrs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">input_string</span> <span class="o">=</span> <span class="n">input_string</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">candidate_term</span> <span class="o">=</span> <span class="n">candidate_term</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">candidate_source</span> <span class="o">=</span> <span class="n">candidate_source</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">candidate_id</span> <span class="o">=</span> <span class="n">candidate_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linking_score</span> <span class="o">=</span> <span class="n">linking_score</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span> <span class="o">=</span> <span class="n">attrs</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -233,18 +240,56 @@
         <span class="n">dirname</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;.query_</span><span class="si">{self.name}</span><span class="s2">_</span><span class="si">{datetime_str}</span><span class="s2">&quot;</span>
         <span class="k">return</span> <span class="n">dirname</span>
 
-<div class="viewcode-block" id="EntityLinker.link"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.EntityLinker.link">[docs]</a>    <span class="k">def</span> <span class="nf">link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_strings</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">_add_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Link an input string or sequence of input strings</span>
-<span class="sd">        to entities in the corresponding database. Outputs a nested</span>
+<span class="sd">        Add IDs to each query.</span>
+
+<span class="sd">        :param list data: A list of strings to which to add IDs.</span>
+<span class="sd">        :returns: data with IDs added.</span>
+<span class="sd">        :rtype: list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_prepare_queries</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">,</span> <span class="n">ascii_only</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the queries into the expected format.</span>
+<span class="sd">        Ensures the input is a list of (ID, text) tuples</span>
+<span class="sd">        Removes non-ASCII characters and text in parentheses.</span>
+
+<span class="sd">        :param list queries: queries to process.</span>
+<span class="sd">        :returns: (ID, query) pair(s).</span>
+<span class="sd">        :rtype: list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">queries</span> <span class="o">=</span> <span class="p">[</span><span class="n">queries</span><span class="p">]</span>
+        <span class="c1"># Add IDs if they were not added by the user.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">queries</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Queries do not seem to have IDs. Adding them.&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">)</span>
+            <span class="n">queries</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">query</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">queries</span><span class="p">)]</span>
+
+        <span class="n">cleaned</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span> <span class="ow">in</span> <span class="n">queries</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">ascii_only</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">q</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[^\x00-\x7F]+&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39; ?\([^)]+\)&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span>
+            <span class="n">q</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;\s+&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span>
+            <span class="n">cleaned</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">q</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">cleaned</span>
+
+<div class="viewcode-block" id="EntityLinker.link"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.EntityLinker.link">[docs]</a>    <span class="k">def</span> <span class="nf">link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Link query or list of queries to entities in the</span>
+<span class="sd">        corresponding database. Input should be a</span>
+<span class="sd">        sequence of (ID, text pairs). Outputs a nested</span>
 <span class="sd">        dictionary of the format</span>
 
 <span class="sd">            {input_string: {matched_input: CandidateLink}}.</span>
 
-<span class="sd">        :param list input_strings: String or strings to link.</span>
+<span class="sd">        :param list input_strings: List of (ID, string) pairs to link.</span>
 <span class="sd">        :returns: Dictionary of input strings to CandidateLink instances.</span>
 <span class="sd">        :rtype: dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">queries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_queries</span><span class="p">(</span><span class="n">queries</span><span class="p">)</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="EntityLinker.get_best_links"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.EntityLinker.get_best_links">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">candidate_links</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
@@ -272,14 +317,15 @@
 <span class="sd">    :param int min_score: minimum score of a candidate mapping to keep.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mm_bin</span><span class="p">,</span> <span class="n">data_year</span><span class="o">=</span><span class="s2">&quot;2018AB&quot;</span><span class="p">,</span> <span class="n">data_version</span><span class="o">=</span><span class="s2">&quot;Base&quot;</span><span class="p">,</span>
-                 <span class="n">min_score</span><span class="o">=</span><span class="mi">800</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;metamap&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;metamap&quot;</span><span class="p">,</span> <span class="n">mm_bin</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">data_year</span><span class="o">=</span><span class="s2">&quot;2018AB&quot;</span><span class="p">,</span>
+                 <span class="n">data_version</span><span class="o">=</span><span class="s2">&quot;Base&quot;</span><span class="p">,</span> <span class="n">min_score</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span> <span class="n">keep_semtypes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mm_bin</span> <span class="o">=</span> <span class="n">mm_bin</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">metamap</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mm_bin</span><span class="p">,</span> <span class="s2">&quot;metamap16&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data_year</span> <span class="o">=</span> <span class="n">data_year</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data_version</span> <span class="o">=</span> <span class="n">data_version</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">min_score</span> <span class="o">=</span> <span class="n">min_score</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keep_semtypes</span> <span class="o">=</span> <span class="n">keep_semtypes</span> <span class="ow">or</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log_parameters</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">()</span>
 
@@ -291,6 +337,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  data_year : </span><span class="si">{self.data_year}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  data_version : </span><span class="si">{self.data_version}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  min_score : </span><span class="si">{self.min_score}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  keep_semtypes: </span><span class="si">{self.keep_semtypes}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -302,33 +349,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">tagger_out</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;You may want to start the WSD server before continuing.&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  Run </span><span class="si">{self.mm_bin}</span><span class="s2">/wsdserverctl start&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span> <span class="nf">_clean_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Remove all non-ASCII characters in the content and</span>
-<span class="sd">        remove content inside of ().</span>
-
-<span class="sd">        :param list data: A list of strings to clean.</span>
-<span class="sd">        :returns: cleaned data.</span>
-<span class="sd">        :rtype: list</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">cleaned</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
-            <span class="n">d</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[^\x00-\x7F]+&#39;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
-            <span class="n">d</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot; ?\([^)]+\)&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
-            <span class="n">cleaned</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">cleaned</span>
-
-    <span class="k">def</span> <span class="nf">_add_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Add IDs to each input string. Required by the metamap</span>
-<span class="sd">        --sldiID option which is used by default in _get_call().</span>
-
-<span class="sd">        :param list data: A list of strings to which to add IDs.</span>
-<span class="sd">        :returns: data with IDs added.</span>
-<span class="sd">        :rtype: list</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{i}</span><span class="s2">|</span><span class="si">{input}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span>
 
     <span class="k">def</span> <span class="nf">_get_call</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indata</span><span class="p">,</span> <span class="n">term_processing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                   <span class="n">options</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">relaxed</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -363,11 +383,11 @@
 
         <span class="n">log_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_query_directory_name</span><span class="p">()</span>
         <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">log_dir</span><span class="p">)</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Logging query to </span><span class="si">{log_dir}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Logging query to </span><span class="si">{log_dir}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">infile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">log_dir</span><span class="p">,</span> <span class="s2">&quot;query.in&quot;</span><span class="p">)</span>
         <span class="n">outfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">log_dir</span><span class="p">,</span> <span class="s2">&quot;query.out&quot;</span><span class="p">)</span>
 
-        <span class="c1"># Log the query</span>
+        <span class="c1"># Write the query to a file for logging and for MetaMap to read.</span>
         <span class="c1"># MetaMap requires an extra newline at the end.</span>
         <span class="n">indata</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">indata</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">infile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outF</span><span class="p">:</span>
@@ -394,10 +414,12 @@
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convert the JSON output by MetaMap into a collection of CandidateLink</span>
 <span class="sd">        instances. Outputs a nested dictionary of</span>
-<span class="sd">        `{input_text: {phrase_text: CandidateLink}}`.</span>
+
+<span class="sd">        `{input_id: {phrase_text: [CandidateLink, [...]]}}`.</span>
 
 <span class="sd">        :param dict output: JSON formatted output from self.run_call()</span>
-<span class="sd">        :param list keep_semtypes: dictionary of the form</span>
+<span class="sd">        :param list keep_semtypes: If list, a list of semtypes to keep.</span>
+<span class="sd">                                   If dict, dictionary of the form</span>
 <span class="sd">                                   `{input_term_id: [semtypes, [...]]}`</span>
 <span class="sd">                                   for each input term. If an ID is missing,</span>
 <span class="sd">                                   does not filter the concepts for that term.</span>
@@ -413,8 +435,8 @@
                                  <span class="n">candidate_term</span><span class="o">=</span><span class="n">pref_term</span><span class="p">,</span>
                                  <span class="n">candidate_source</span><span class="o">=</span><span class="s2">&quot;UMLS&quot;</span><span class="p">,</span>
                                  <span class="n">candidate_id</span><span class="o">=</span><span class="n">candidate</span><span class="p">[</span><span class="s2">&quot;CandidateCUI&quot;</span><span class="p">],</span>
-                                 <span class="c1"># attrs</span>
                                  <span class="n">linking_score</span><span class="o">=</span><span class="n">candidate</span><span class="p">[</span><span class="s2">&quot;CandidateScore&quot;</span><span class="p">],</span>
+                                 <span class="c1"># attrs</span>
                                  <span class="n">umls_semantic_type</span><span class="o">=</span><span class="n">candidate</span><span class="p">[</span><span class="s2">&quot;SemTypes&quot;</span><span class="p">])</span>
 
         <span class="n">all_mappings</span> <span class="o">=</span> <span class="p">{}</span>
@@ -432,58 +454,68 @@
                     <span class="n">phrase_text</span> <span class="o">=</span> <span class="n">phrase</span><span class="p">[</span><span class="s2">&quot;PhraseText&quot;</span><span class="p">]</span>
                     <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">phrase</span><span class="p">[</span><span class="s2">&quot;Mappings&quot;</span><span class="p">]</span>
                                   <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">m</span><span class="p">[</span><span class="s2">&quot;MappingCandidates&quot;</span><span class="p">]]</span>
-                    <span class="k">if</span> <span class="n">doc_id</span> <span class="ow">in</span> <span class="n">keep_semtypes</span><span class="p">:</span>
-                        <span class="c1"># Filter candidates on semantic types</span>
-                        <span class="n">types</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">keep_semtypes</span><span class="p">[</span><span class="n">doc_id</span><span class="p">])</span>
-                        <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span>
-                                      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">types</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;SemTypes&quot;</span><span class="p">]))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+
+                    <span class="c1"># Filter candidates on semantic types</span>
+                    <span class="k">if</span> <span class="n">keep_semtypes</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keep_semtypes</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> \
+                           <span class="ow">and</span> <span class="n">doc_id</span> <span class="ow">in</span> <span class="n">keep_semtypes</span><span class="p">:</span>
+                            <span class="n">types</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">keep_semtypes</span><span class="p">[</span><span class="n">doc_id</span><span class="p">])</span>
+                        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keep_semtypes</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                            <span class="n">types</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">keep_semtypes</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">types</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span>
+                                          <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">types</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;SemTypes&quot;</span><span class="p">]))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># noqa</span>
+
                     <span class="k">if</span> <span class="n">candidates</span> <span class="o">!=</span> <span class="p">[]:</span>
                         <span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">_convert_to_candidate_link</span><span class="p">(</span><span class="n">phrase_text</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>  <span class="c1"># noqa</span>
                                       <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">]</span>
                         <span class="n">doc_mappings</span><span class="p">[</span><span class="n">phrase_text</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidates</span>
+
             <span class="n">all_mappings</span><span class="p">[</span><span class="n">doc_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">doc_mappings</span>
 
         <span class="k">return</span> <span class="n">all_mappings</span>
 
-<div class="viewcode-block" id="MetaMapDriver.link"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.MetaMapDriver.link">[docs]</a>    <span class="k">def</span> <span class="nf">link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_strings</span><span class="p">,</span> <span class="n">term_processing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-             <span class="n">call_options</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">keep_semtypes</span><span class="o">=</span><span class="p">{}):</span>
+<div class="viewcode-block" id="MetaMapDriver.link"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.MetaMapDriver.link">[docs]</a>    <span class="k">def</span> <span class="nf">link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">,</span> <span class="n">term_processing</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+             <span class="n">call_options</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">keep_semtypes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Link an input string or list of strings to UMLS concepts.</span>
+<span class="sd">        Link a query or list of queries to UMLS concepts. Outputs a nested</span>
+<span class="sd">        dictionary of the format</span>
 
-<span class="sd">        :param list input_strings: list of strings to input to MetaMap</span>
+<span class="sd">        `{input_id: {phrase_text: [CandidateLink, [...]]}}`.</span>
+
+<span class="sd">        :param list queries: list of queries to send to MetaMap</span>
 <span class="sd">        :param bool term_processing: process a list of terms rather than a</span>
 <span class="sd">                                     list of texts. (default False).</span>
 <span class="sd">        :param str call_options: other command line options to pass to metamap.</span>
 <span class="sd">                                 (default None)</span>
-<span class="sd">        :param list keep_semtypes: list of strings of semantic types to keep.</span>
-<span class="sd">                                   (default None)</span>
+<span class="sd">        :param dict keep_semtypes: If list, list of semantic types to include.</span>
+<span class="sd">                                   If dict, maps input IDs to list of semantic</span>
+<span class="sd">                                   types to keep. (default None)</span>
 <span class="sd">        :returns: mapping from input to UMLS concepts</span>
 <span class="sd">        :rtype: dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keep_semtypes</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;keep_semtypes must be a dict&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">input_strings</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
-            <span class="n">input_strings</span> <span class="o">=</span> <span class="p">[</span><span class="n">input_strings</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">keep_semtypes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">keep_semtypes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_semtypes</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">keep_semtypes</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;keep_semtypes must be a list or a dict&quot;</span><span class="p">)</span>
 
-        <span class="n">clean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clean_data</span><span class="p">(</span><span class="n">input_strings</span><span class="p">)</span>
-        <span class="c1"># Add IDs if they were not added by the user.</span>
-        <span class="n">has_ids_match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;.+\|.+&#39;</span><span class="p">,</span> <span class="n">clean</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">has_ids_match</span><span class="p">:</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Inputs do not seem to have IDs. Adding them.&quot;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warn&quot;</span><span class="p">)</span>
-            <span class="n">clean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_ids</span><span class="p">(</span><span class="n">clean</span><span class="p">)</span>
-
-        <span class="n">call</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_call</span><span class="p">(</span><span class="n">clean</span><span class="p">,</span> <span class="n">term_processing</span><span class="o">=</span><span class="n">term_processing</span><span class="p">,</span>
+        <span class="n">queries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_queries</span><span class="p">(</span><span class="n">queries</span><span class="p">)</span>
+        <span class="n">formatted_for_metamap</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{i}</span><span class="s2">|</span><span class="si">{query}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span> <span class="ow">in</span> <span class="n">queries</span><span class="p">]</span>
+        <span class="n">call</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_call</span><span class="p">(</span><span class="n">formatted_for_metamap</span><span class="p">,</span>
+                              <span class="n">term_processing</span><span class="o">=</span><span class="n">term_processing</span><span class="p">,</span>
                               <span class="n">options</span><span class="o">=</span><span class="n">call_options</span><span class="p">)</span>
         <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_call</span><span class="p">(</span><span class="n">call</span><span class="p">)</span>
         <span class="n">links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_output_to_candidate_links</span><span class="p">(</span><span class="n">output</span><span class="p">,</span>
                                                         <span class="n">keep_semtypes</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">links</span></div>
 
-<div class="viewcode-block" id="MetaMapDriver.get_best_links"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.MetaMapDriver.get_best_links">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">candidate_links</span><span class="p">,</span> <span class="n">min_score</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="MetaMapDriver.get_best_links"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.MetaMapDriver.get_best_links">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">candidate_links</span><span class="p">,</span> <span class="n">min_score</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the candidate link with the highest score</span>
-<span class="sd">        for each input term.</span>
+<span class="sd">        for each input term. The output format is</span>
+
+<span class="sd">        `{input_id: {phrase_text: CandidateLink}}`.</span>
+
 <span class="sd">        Warning! If two or more concepts are tied, one will</span>
 <span class="sd">        be returned at random.</span>
 
@@ -492,7 +524,7 @@
 <span class="sd">                              accept. If not specified, defaults to</span>
 <span class="sd">                              self.min_score.</span>
 <span class="sd">        :returns: The best candidate mapping for each input term.</span>
-<span class="sd">        :rtype: list</span>
+<span class="sd">        :rtype: dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">candidate_links</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Unsupported type &#39;{type(candidate_links)}.&quot;</span><span class="p">)</span>
@@ -504,17 +536,318 @@
                 <span class="n">best_score</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;-inf&quot;</span><span class="p">)</span>
                 <span class="n">best_candidate</span> <span class="o">=</span> <span class="kc">None</span>
                 <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
-                    <span class="n">score</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;linking_score&quot;</span><span class="p">]))</span>
+                    <span class="n">score</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">linking_score</span><span class="p">))</span>
                     <span class="k">if</span> <span class="n">score</span> <span class="o">&gt;</span> <span class="n">best_score</span> <span class="ow">and</span> <span class="n">score</span> <span class="o">&gt;</span> <span class="n">min_score</span><span class="p">:</span>
                         <span class="n">best_score</span> <span class="o">=</span> <span class="n">score</span>
                         <span class="n">best_candidate</span> <span class="o">=</span> <span class="n">c</span>
                 <span class="k">if</span> <span class="n">best_candidate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;No best candidate for input &#39;</span><span class="si">{phrase_text}</span><span class="s2">&#39;.&quot;</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warn&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">)</span>
 
                 <span class="n">phrase2candidate</span><span class="p">[</span><span class="n">phrase_text</span><span class="p">]</span> <span class="o">=</span> <span class="n">best_candidate</span>
             <span class="n">all_concepts</span><span class="p">[</span><span class="n">doc_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">phrase2candidate</span>
         <span class="k">return</span> <span class="n">all_concepts</span></div></div>
+
+
+<div class="viewcode-block" id="QuickUMLSDriver"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.QuickUMLSDriver">[docs]</a><span class="k">class</span> <span class="nc">QuickUMLSDriver</span><span class="p">(</span><span class="n">EntityLinker</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;quickumls&quot;</span><span class="p">,</span> <span class="n">quickumls_install</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                 <span class="n">criterion</span><span class="o">=</span><span class="s2">&quot;score&quot;</span><span class="p">,</span> <span class="n">min_score</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">keep_semtypes</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Interface to QuickUMLS.</span>
+
+<span class="sd">        :param str quickumls_install: The path to the QuickUMLS installation.</span>
+<span class="sd">        :param float min_score: Minimum score to consider, between 0 and 1.0.</span>
+<span class="sd">        :param list keep_semtypes: List of semantic types to consider.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">quickumls_install</span> <span class="o">=</span> <span class="n">quickumls_install</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">=</span> <span class="n">criterion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_score</span> <span class="o">=</span> <span class="n">min_score</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keep_semtypes</span> <span class="o">=</span> <span class="n">keep_semtypes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_parameters</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_log_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Staring annotator &#39;</span><span class="si">{self.name}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.name}</span><span class="s2"> parameters:&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  quickumls_install : </span><span class="si">{self.quickumls_install}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  criterion : </span><span class="si">{self.criterion}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  min_score : </span><span class="si">{self.min_score}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  keep_semtypes : </span><span class="si">{self.keep_semtypes}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Instantiate the QuickUMLS matcher.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_linker</span> <span class="o">=</span> <span class="n">QuickUMLS</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quickumls_install</span><span class="p">,</span>
+                                 <span class="n">overlapping_criteria</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="p">,</span>
+                                 <span class="n">threshold</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_score</span><span class="p">,</span>
+                                 <span class="n">accepted_semtypes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">keep_semtypes</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Started&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_convert_output_to_candidate_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert the raw QuickUMLS output into CandidateLink</span>
+<span class="sd">        instances. Output is of the format:</span>
+
+<span class="sd">        {matched_string: [CandidateLink, [...]]}</span>
+
+<span class="sd">        :param list outputs: List of outputs from QuickUMLS.match().</span>
+<span class="sd">    def __init__(self, input_string, candidate_term,</span>
+<span class="sd">                 candidate_source, candidate_id, **attrs):</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">phrase</span> <span class="ow">in</span> <span class="n">outputs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">match</span> <span class="ow">in</span> <span class="n">phrase</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">candidate_term</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="s2">&quot;preferred_term&quot;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">candidate_term</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>  <span class="c1"># No preferred_term found.</span>
+                        <span class="n">candidate_term</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="s2">&quot;term&quot;</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="n">candidate_term</span> <span class="o">=</span> <span class="n">match</span><span class="p">[</span><span class="s2">&quot;term&quot;</span><span class="p">]</span>
+                <span class="n">candidate</span> <span class="o">=</span> <span class="n">CandidateLink</span><span class="p">(</span><span class="n">input_string</span><span class="o">=</span><span class="n">match</span><span class="p">[</span><span class="s2">&quot;ngram&quot;</span><span class="p">],</span>
+                                          <span class="n">candidate_term</span><span class="o">=</span><span class="n">candidate_term</span><span class="p">,</span>
+                                          <span class="n">candidate_source</span><span class="o">=</span><span class="s2">&quot;UMLS&quot;</span><span class="p">,</span>
+                                          <span class="n">candidate_id</span><span class="o">=</span><span class="n">match</span><span class="p">[</span><span class="s2">&quot;cui&quot;</span><span class="p">],</span>
+                                          <span class="n">linking_score</span><span class="o">=</span><span class="n">match</span><span class="p">[</span><span class="s2">&quot;similarity&quot;</span><span class="p">],</span>
+                                          <span class="c1"># attrs</span>
+                                          <span class="n">umls_semantic_type</span><span class="o">=</span><span class="n">match</span><span class="p">[</span><span class="s2">&quot;semtypes&quot;</span><span class="p">])</span>
+                <span class="n">links</span><span class="p">[</span><span class="n">match</span><span class="p">[</span><span class="s2">&quot;ngram&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">links</span>
+
+<div class="viewcode-block" id="QuickUMLSDriver.link"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.QuickUMLSDriver.link">[docs]</a>    <span class="k">def</span> <span class="nf">link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Link query or list of queries to entities in the</span>
+<span class="sd">        corresponding database. Input should be a</span>
+<span class="sd">        sequence of (ID, text pairs). Outputs a nested</span>
+<span class="sd">        dictionary of the format</span>
+
+<span class="sd">            {input_id: {matched_input: [CandidateLink, [...]]}}.</span>
+
+<span class="sd">        :param list input_strings: List of (ID, string) pairs to link.</span>
+<span class="sd">        :returns: Dictionary of input strings to CandidateLink instances.</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">queries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_queries</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="n">ascii_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">all_links</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span> <span class="ow">in</span> <span class="n">queries</span><span class="p">:</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_linker</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+            <span class="n">links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_output_to_candidate_links</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+            <span class="n">all_links</span><span class="p">[</span><span class="n">qid</span><span class="p">]</span> <span class="o">=</span> <span class="n">links</span>
+        <span class="k">return</span> <span class="n">all_links</span></div>
+
+<div class="viewcode-block" id="QuickUMLSDriver.get_best_links"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.QuickUMLSDriver.get_best_links">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">candidate_links</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given a set of candidate links for a set of input</span>
+<span class="sd">        strings returned by EntityLinker.link(), choose</span>
+<span class="sd">        the &quot;best&quot; linking for each input string from among</span>
+<span class="sd">        the candidate links.</span>
+
+<span class="sd">            {input_id: {matched_input: CandidateLink}}</span>
+
+<span class="sd">        :param dict candidate_links: Dictionary of input strings</span>
+<span class="sd">                                     to candidate linkings.</span>
+<span class="sd">        :returns: candidate_links filtered to include only the &quot;best&quot; links.</span>
+<span class="sd">        :rtype: list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">best_links</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">qid</span> <span class="ow">in</span> <span class="n">candidate_links</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">phrase2candidate</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">matched_str</span><span class="p">,</span> <span class="n">candidates</span><span class="p">)</span> <span class="ow">in</span> <span class="n">candidate_links</span><span class="p">[</span><span class="n">qid</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">best_score</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">best_candidate</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">matched_str</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">c</span><span class="o">.</span><span class="n">candidate_term</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                        <span class="n">best_candidate</span> <span class="o">=</span> <span class="n">c</span>
+                        <span class="k">break</span>
+                    <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">linking_score</span> <span class="o">&gt;</span> <span class="n">best_score</span><span class="p">:</span>
+                        <span class="n">best_score</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">linking_score</span>
+                        <span class="n">best_candidate</span> <span class="o">=</span> <span class="n">c</span>
+                <span class="n">phrase2candidate</span><span class="p">[</span><span class="n">matched_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">best_candidate</span>
+            <span class="n">best_links</span><span class="p">[</span><span class="n">qid</span><span class="p">]</span> <span class="o">=</span> <span class="n">phrase2candidate</span>
+        <span class="k">return</span> <span class="n">best_links</span></div></div>
+
+
+<span class="k">class</span> <span class="nc">BioPortalDriver</span><span class="p">(</span><span class="n">EntityLinker</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Interfaces with the Bioportal API for performing entity linking.</span>
+<span class="sd">    Uses the BioPortal annotator API interface.</span>
+
+<span class="sd">    :param str name: The name of this entity linker.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;bioportal&quot;</span><span class="p">,</span> <span class="n">rest_url</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">query_url</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                 <span class="n">query_options</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rest_url</span> <span class="o">=</span> <span class="n">rest_url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">query_url</span> <span class="o">=</span> <span class="n">query_url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">query_options</span> <span class="o">=</span> <span class="n">query_options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span> <span class="o">=</span> <span class="n">api_key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_parameters</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_log_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Staring annotator &#39;</span><span class="si">{self.name}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.name}</span><span class="s2"> parameters:&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  rest_url : </span><span class="si">{self.rest_url}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  query_url : </span><span class="si">{self.query_url}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  query_options : </span><span class="si">{self.query_options}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;  api_key : </span><span class="si">{self.api_key}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_query_bioportal_api</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
+        <span class="n">opener</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">build_opener</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="n">opener</span><span class="o">.</span><span class="n">addheaders</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;Authorization&quot;</span><span class="p">,</span>
+                                  <span class="n">f</span><span class="s2">&quot;apikey token=</span><span class="si">{self.api_key}</span><span class="s2">&quot;</span><span class="p">)]</span>
+        <span class="n">annotations</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">opener</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">annotations</span>
+
+    <span class="k">def</span> <span class="nf">_get_linked_entities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">annotations</span><span class="p">):</span>
+        <span class="n">links</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">annotation</span> <span class="ow">in</span> <span class="n">annotations</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">class_details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query_bioportal_api</span><span class="p">(</span>
+                        <span class="n">annotation</span><span class="p">[</span><span class="s2">&quot;annotatedClass&quot;</span><span class="p">][</span><span class="s2">&quot;links&quot;</span><span class="p">][</span><span class="s2">&quot;self&quot;</span><span class="p">])</span>
+            <span class="k">except</span> <span class="n">urllib</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">HTTPError</span><span class="p">:</span>
+                <span class="n">ann_id</span> <span class="o">=</span> <span class="n">class_details</span><span class="p">[</span><span class="s1">&#39;annotatedClass&#39;</span><span class="p">][</span><span class="s1">&#39;@id&#39;</span><span class="p">]</span>
+                <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;Error retrieving label for </span><span class="si">{ann_id}</span><span class="s2">&quot;</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">)</span>
+
+            <span class="n">matched_str</span> <span class="o">=</span> <span class="n">annotation</span><span class="p">[</span><span class="s2">&quot;annotations&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;text&quot;</span><span class="p">]</span>
+            <span class="n">ann_id</span> <span class="o">=</span> <span class="n">class_details</span><span class="p">[</span><span class="s2">&quot;@id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">class_details</span><span class="p">[</span><span class="s2">&quot;prefLabel&quot;</span><span class="p">]</span>
+            <span class="n">candidate</span> <span class="o">=</span> <span class="n">CandidateLink</span><span class="p">(</span><span class="n">input_string</span><span class="o">=</span><span class="n">matched_str</span><span class="p">,</span>
+                                      <span class="n">candidate_term</span><span class="o">=</span><span class="n">term</span><span class="p">,</span>
+                                      <span class="n">candidate_source</span><span class="o">=</span><span class="s2">&quot;MEDDRA&quot;</span><span class="p">,</span>
+                                      <span class="n">candidate_id</span><span class="o">=</span><span class="n">ann_id</span><span class="p">)</span>
+            <span class="n">links</span><span class="p">[</span><span class="n">matched_str</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">links</span>
+
+    <span class="k">def</span> <span class="nf">link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">,</span> <span class="n">get_class</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Link a query or list of queries to entities in</span>
+<span class="sd">        the corresponding database. Outputs a nested</span>
+<span class="sd">        dictionary of the format</span>
+
+<span class="sd">            {input_id: {matched_input: [CandidateLink, [...]]}}.</span>
+
+<span class="sd">        :param list input_strings: String or strings to link.</span>
+<span class="sd">        :returns: Dictionary of input strings to CandidateLink instances.</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">all_links</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">raw_queries</span> <span class="o">=</span> <span class="n">queries</span>
+        <span class="n">queries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_queries</span><span class="p">(</span><span class="n">raw_queries</span><span class="p">)</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">query_str</span><span class="p">)</span> <span class="ow">in</span> <span class="n">queries</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_url</span> <span class="o">+</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">query_str</span><span class="p">)</span>
+            <span class="n">request</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rest_url</span> <span class="o">+</span> <span class="n">query</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">query_options</span>
+            <span class="n">annotations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_query_bioportal_api</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">get_class</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">annotations</span>
+            <span class="n">links</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_linked_entities</span><span class="p">(</span><span class="n">annotations</span><span class="p">)</span>
+            <span class="n">all_links</span><span class="p">[</span><span class="n">qid</span><span class="p">]</span> <span class="o">=</span> <span class="n">links</span>
+
+        <span class="k">return</span> <span class="n">all_links</span>
+
+    <span class="k">def</span> <span class="nf">get_best_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">candidate_links</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Given a set of candidate links for a set of input</span>
+<span class="sd">        strings returned by EntityLinker.link(), choose</span>
+<span class="sd">        the &quot;best&quot; linking for each input string from among</span>
+<span class="sd">        the candidate links.</span>
+
+<span class="sd">            {input_id: {matched_input: CandidateLink}}.</span>
+
+<span class="sd">        :param dict candidate_links: Dictionary of input strings</span>
+<span class="sd">                                     to candidate linkings.</span>
+<span class="sd">        :returns: candidate_links filtered to include only the &quot;best&quot; links.</span>
+<span class="sd">        :rtype: list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;get_best_links() just gets the first candidate.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="s2">&quot;warning&quot;</span><span class="p">)</span>
+        <span class="n">best_links</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">qid</span> <span class="ow">in</span> <span class="n">candidate_links</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">phrase2candidate</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">matched_str</span><span class="p">,</span> <span class="n">candidates</span><span class="p">)</span> <span class="ow">in</span> <span class="n">candidate_links</span><span class="p">[</span><span class="n">qid</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">candidates</span><span class="p">:</span>
+                    <span class="n">best</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">best</span> <span class="o">=</span> <span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">phrase2candidate</span><span class="p">[</span><span class="n">matched_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">best</span>
+            <span class="n">best_links</span><span class="p">[</span><span class="n">qid</span><span class="p">]</span> <span class="o">=</span> <span class="n">phrase2candidate</span>
+        <span class="k">return</span> <span class="n">best_links</span>
+
+
+<div class="viewcode-block" id="MedDRARuleBased"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.MedDRARuleBased">[docs]</a><span class="k">class</span> <span class="nc">MedDRARuleBased</span><span class="p">(</span><span class="n">EntityLinker</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A simple rule-based annotator for MedDRA system organ classes (SOCs).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;meddra_soc&quot;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Starting </span><span class="si">{self.name}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_soc_lookup</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term</span><span class="p">):</span>
+        <span class="n">soc_table</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;cardiovascular&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;cardio&quot;</span><span class="p">,</span> <span class="s2">&quot;Cardiac disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10007541&quot;</span><span class="p">),</span>
+                                   <span class="p">(</span><span class="s2">&quot;vascular&quot;</span><span class="p">,</span> <span class="s2">&quot;Vascular disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10047065&quot;</span><span class="p">)],</span>  <span class="c1"># noqa</span>
+                <span class="s2">&quot;dental&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Dental and gingival conditions&quot;</span><span class="p">,</span> <span class="s2">&quot;10044018&quot;</span><span class="p">)],</span>
+                <span class="s2">&quot;dermatologic&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Skin and subcutaneous tissue disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10040785&quot;</span><span class="p">)],</span>  <span class="c1"># noqa</span>
+                <span class="s2">&quot;endocrine&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Endocrine disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10014698&quot;</span><span class="p">)],</span>
+                <span class="s2">&quot;gastrointestinal&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Gastrointestinal disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10017947&quot;</span><span class="p">)],</span>  <span class="c1"># noqa</span>
+                <span class="s2">&quot;genitourinary&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;genito&quot;</span><span class="p">,</span> <span class="s2">&quot;Reproductive system and breast disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10038604&quot;</span><span class="p">),</span>  <span class="c1"># noqa</span>
+                                  <span class="p">(</span><span class="s2">&quot;urinary&quot;</span><span class="p">,</span> <span class="s2">&quot;Renal and urinary disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10038359&quot;</span><span class="p">)],</span>  <span class="c1"># noqa</span>
+                <span class="s2">&quot;hematologic&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Blood and lymphatic system disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10005329&quot;</span><span class="p">)],</span>  <span class="c1"># noqa</span>
+                <span class="s2">&quot;hepatic&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Hepatobiliary disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10019805&quot;</span><span class="p">)],</span>
+                <span class="s2">&quot;immunologic&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Immune system disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10021428&quot;</span><span class="p">)],</span>
+                <span class="s2">&quot;musculoskeletal&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Musculoskeletal and connective tissue disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10028395&quot;</span><span class="p">)],</span>  <span class="c1"># noqa</span>
+                <span class="s2">&quot;neurologic/cns&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Nervous system disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10029205&quot;</span><span class="p">)],</span>  <span class="c1"># noqa</span>
+                <span class="s2">&quot;ocular/otic&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Eye disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10015919&quot;</span><span class="p">)],</span>
+                <span class="s2">&quot;oncologic&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Neoplasms benign, malignant and unspecified (incl cysts and polyps)&quot;</span><span class="p">,</span> <span class="s2">&quot;10029104&quot;</span><span class="p">)],</span>  <span class="c1"># noqa</span>
+                <span class="s2">&quot;psychiatric&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Psychiatric disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10037175&quot;</span><span class="p">)],</span>
+                <span class="s2">&quot;pulmonary/respiratory&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Respiratory, thoracic and mediastinal disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10038738&quot;</span><span class="p">)],</span>  <span class="c1"># noqa</span>
+                <span class="s2">&quot;renal&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;Renal and urinary disorders&quot;</span><span class="p">,</span> <span class="s2">&quot;10038359&quot;</span><span class="p">)],</span>
+                     <span class="p">}</span>
+        <span class="n">candidates</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">socs</span> <span class="o">=</span> <span class="n">soc_table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">term</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">socs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">candidates</span>
+        <span class="k">for</span> <span class="n">soc</span> <span class="ow">in</span> <span class="n">socs</span><span class="p">:</span>
+            <span class="n">matched_str</span> <span class="o">=</span> <span class="n">soc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">soc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">matched_str</span> <span class="o">=</span> <span class="n">term</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+            <span class="n">candidate</span> <span class="o">=</span> <span class="n">CandidateLink</span><span class="p">(</span><span class="n">input_string</span><span class="o">=</span><span class="n">matched_str</span><span class="p">,</span>
+                                      <span class="n">candidate_term</span><span class="o">=</span><span class="n">soc</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                      <span class="n">candidate_id</span><span class="o">=</span><span class="n">soc</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                                      <span class="n">candidate_source</span><span class="o">=</span><span class="s2">&quot;MEDDRA&quot;</span><span class="p">)</span>
+            <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">candidates</span>
+
+<div class="viewcode-block" id="MedDRARuleBased.link"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.MedDRARuleBased.link">[docs]</a>    <span class="k">def</span> <span class="nf">link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">all_candidates</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">queries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_queries</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="n">ascii_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">qid</span><span class="p">,</span> <span class="n">query</span><span class="p">)</span> <span class="ow">in</span> <span class="n">queries</span><span class="p">:</span>
+            <span class="n">matches</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+            <span class="n">candidates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_soc_lookup</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">candidate</span> <span class="ow">in</span> <span class="n">candidates</span><span class="p">:</span>
+                <span class="n">matches</span><span class="p">[</span><span class="n">candidate</span><span class="o">.</span><span class="n">input_string</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+            <span class="n">all_candidates</span><span class="p">[</span><span class="n">qid</span><span class="p">]</span> <span class="o">=</span> <span class="n">matches</span>
+        <span class="k">return</span> <span class="n">all_candidates</span></div>
+
+<div class="viewcode-block" id="MedDRARuleBased.get_best_links"><a class="viewcode-back" href="../../../source/entity_linking.html#idlib.entity_linking.linkers.MedDRARuleBased.get_best_links">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_links</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">candidate_links</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">best_links</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">qid</span> <span class="ow">in</span> <span class="n">candidate_links</span><span class="p">:</span>
+            <span class="n">phrase2candidate</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">matched_str</span><span class="p">,</span> <span class="n">candidates</span><span class="p">)</span> <span class="ow">in</span> <span class="n">candidate_links</span><span class="p">[</span><span class="n">qid</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">phrase2candidate</span><span class="p">[</span><span class="n">matched_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">candidates</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">best_links</span><span class="p">[</span><span class="n">qid</span><span class="p">]</span> <span class="o">=</span> <span class="n">phrase2candidate</span>
+        <span class="k">return</span> <span class="n">best_links</span></div></div>
 </pre></div>
 
            </div>

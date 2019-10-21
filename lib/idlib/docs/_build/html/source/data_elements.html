@@ -162,7 +162,7 @@
 <h2>Atom<a class="headerlink" href="#atom" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="idlib.data_elements.Atom">
-<em class="property">class </em><code class="sig-prename descclassname">idlib.data_elements.</code><code class="sig-name descname">Atom</code><span class="sig-paren">(</span><em class="sig-param">term</em>, <em class="sig-param">src</em>, <em class="sig-param">src_id</em>, <em class="sig-param">term_type</em>, <em class="sig-param">is_preferred</em>, <em class="sig-param">ui=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Atom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Atom" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">idlib.data_elements.</code><code class="sig-name descname">Atom</code><span class="sig-paren">(</span><em class="sig-param">term</em>, <em class="sig-param">src</em>, <em class="sig-param">src_id</em>, <em class="sig-param">term_type</em>, <em class="sig-param">is_preferred</em>, <em class="sig-param">ui=None</em>, <em class="sig-param">**attrs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Atom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Atom" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">idlib.data_elements.DataElement</span></code></p>
 <p>An Atom is an a unique string, source, source ID, and term type.
 A collection of Atoms is a Concept.</p>
@@ -188,7 +188,8 @@ The JSON must be formatted:</p>
  &quot;src&quot;: str,
  &quot;src_id&quot;: str,
  &quot;term_type&quot;: str,
- &quot;is_preferred&quot;: bool}
+ &quot;is_preferred&quot;: bool,
+ **attrs}
 </pre></div>
 </div>
 <dl class="field-list simple">
@@ -212,7 +213,8 @@ The JSON must be formatted:</p>
  &quot;src&quot;: str,
  &quot;src_id&quot;: str,
  &quot;term_type&quot;: str,
- &quot;is_preferred&quot;: bool}
+ &quot;is_preferred&quot;: bool,
+ **attrs}
 </pre></div>
 </div>
 </dd></dl>
@@ -238,6 +240,23 @@ must be an instance of Atom. Optional.</p></li>
 </ul>
 </dd>
 </dl>
+<dl class="method">
+<dt id="idlib.data_elements.Concept.from_concept">
+<em class="property">classmethod </em><code class="sig-name descname">from_concept</code><span class="sig-paren">(</span><em class="sig-param">concept</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Concept.from_concept"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Concept.from_concept" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a new Concept instance with the same
+Atoms, Attributes, and Relationships as this one.
+Attributes and Relationships are copied and their
+subjects updated.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>concept</strong> (<a class="reference internal" href="#idlib.data_elements.Concept" title="idlib.data_elements.Concept"><em>Concept</em></a>) – The concept to copy from.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>New Concept</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="method">
 <dt id="idlib.data_elements.Concept.from_dict">
 <em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">data</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Concept.from_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Concept.from_dict" title="Permalink to this definition">¶</a></dt>
@@ -356,7 +375,7 @@ case, this method should be run after creating all concept instances.</p>
 <h2>Attribute<a class="headerlink" href="#attribute" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="idlib.data_elements.Attribute">
-<em class="property">class </em><code class="sig-prename descclassname">idlib.data_elements.</code><code class="sig-name descname">Attribute</code><span class="sig-paren">(</span><em class="sig-param">subject</em>, <em class="sig-param">atr_name</em>, <em class="sig-param">atr_value</em>, <em class="sig-param">src</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Attribute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Attribute" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">idlib.data_elements.</code><code class="sig-name descname">Attribute</code><span class="sig-paren">(</span><em class="sig-param">subject</em>, <em class="sig-param">atr_name</em>, <em class="sig-param">atr_value</em>, <em class="sig-param">src</em>, <em class="sig-param">ui=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Attribute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Attribute" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">idlib.data_elements.DataElement</span></code></p>
 <p>An attribute of a concept or relationship.</p>
 <dl class="field-list simple">
@@ -369,6 +388,11 @@ case, this method should be run after creating all concept instances.</p>
 </ul>
 </dd>
 </dl>
+<dl class="method">
+<dt id="idlib.data_elements.Attribute.from_attribute">
+<em class="property">classmethod </em><code class="sig-name descname">from_attribute</code><span class="sig-paren">(</span><em class="sig-param">attribute</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Attribute.from_attribute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Attribute.from_attribute" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="idlib.data_elements.Attribute.from_dict">
 <em class="property">classmethod </em><code class="sig-name descname">from_dict</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">subject</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Attribute.from_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Attribute.from_dict" title="Permalink to this definition">¶</a></dt>
@@ -432,7 +456,7 @@ just the ui.</p></li>
 <h2>Relationship<a class="headerlink" href="#relationship" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="idlib.data_elements.Relationship">
-<em class="property">class </em><code class="sig-prename descclassname">idlib.data_elements.</code><code class="sig-name descname">Relationship</code><span class="sig-paren">(</span><em class="sig-param">subject</em>, <em class="sig-param">rel_name</em>, <em class="sig-param">obj</em>, <em class="sig-param">src</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Relationship"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Relationship" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">idlib.data_elements.</code><code class="sig-name descname">Relationship</code><span class="sig-paren">(</span><em class="sig-param">subject</em>, <em class="sig-param">rel_name</em>, <em class="sig-param">object</em>, <em class="sig-param">src</em>, <em class="sig-param">ui=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Relationship"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Relationship" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">idlib.data_elements.DataElement</span></code></p>
 <p>A relationship between two concepts.</p>
 <dl class="field-list simple">
@@ -440,7 +464,7 @@ just the ui.</p></li>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>subject</strong> (<a class="reference internal" href="#idlib.data_elements.Concept" title="idlib.data_elements.Concept"><em>Concept</em></a>) – The subject of this relationship.</p></li>
 <li><p><strong>rel_name</strong> (<em>str</em>) – The relation. E.g. “ingredient_of”.</p></li>
-<li><p><strong>obj</strong> (<em>Concept/str</em>) – The object of this relationship. Can be a
+<li><p><strong>object</strong> (<em>Concept/str</em>) – The object of this relationship. Can be a
 Concept instance or a concept UI.</p></li>
 <li><p><strong>src</strong> (<em>str</em>) – The source code of where this relationship was found.</p></li>
 <li><p><strong>attributes</strong> (<em>list</em><em>(</em><a class="reference internal" href="#idlib.data_elements.Attribute" title="idlib.data_elements.Attribute"><em>Attribute</em></a><em>)</em>) – Any attributes of this relationship.</p></li>
@@ -483,6 +507,11 @@ of a Concept instance.</p></li>
 </dd></dl>
 
 <dl class="method">
+<dt id="idlib.data_elements.Relationship.from_relationship">
+<em class="property">classmethod </em><code class="sig-name descname">from_relationship</code><span class="sig-paren">(</span><em class="sig-param">relationship</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Relationship.from_relationship"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Relationship.from_relationship" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
 <dt id="idlib.data_elements.Relationship.get_attributes">
 <code class="sig-name descname">get_attributes</code><span class="sig-paren">(</span><em class="sig-param">r_type='object'</em>, <em class="sig-param">return_subject=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/data_elements.html#Relationship.get_attributes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.data_elements.Relationship.get_attributes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return a generator over attributes of this relationship.</p>
@@ -512,7 +541,8 @@ a “subject” key.</p></li>
 The subject is optional to accord with the iDISK JSON format.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span>{&quot;rel_name&quot;: str,
  &quot;object&quot;: str,
- &quot;src&quot;: str}
+ &quot;src&quot;: str,
+ &quot;attributes&quot;: list}
 </pre></div>
 </div>
 <dl class="field-list simple">

@@ -157,17 +157,9 @@
 <h1>idlib.entity_linking<a class="headerlink" href="#idlib-entity-linking" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="running-entity-linking">
 <h2>Running Entity Linking<a class="headerlink" href="#running-entity-linking" title="Permalink to this headline">¶</a></h2>
-<p>Entity linking works by following an already created Neo4j knowledge graph schema.</p>
-<p>Each external terminology to map to must have an entry in <cite>annotator.ini</cite>.</p>
-<div class="highlight-na notranslate"><div class="highlight"><pre><span></span>foreach concept in input:
-  get the node in the schema corresponding to concept.concept_type
-  link the concept to the terminology specified by the node.maps_to attribute
-  foreach relationship in concept:
-    look up the relationship in the schema
-    get the node in the schema corresponding to relationship.end_node
-    link the relationship.end_node value to the terminology specified by relationship.end_node.maps_to attribute
-</pre></div>
-</div>
+<p>Entity linking works by following an already created Neo4j knowledge graph schema.
+The schema defines which terminologies each concept type will be linked to. These terminologies
+are instantiated according to <cite>annotator.ini</cite>.</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python run_entity_linking.py --concepts_file path/to/concepts.jsonl <span class="se">\</span>
                              --outfile path/to/outfile.jsonl <span class="se">\</span>
                              --annotator_conf path/to/annotator.ini <span class="se">\</span>
@@ -212,16 +204,17 @@ to candidate linkings.</p>
 
 <dl class="method">
 <dt id="idlib.entity_linking.linkers.EntityLinker.link">
-<code class="sig-name descname">link</code><span class="sig-paren">(</span><em class="sig-param">input_strings</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#EntityLinker.link"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.linkers.EntityLinker.link" title="Permalink to this definition">¶</a></dt>
-<dd><p>Link an input string or sequence of input strings
-to entities in the corresponding database. Outputs a nested
+<code class="sig-name descname">link</code><span class="sig-paren">(</span><em class="sig-param">queries</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#EntityLinker.link"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.linkers.EntityLinker.link" title="Permalink to this definition">¶</a></dt>
+<dd><p>Link query or list of queries to entities in the
+corresponding database. Input should be a
+sequence of (ID, text pairs). Outputs a nested
 dictionary of the format</p>
 <blockquote>
 <div><p>{input_string: {matched_input: CandidateLink}}.</p>
 </div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>input_strings</strong> (<em>list</em>) – String or strings to link.</p>
+<dd class="field-odd"><p><strong>input_strings</strong> (<em>list</em>) – List of (ID, string) pairs to link.</p>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>Dictionary of input strings to CandidateLink instances.</p>
@@ -236,7 +229,7 @@ dictionary of the format</p>
 
 <dl class="class">
 <dt id="idlib.entity_linking.MetaMapDriver">
-<em class="property">class </em><code class="sig-prename descclassname">idlib.entity_linking.</code><code class="sig-name descname">MetaMapDriver</code><span class="sig-paren">(</span><em class="sig-param">mm_bin</em>, <em class="sig-param">data_year='2018AB'</em>, <em class="sig-param">data_version='Base'</em>, <em class="sig-param">min_score=800</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#MetaMapDriver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.MetaMapDriver" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">idlib.entity_linking.</code><code class="sig-name descname">MetaMapDriver</code><span class="sig-paren">(</span><em class="sig-param">name='metamap'</em>, <em class="sig-param">mm_bin=''</em>, <em class="sig-param">data_year='2018AB'</em>, <em class="sig-param">data_version='Base'</em>, <em class="sig-param">min_score=800</em>, <em class="sig-param">keep_semtypes=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#MetaMapDriver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.MetaMapDriver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#idlib.entity_linking.linkers.EntityLinker" title="idlib.entity_linking.linkers.EntityLinker"><code class="xref py py-class docutils literal notranslate"><span class="pre">idlib.entity_linking.linkers.EntityLinker</span></code></a></p>
 <p>Class to start and use a MetaMap instance from within Python.</p>
 <dl class="field-list simple">
@@ -251,10 +244,11 @@ dictionary of the format</p>
 </dl>
 <dl class="method">
 <dt id="idlib.entity_linking.MetaMapDriver.get_best_links">
-<code class="sig-name descname">get_best_links</code><span class="sig-paren">(</span><em class="sig-param">candidate_links</em>, <em class="sig-param">min_score=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#MetaMapDriver.get_best_links"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.MetaMapDriver.get_best_links" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">get_best_links</code><span class="sig-paren">(</span><em class="sig-param">candidate_links</em>, <em class="sig-param">min_score=0</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#MetaMapDriver.get_best_links"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.MetaMapDriver.get_best_links" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the candidate link with the highest score
-for each input term.
-Warning! If two or more concepts are tied, one will
+for each input term. The output format is</p>
+<p><cite>{input_id: {phrase_text: CandidateLink}}</cite>.</p>
+<p>Warning! If two or more concepts are tied, one will
 be returned at random.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -269,25 +263,28 @@ self.min_score.</p></li>
 <dd class="field-even"><p>The best candidate mapping for each input term.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>list</p>
+<dd class="field-odd"><p>dict</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="idlib.entity_linking.MetaMapDriver.link">
-<code class="sig-name descname">link</code><span class="sig-paren">(</span><em class="sig-param">input_strings</em>, <em class="sig-param">term_processing=False</em>, <em class="sig-param">call_options=None</em>, <em class="sig-param">keep_semtypes={}</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#MetaMapDriver.link"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.MetaMapDriver.link" title="Permalink to this definition">¶</a></dt>
-<dd><p>Link an input string or list of strings to UMLS concepts.</p>
+<code class="sig-name descname">link</code><span class="sig-paren">(</span><em class="sig-param">queries</em>, <em class="sig-param">term_processing=False</em>, <em class="sig-param">call_options=None</em>, <em class="sig-param">keep_semtypes=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#MetaMapDriver.link"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.MetaMapDriver.link" title="Permalink to this definition">¶</a></dt>
+<dd><p>Link a query or list of queries to UMLS concepts. Outputs a nested
+dictionary of the format</p>
+<p><cite>{input_id: {phrase_text: [CandidateLink, […]]}}</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>input_strings</strong> (<em>list</em>) – list of strings to input to MetaMap</p></li>
+<li><p><strong>queries</strong> (<em>list</em>) – list of queries to send to MetaMap</p></li>
 <li><p><strong>term_processing</strong> (<em>bool</em>) – process a list of terms rather than a
 list of texts. (default False).</p></li>
 <li><p><strong>call_options</strong> (<em>str</em>) – other command line options to pass to metamap.
 (default None)</p></li>
-<li><p><strong>keep_semtypes</strong> (<em>list</em>) – list of strings of semantic types to keep.
-(default None)</p></li>
+<li><p><strong>keep_semtypes</strong> (<em>dict</em>) – If list, list of semantic types to include.
+If dict, maps input IDs to list of semantic
+types to keep. (default None)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -298,6 +295,76 @@ list of texts. (default False).</p></li>
 </dd>
 </dl>
 </dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="idlib.entity_linking.QuickUMLSDriver">
+<em class="property">class </em><code class="sig-prename descclassname">idlib.entity_linking.</code><code class="sig-name descname">QuickUMLSDriver</code><span class="sig-paren">(</span><em class="sig-param">name='quickumls'</em>, <em class="sig-param">quickumls_install=''</em>, <em class="sig-param">criterion='score'</em>, <em class="sig-param">min_score=0.7</em>, <em class="sig-param">keep_semtypes=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#QuickUMLSDriver"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.QuickUMLSDriver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#idlib.entity_linking.linkers.EntityLinker" title="idlib.entity_linking.linkers.EntityLinker"><code class="xref py py-class docutils literal notranslate"><span class="pre">idlib.entity_linking.linkers.EntityLinker</span></code></a></p>
+<dl class="method">
+<dt id="idlib.entity_linking.QuickUMLSDriver.get_best_links">
+<code class="sig-name descname">get_best_links</code><span class="sig-paren">(</span><em class="sig-param">candidate_links</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#QuickUMLSDriver.get_best_links"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.QuickUMLSDriver.get_best_links" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a set of candidate links for a set of input
+strings returned by EntityLinker.link(), choose
+the “best” linking for each input string from among
+the candidate links.</p>
+<blockquote>
+<div><p>{input_id: {matched_input: CandidateLink}}</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>candidate_links</strong> (<em>dict</em>) – Dictionary of input strings
+to candidate linkings.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>candidate_links filtered to include only the “best” links.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="idlib.entity_linking.QuickUMLSDriver.link">
+<code class="sig-name descname">link</code><span class="sig-paren">(</span><em class="sig-param">queries</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#QuickUMLSDriver.link"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.QuickUMLSDriver.link" title="Permalink to this definition">¶</a></dt>
+<dd><p>Link query or list of queries to entities in the
+corresponding database. Input should be a
+sequence of (ID, text pairs). Outputs a nested
+dictionary of the format</p>
+<blockquote>
+<div><p>{input_id: {matched_input: [CandidateLink, […]]}}.</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>input_strings</strong> (<em>list</em>) – List of (ID, string) pairs to link.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dictionary of input strings to CandidateLink instances.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="idlib.entity_linking.MedDRARuleBased">
+<em class="property">class </em><code class="sig-prename descclassname">idlib.entity_linking.</code><code class="sig-name descname">MedDRARuleBased</code><span class="sig-paren">(</span><em class="sig-param">name='meddra_soc'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#MedDRARuleBased"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.MedDRARuleBased" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#idlib.entity_linking.linkers.EntityLinker" title="idlib.entity_linking.linkers.EntityLinker"><code class="xref py py-class docutils literal notranslate"><span class="pre">idlib.entity_linking.linkers.EntityLinker</span></code></a></p>
+<p>A simple rule-based annotator for MedDRA system organ classes (SOCs).</p>
+<dl class="method">
+<dt id="idlib.entity_linking.MedDRARuleBased.get_best_links">
+<code class="sig-name descname">get_best_links</code><span class="sig-paren">(</span><em class="sig-param">candidate_links</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#MedDRARuleBased.get_best_links"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.MedDRARuleBased.get_best_links" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="idlib.entity_linking.MedDRARuleBased.link">
+<code class="sig-name descname">link</code><span class="sig-paren">(</span><em class="sig-param">queries</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/idlib/entity_linking/linkers.html#MedDRARuleBased.link"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#idlib.entity_linking.MedDRARuleBased.link" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </dd></dl>
 
