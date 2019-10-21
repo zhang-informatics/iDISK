@@ -46,6 +46,8 @@ annotation_clean:
 version:
 	mkdir -p $(VERSION_DIR)/concepts/
 	mkdir -p $(VERSION_DIR)/build/{Neo4j,RRF}/
+	echo "# Changes in version $(IDISK_VERSION)" > $(VERSION_DIR)/CHANGELOG.md
+	@echo "Fill in the changes for this version in $(VERSION_DIR)/CHANGELOG.md"
 
 
 ## Create the iDISK schema as a neo4j graph
@@ -100,7 +102,7 @@ run_annotation:
 	# Create the annotation data in Prodigy JSON lines format.
 	mkdir -p $(VERSION_DIR)/concepts/manual_review/indata
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/annotation/to_prodigy.py \
-		--concepts_file $(VERSION_DIR)/concepts/concepts_orig.jsonl \
+		--concepts_file $(VERSION_DIR)/concepts/concepts_linked.jsonl \
 		--connections_file $(VERSION_DIR)/concepts/connections.csv \
 		--outfile $(VERSION_DIR)/concepts/manual_review/indata/matches.jsonl
 	# Create a dataset to hold the annotations if it doesn't exist.
