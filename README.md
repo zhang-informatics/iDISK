@@ -147,6 +147,9 @@ so it is advisable that you run it in an environment in which you can set it and
 make connections
 ```
 
+Note that while this does take a while, these connections only need to change if the order or number of concepts in the source files changes.
+That is, you generally don't need to rerun `make connections` unless your source data drastically changes.
+
 These connections can be used directly, but it is advisable to filter them. Two methods of
 filtering connections are implemented: The first removes connections based on some simple rules; the
 second removes connections using human annotations.
