@@ -14,7 +14,7 @@ Prodigy recipe for annotating pairs of iDISK concepts.
                            "positional", None, str))
 def compare(dataset, input_file, html_file):
     """
-
+    Prodigy recipe for annotating pairs of iDISK concepts.
     """
     stream = JSONL(input_file)
     html_template = open(html_file, 'r').read()
@@ -24,6 +24,7 @@ def compare(dataset, input_file, html_file):
             "dataset": dataset,
             "stream": stream,
             "view_id": "choice",
+            "exclude": [dataset],
             "config": {"html_template": html_template}
             }
 
