@@ -26,7 +26,7 @@ author = 'Jake Vasilakes'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = '1.0.1'
 
 
 # -- General configuration ---------------------------------------------------
