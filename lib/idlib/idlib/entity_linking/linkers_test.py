@@ -8,6 +8,7 @@ from linkers import MetaMapDriver, QuickUMLSDriver, \
 logging.getLogger().setLevel(logging.INFO)
 
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--metamap", action="store_true", default=False,
@@ -44,12 +45,18 @@ def test_metamap():
         msg = f"<test_metamap> " + msg
         func(msg)
 
-    mm = MetaMapDriver(mm_bin="/Users/vasil024/tools/metamap/public_mm/bin",
+    mm = MetaMapDriver(mm_bin="/Users/vasil024/tools/MetaMap/public_mm/bin",
                        data_year="2016AA", data_version="USABase",
-                       keep_semtypes=["sosy", "vita"], min_score=800)
+                       keep_semtypes=["dsyn", "neop", "fndg", "sosy", "vita"],
+                       min_score=800)
 
-    queries = [(1, "Vitamin C is good for headaches."),
-               (2, "Side effects include nausea and vomiting.")]
+    queries = [("lkjsdlfkj", "dysuria"),
+               (10924, "diabetes"),
+               ("c1", "vitamin c"),
+               ("009234", "Melanoma often co-occurs with cancer"),
+               ("55", "Topical administration of aloe gel is considered safe but oral consumption of aloe can cause gastrointestinal upset and electrolyte abnormalities."),
+               ("234", "According to Cerbe, Inc. the efficacy of 714X may decrease when administered concurrently with vitamin B12, vitamin E, and shark or bovine cartilage.")
+               ]
 
     _log("Input:")
     _log(str(queries))
@@ -71,13 +78,14 @@ def test_quickumls():
 
     _log("QuickUMLS")
     # Uncomment for the vanilla version of QuickUMLS
-    # qumls = QuickUMLSDriver(quickumls_install="/Users/vasil024/tools/QuickUMLS/",
-    qumls = QuickUMLSDriver(quickumls_install="/Users/vasil024/Projects/Code/QuickUMLS/Install",
+    qumls_path = "/Users/vasil024/tools/QuickUMLS/PreferredTermRankedInstall/"
+    qumls = QuickUMLSDriver(quickumls_install=qumls_path,
                             min_score=0.7,
                             keep_semtypes=["T047", "T191", "T184", "T033", "T127"])
 
     queries = [("lkjsdlfkj", "dysuria"),
                (10924, "diabetes"),
+               ("c1", "vitamin c"),
                ("009234", "Melanoma often co-occurs with cancer"),
                ("55", "Topical administration of aloe gel is considered safe but oral consumption of aloe can cause gastrointestinal upset and electrolyte abnormalities."),
                ("234", "According to Cerbe, Inc. the efficacy of 714X may decrease when administered concurrently with vitamin B12, vitamin E, and shark or bovine cartilage.")

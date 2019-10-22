@@ -453,7 +453,7 @@ class QuickUMLSDriver(EntityLinker):
             for match in phrase:
                 try:
                     candidate_term = match["preferred_term"]
-                    if candidate_term == "":  # No preferred_term found. 
+                    if candidate_term == "":  # No preferred_term found.
                         candidate_term = match["term"]
                 except KeyError:
                     candidate_term = match["term"]
@@ -506,10 +506,16 @@ class QuickUMLSDriver(EntityLinker):
         for qid in candidate_links.keys():
             phrase2candidate = {}
             for (matched_str, candidates) in candidate_links[qid].items():
-                best = sorted(candidates,
-                              key=lambda c: c.linking_score,
-                              reverse=True)[0]
-                phrase2candidate[matched_str] = best
+                best_score = 0
+                best_candidate = None
+                for c in candidates:
+                    if matched_str.lower() == c.candidate_term.lower():
+                        best_candidate = c
+                        break
+                    if c.linking_score > best_score:
+                        best_score = c.linking_score
+                        best_candidate = c
+                phrase2candidate[matched_str] = best_candidate
             best_links[qid] = phrase2candidate
         return best_links
 
