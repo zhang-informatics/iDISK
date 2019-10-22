@@ -61,6 +61,8 @@ def convert_one_to_prodigy(concept1, concept2):
                         "src": pref2.src,
                         "src_id": pref2.src_id},
                "matched_on": sorted(overlap)}
+    if pref1.term.lower() == pref2.term.lower():
+        outjson = {}
     return outjson
 
 
@@ -71,8 +73,9 @@ def main(concepts_file, connections_file, outfile):
     cnxs = read_connections_file(connections_file)
     with open(outfile, 'w') as outF:
         for outjson in convert_all_to_prodigy(concepts, cnxs):
-            json.dump(outjson, outF)
-            outF.write('\n')
+            if outjson != {}:
+                json.dump(outjson, outF)
+                outF.write('\n')
 
 
 if __name__ == "__main__":
