@@ -103,6 +103,7 @@ def get_annotators(annotator_conf, schema):
     """
     annotator_map = {"umls.metamap": MetaMapDriver,
                      "umls.metamap.pd": MetaMapDriver,
+                     "umls.metamap.sdsi": MetaMapDriver,
                      "umls.quickumls.dis": QuickUMLSDriver,
                      "umls.quickumls.sdsi": QuickUMLSDriver,
                      "umls.quickumls.pd": QuickUMLSDriver,
@@ -262,12 +263,11 @@ def create_concepts_from_linkings(linkings, existing_concepts):
     :returns: Updated set of concepts.
     :rtype: list
     """
-    # TODO: Make these more robust by finding the max value
-    # of the Atom and Concept UIs.
-    num_existing_atoms = sum([1 for concept in existing_concepts
-                              for atom in concept.get_atoms()])
-    Atom.init_counter(num_existing_atoms)
-    Concept.init_counter(len(existing_concepts))
+    max_atom = max([atom._number for concept in existing_concepts
+                    for atom in concept.get_atoms()])
+    Atom.init_counter(max_atom)
+    max_concept = max([concept._number for concept in existing_concepts])
+    Concept.init_counter(max_concept)
 
     concept_lookup = {c.ui: c for c in existing_concepts}
 
