@@ -1,5 +1,5 @@
 from selenium.common.exceptions import NoSuchElementException
-
+from selenium.common.exceptions import StaleElementReferenceException
 
 """
 The combined script for extracting MSKCC data
@@ -99,6 +99,8 @@ class MSKCC_URL(object):
                                     "Load More").click()
                     self.extract_url()
             except NoSuchElementException:
+                self.extract_url()
+            except StaleElementReferenceException:
                 self.extract_url()
         print("Finish extracting.")
 
