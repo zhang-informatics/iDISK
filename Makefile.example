@@ -5,7 +5,7 @@
 #################################################################################
 
 # Your preferred Python.
-PYTHON_INTERPRETER = python3
+PYTHON_INTERPRETER = /path/to/virtual_environment/python
 # Where iDISK is located.
 IDISK_HOME = /full/path/to/iDISK_home/
 # The version of iDISK to build.
@@ -82,6 +82,10 @@ connections:
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/idlib/idlib/set_functions.py find_connections \
 		--infiles $(VERSION_DIR)/concepts/concepts_linked.jsonl \
 		--outfile $(VERSION_DIR)/concepts/connections.csv \
+		--ignore_concept_types DSP \
+		2> $(VERSION_DIR)/concepts/connections.csv.log &
+	@echo "Finding connections. Check $(VERSION_DIR)/concepts/connections.csv.log for progress."
+	@echo "Connections will be written to $(VERSION_DIR)/concepts/connections.csv"
 
 
 ## Filter connections based on simple heuristics
@@ -92,6 +96,7 @@ filter_connections:
 		--outfile $(VERSION_DIR)/concepts/connections_new.csv \
 		--ignore_concept_types DSP
 	@mv $(VERSION_DIR)/concepts/connections.csv $(VERSION_DIR)/concepts/connections_orig.csv
+	@mv $(VERSION_DIR)/concepts/connections.csv.log $(VERSION_DIR)/concepts/connections_orig.csv.log
 	@mv $(VERSION_DIR)/concepts/connections_new.csv $(VERSION_DIR)/concepts/connections.csv
 	@echo "New connections written to \n\t $(VERSION_DIR)/concepts/connections.csv"
 	@echo "Original connections at \n\t $(VERSION_DIR)/concepts/connections_orig.csv"
@@ -101,6 +106,7 @@ filter_connections:
 run_annotation:
 	# Create the annotation data in Prodigy JSON lines format.
 	mkdir -p $(VERSION_DIR)/concepts/manual_review/indata
+	[[ -f $(VERSION_DIR)/concepts/manual_review/indata/matches.jsonl ]] || \
 	$(PYTHON_INTERPRETER) $(IDISK_HOME)/lib/annotation/to_prodigy.py \
 		--concepts_file $(VERSION_DIR)/concepts/concepts_linked.jsonl \
 		--connections_file $(VERSION_DIR)/concepts/connections.csv \
