@@ -1,0 +1,216 @@
+{
+  "ui": "MSKCC0000074",
+  "concept_type": "SDSI",
+  "synonyms": [
+    {
+      "term": "Aloe Gel",
+      "src": "MSKCC",
+      "src_id": "0",
+      "term_type": "SY",
+      "is_preferred": true
+    },
+    {
+      "term": "aloe",
+      "src": "UMLS",
+      "src_id": "C0002168",
+      "term_type": "SY",
+      "is_preferred": true,
+      "linked_string": "Aloe",
+      "linking_score": 1
+    }
+  ],
+  "attributes": [
+    {
+      "atr_name": "umls_semantic_type",
+      "atr_value": "T002",
+      "src": "UMLS"
+    }
+  ],
+  "relationships": [
+    {
+      "rel_name": "has_adverse_reaction",
+      "object": "MSKCC0000077",
+      "src": "MSKCC",
+      "attributes": []
+    },
+    {
+      "rel_name": "interacts_with",
+      "object": "MSKCC0000079",
+      "src": "MSKCC",
+      "attributes": []
+    },
+    {
+      "rel_name": "has_adverse_reaction",
+      "object": "MSKCC0000076",
+      "src": "MSKCC",
+      "attributes": []
+    }
+  ]
+}
+{
+  "ui": "MSKCC0000075",
+  "concept_type": "SDSI",
+  "synonyms": [
+    {
+      "term": "Aloe vera",
+      "src": "MSKCC",
+      "src_id": "0",
+      "term_type": "SY",
+      "is_preferred": true
+    },
+    {
+      "term": "aloe",
+      "src": "UMLS",
+      "src_id": "C0002168",
+      "term_type": "SY",
+      "is_preferred": true,
+      "linked_string": "Aloe",
+      "linking_score": 1
+    }
+  ],
+  "attributes": [
+    {
+      "atr_name": "umls_semantic_type",
+      "atr_value": "T002",
+      "src": "UMLS"
+    }
+  ],
+  "relationships": [
+    {
+      "rel_name": "interacts_with",
+      "object": "MSKCC0000078",
+      "src": "MSKCC",
+      "attributes": []
+    }
+  ]
+}
+{
+  "ui": "MSKCC0000076",
+  "concept_type": "SS",
+  "synonyms": [
+    {
+      "term": "abnormal electrolytes",
+      "src": "UMLS",
+      "src_id": "C0151613",
+      "term_type": "SY",
+      "is_preferred": true,
+      "linked_string": "and electrolyte abnormalities",
+      "linking_score": 0.7241379310344828
+    },
+    {
+      "term": "Topical administration of aloe gel is considered safe but oral consumption of aloe can cause gastrointestinal upset and electrolyte abnormalities.",
+      "src": "MSKCC",
+      "src_id": "0",
+      "term_type": "SY",
+      "is_preferred": false
+    }
+  ],
+  "attributes": [
+    {
+      "atr_name": "umls_semantic_type",
+      "atr_value": "T033",
+      "src": "UMLS"
+    }
+  ],
+  "relationships": []
+}
+{
+  "ui": "MSKCC0000077",
+  "concept_type": "SS",
+  "synonyms": [
+    {
+      "term": "Topical administration of aloe gel is considered safe but oral consumption of aloe can cause gastrointestinal upset and electrolyte abnormalities.",
+      "src": "MSKCC",
+      "src_id": "0",
+      "term_type": "SY",
+      "is_preferred": false
+    },
+    {
+      "term": "Gastrointestinal irritation",
+      "src": "UMLS",
+      "src_id": "C2697368",
+      "term_type": "SY",
+      "is_preferred": true,
+      "linked_string": "cause gastrointestinal upset",
+      "linking_score": 0.7692307692307693
+    }
+  ],
+  "attributes": [
+    {
+      "atr_name": "umls_semantic_type",
+      "atr_value": "T047",
+      "src": "UMLS"
+    }
+  ],
+  "relationships": []
+}
+{
+  "ui": "MSKCC0000078",
+  "concept_type": "PD",
+  "synonyms": [
+    {
+      "term": "aspirin",
+      "src": "MSKCC",
+      "src_id": "0",
+      "term_type": "SY",
+      "is_preferred": false
+    },
+    {
+      "term": "aspirins",
+      "src": "UMLS",
+      "src_id": "C0004057",
+      "term_type": "SY",
+      "is_preferred": true,
+      "linked_string": "aspirin",
+      "linking_score": 1
+    }
+  ],
+  "attributes": [
+    {
+      "atr_name": "umls_semantic_type",
+      "atr_value": "T109",
+      "src": "UMLS"
+    },
+    {
+      "atr_name": "umls_semantic_type",
+      "atr_value": "T121",
+      "src": "UMLS"
+    }
+  ],
+  "relationships": []
+}
+{
+  "ui": "MSKCC0000079",
+  "concept_type": "PD",
+  "synonyms": [
+    {
+      "term": "acetylsalicylic acid",
+      "src": "MSKCC",
+      "src_id": "0",
+      "term_type": "SY",
+      "is_preferred": false
+    },
+    {
+      "term": "aspirins",
+      "src": "UMLS",
+      "src_id": "C0004057",
+      "term_type": "SY",
+      "is_preferred": true,
+      "linked_string": "acetylsalicylic acid",
+      "linking_score": 1
+    }
+  ],
+  "attributes": [
+    {
+      "atr_name": "umls_semantic_type",
+      "atr_value": "T109",
+      "src": "UMLS"
+    },
+    {
+      "atr_name": "umls_semantic_type",
+      "atr_value": "T121",
+      "src": "UMLS"
+    }
+  ],
+  "relationships": []
+}

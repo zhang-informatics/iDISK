@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>idlib.config &mdash; idlib 0.0.1 documentation</title>
+  <title>idlib.config &mdash; idlib 1.0.1 documentation</title>
   
 
   
@@ -160,24 +160,20 @@
 <p>This module defines the following variables:</p>
 <div class="section" id="sources">
 <h2>SOURCES<a class="headerlink" href="#sources" title="Permalink to this headline">¶</a></h2>
-<p>The valid source codes for building iDISK. These are</p>
+<p>The valid sources and source codes for iDISK are, in order of rank:</p>
 <ul class="simple">
-<li><p>IDISK: The Integrate Dietary Supplement Knowledge Base</p></li>
-<li><p>NMCD: Natural Medicines Comprehensive Database</p></li>
-<li><p>DSLD: Dietary Supplements Label Database</p></li>
-<li><p>NHPID: Natural Health Products Ingredient Database</p></li>
-<li><p>LNHPD: Licensed Natural Health Products Database</p></li>
-<li><p>MSKCC: Memorial Sloan Kettering Cancer Center herb database</p></li>
 <li><p>UMLS: the Unified Medical Language System metathesaurus</p></li>
 <li><p>MEDDRA: Medical Dictionary of Regulatory Activities</p></li>
+<li><p>NMCD: Natural Medicines Comprehensive Database</p></li>
+<li><p>MSKCC: Memorial Sloan Kettering Cancer Center herb database</p></li>
+<li><p>DSLD: Dietary Supplements Label Database</p></li>
+<li><p>NHPID: Natural Health Products Ingredient Database</p></li>
 </ul>
 </div>
 <div class="section" id="term-types">
 <h2>TERM_TYPES<a class="headerlink" href="#term-types" title="Permalink to this headline">¶</a></h2>
 <p>The valid term types for Atoms in iDISK. These are</p>
 <ul class="simple">
-<li><p>PN: Preferred Name (deprecated, use PT instead)</p></li>
-<li><p>PT: Preferred Term (the preferred term for this concept in a given source)</p></li>
 <li><p>SN: Scientific Name (e.g. the full chemical name or the taxonomic name)</p></li>
 <li><p>CN: Common Name (how people normally refer to this concept)</p></li>
 <li><p>SY: Synonym (generic term type. covers the cases when SN and CN cannot be determined)</p></li>

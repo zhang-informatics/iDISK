@@ -66,6 +66,9 @@ Project Configuration section of the `Makefile` as necessary for your installati
 make version
 ```
 
+**N.B.** If this is not the first ever version of the database, you are encouraged to fill out the changelog location at `${IDISK_HOME}/versions/${VERSION_DIR}/CHANGELOG.md` with any changes or additions over the previous version.
+
+
 ## The iDISK Schema
 
 Firstly, make sure to 
@@ -140,15 +143,13 @@ This will likely take a few mintues. Check the progress in the log file at
 The next step is to generate candidate synonymy connections between the concepts in the source files.
 Currently, two concepts are considered synonymous if they share one or more atom terms.
 
-Note that for large numbers of concepts this can take a very long time,
-so it is advisable that you run it in an environment in which you can set it and forget it.
-
 ```
 make connections
 ```
 
-Note that while this does take a while, these connections only need to change if the order or number of concepts in the source files changes.
-That is, you generally don't need to rerun `make connections` unless your source data drastically changes.
+Note that if there are any concept types that you do not want to consider matching, this can
+be specified in the Makefile via the `--ignore_concept_types` option in the `connections` recipe.
+Currently, supplement products (concept type DSP) are ignored.
 
 These connections can be used directly, but it is advisable to filter them. Two methods of
 filtering connections are implemented: The first removes connections based on some simple rules; the
@@ -229,5 +230,7 @@ Create these files by running
 ```
 make rrf
 ```
+
+This command will also create a date-stamped zip file containing the RRF files.
 
 -------------------------

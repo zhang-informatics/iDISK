@@ -28,6 +28,9 @@ def parse_args():
                                 per line. Assumes that the concepts have
                                 already been concatenated and thus there
                                 is only one infile.""")
+    parser.add_argument("--ignore_concept_types", type=str, nargs="*",
+                        help="""A list of concept types to ignore when
+                                checking for a match.""")
     args = parser.parse_args()
     return args
 
@@ -66,7 +69,7 @@ def read_connections_file(infile):
     return connections
 
 
-def perform_find_connections(concepts, outfile):
+def perform_find_connections(concepts, outfile, ignore_concept_types=[]):
     """
     Run find_connections without the set function and write the result
     outfile.
@@ -74,14 +77,16 @@ def perform_find_connections(concepts, outfile):
     :param list concepts: A list of Concepts to run over.
     :param list outfile: Where to save the output.
     """
-    cnxs = Union(concepts, run_union=False).connections
+    cnxs = Union(concepts, run_union=False,
+                 ignore_concept_types=ignore_concept_types).connections
     with open(outfile, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerows(cnxs)
     logging.info("Done")
 
 
-def perform_set_function(func, concepts, outfile, connections=None):
+def perform_set_function(func, concepts, outfile, connections=None,
+                         ignore_concept_types=[]):
     """
     Run find_connections without the set function and write the result
     outfile.
@@ -91,7 +96,8 @@ def perform_set_function(func, concepts, outfile, connections=None):
     :param str outfile: The path to the outfile.
     :param list connections: List of int tuples specifying connections.
     """
-    result = func(concepts, connections=connections).result
+    result = func(concepts, connections=connections,
+                  ignore_concept_types=ignore_concept_types).result
     logging.info(f"Number of resulting concepts: {len(result)}")
     with open(outfile, 'w') as outF:
         for concept in result:
@@ -146,27 +152,36 @@ class Union(object):
     :param bool run_union: If True (default) run union-find on the input.
                            Otherwise, just run find_connections.
     """
-    def __init__(self, concepts, connections=[], run_union=True):
-        self._check_params(concepts, connections)
+    def __init__(self, concepts, connections=None, run_union=True,
+                 ignore_concept_types=None):
         self.concepts = concepts
+        self.connections = connections or []
+        self.ignore_concept_types = ignore_concept_types or []
+        self._check_params(self.concepts, self.connections,
+                           self.ignore_concept_types)
+
+        if len(self.ignore_concept_types) > 0:
+            logging.info(f"Ignoring types: {self.ignore_concept_types}.")
+
         self.ui2index = {c.ui: i for (i, c) in enumerate(self.concepts)}
         self.parents = list(range(len(self.concepts)))
-        if connections == []:
-            logging.info(f"Finding connections...")
+        if self.connections == []:
+            logging.info("Finding connections...")
             self.connections = self.find_connections()
-        else:
-            self.connections = connections
         if run_union is True:
             self.union_find()
             self.result = self.update_relationships()
 
-    def _check_params(self, concepts, connections):
+    def _check_params(self, concepts, connections, ignore_types):
         assert(all([isinstance(c, Concept) for c in concepts]))
         assert(isinstance(connections, list))
         if len(connections) > 0:
             assert(all([isinstance(elem, tuple) for elem in connections]))
             assert(all([isinstance(i, int) for elem in connections
                         for i in elem]))
+        assert(isinstance(ignore_types, list))
+        if len(ignore_types) > 0:
+            assert(all([isinstance(elem, str) for elem in ignore_types]))
 
     def find_connections(self):
         """
@@ -184,11 +199,25 @@ class Union(object):
                      for i in indices}
             return cache
 
+        def _cache_concept_types(indices):
+            # Cache the types of each concept to speed things up.
+            cache = {i: self.concepts[i].concept_type for i in indices}
+            return cache
+
+        def _filter_indices(idxs):
+            # Remove indices of concepts that should be ignored.
+            filtered_idxs = []
+            for i in idxs:
+                if _type_cache[i] in self.ignore_concept_types:
+                    continue
+                filtered_idxs.append(i)
+            return filtered_idxs
+
         def _connected(i, j):
-            # Returns True if ci is connected to cj, else False.
-            ci = self.concepts[i]
-            cj = self.concepts[j]
-            if ci.concept_type != cj.concept_type:
+            # Two concepts are connected if their atoms overlap.
+            ci_type = _type_cache[i]
+            cj_type = _type_cache[j]
+            if ci_type != cj_type:
                 return False
             ci_terms = _atom_cache[i]
             cj_terms = _atom_cache[j]
@@ -196,11 +225,13 @@ class Union(object):
             return bool(overlap)
 
         idxs = list(range(len(self.concepts)))
+        _type_cache = _cache_concept_types(idxs)
+        idxs = _filter_indices(idxs)
         _atom_cache = _cache_atoms(idxs)
 
         combos = combinations(idxs, 2)
         # This is a quick approximation as the factorials get large.
-        n_combos = (idxs[-1]**2 // 2) - idxs[-1]
+        n_combos = (len(idxs)**2 // 2) - len(idxs)
         n_connections = 0
         for (count, (i, j)) in enumerate(combos):
             if count % 1000000 == 0:
@@ -348,18 +379,20 @@ if __name__ == "__main__":
                   "intersection": Intersection,
                   "difference": Difference}
     args = parse_args()
-    cnxs = []
 
     logging.info("Loading concepts.")
     concepts = read_concepts_files(*args.infiles)
     logging.info(f"Number of starting concepts: {len(concepts)}")
 
+    cnxs = []
     if args.connections_file is not None:
         cnxs = read_connections_file(args.connections_file)
 
     if args.function == "find_connections":
         # Just find connections, don't compute the union.
-        perform_find_connections(concepts, args.outfile)
+        perform_find_connections(concepts, args.outfile,
+                                 ignore_concept_types=args.ignore_concept_types)  # noqa
     else:
         func = func_table[args.function]
-        perform_set_function(func, concepts, args.outfile, connections=cnxs)
+        perform_set_function(func, concepts, args.outfile, connections=cnxs,
+                             ignore_concept_types=args.ignore_concept_types)
