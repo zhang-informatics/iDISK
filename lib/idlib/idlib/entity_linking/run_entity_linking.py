@@ -2,12 +2,12 @@ import os
 import sys
 import argparse
 import logging
+import importlib
 import json
 from collections import defaultdict
 
-from linkers import MetaMapDriver, QuickUMLSDriver, \
-                    BioPortalDriver, MedDRARuleBased
-from idlib import Schema, Atom, Concept, Attribute, Relationship
+from idlib import Schema
+from idlib.data_elements import Atom, Concept, Attribute, Relationship
 
 
 """
@@ -73,8 +73,8 @@ def parse_args():
     parser.add_argument("--outfile", type=str,
                         help="Where to write the mapped JSON lines file.")
     # Annotator settings
-    parser.add_argument("--annotator_conf", type=str,
-                        help="Path to config file for the annotators.")
+    parser.add_argument("--linkers_conf", type=str,
+                        help="Path to config file for the entity linkers.")
     # Schema access
     parser.add_argument("--uri", type=str, default="localhost",
                         help="URI of the graph to connect to.")
@@ -90,45 +90,37 @@ def parse_args():
     return args
 
 
-def get_annotators(annotator_conf, schema):
+def get_linkers(linkers_conf, schema):
     """
-    Create instances of annotators for mapping
+    Create instances of entity linkers for mapping
     concepts to existing terminologies.
 
-    :param str annotator_conf: JSON file containing configuration parameters
-                              for each annotation driver class.
+    :param str linkers_conf: JSON file containing configuration parameters
+                              for each entity linker driver class.
     :param Schema schema: instance of Schema.
-    :returns: annotators for each external database in the schema.
+    :returns: linkers for each external database in the schema.
     :rtype: dict
     """
-    annotator_map = {"umls.metamap": MetaMapDriver,
-                     "umls.metamap.pd": MetaMapDriver,
-                     "umls.metamap.sdsi": MetaMapDriver,
-                     "umls.quickumls.dis": QuickUMLSDriver,
-                     "umls.quickumls.sdsi": QuickUMLSDriver,
-                     "umls.quickumls.pd": QuickUMLSDriver,
-                     "umls.quickumls.ss": QuickUMLSDriver,
-                     "umls.quickumls.tc": QuickUMLSDriver,
-                     "meddra.bioportal": BioPortalDriver,
-                     "meddra.rulebased": MedDRARuleBased}
+    # Import the linkers dynamically according to the "class_name"
+    # attribute in linkers.conf.
+    linkers_module = importlib.import_module("idlib.entity_linking.linkers")
 
-    if not os.path.exists(annotator_conf):
-        raise OSError("{annotator_conf} not found.")
+    if not os.path.exists(linkers_conf):
+        raise OSError("{linkers_conf} not found.")
+    config = json.load(open(linkers_conf, 'r'))
 
     external_dbs = schema.external_terminologies
-    config = json.load(open(annotator_conf, 'r'))
-
-    logging.info("Starting annotators")
-    annotators = {}
+    logging.info("Starting entity linkers")
+    linkers = {}
     for db in external_dbs:
-        if db not in annotator_map.keys():
-            logging.warning(f"No driver available for '{db}'. Skipping.")
-            continue
-        driver = annotator_map[db]
         params = config[db]
+        # This will throw an AttributeError if the class_name
+        # is not in the linkers module.
+        driver = getattr(linkers_module, params["class_name"])
         params.update({"name": db})
-        annotators[db] = (driver, params)
-    return annotators
+        del params["class_name"]
+        linkers[db] = (driver, params)
+    return linkers
 
 
 def get_linkables_from_concepts(concepts, schema):
@@ -200,13 +192,13 @@ def get_linkables_from_relationships(concepts, schema):
     return list(linkables)
 
 
-def link_entities(linkables, annotators):
+def link_entities(linkables, linkers):
     """
     Link the Linking.string instances to external terminologies using
-    annotators.
+    linkers.
 
     :param iterable linkings: Linking instances to link.
-    :param dict annotators: Dictionary from source database names
+    :param dict linkers: Dictionary from source database names
                             to EntityLinker instances.
     :returns: The input Linking instances with their
               candidate_links values populated.
@@ -227,12 +219,12 @@ def link_entities(linkables, annotators):
     # Run each query.
     for (terminology, queries) in queries_by_terminology.items():
         try:
-            driver, params = annotators[terminology]
-            ann = driver(**params)
+            driver, params = linkers[terminology]
+            linker = driver(**params)
         except KeyError:
             continue
-        candidates = ann.link(queries)
-        candidates = ann.get_best_links(candidates)
+        candidates = linker.link(queries)
+        candidates = linker.get_best_links(candidates)
 
         # Add the linked entities to the corresponding Linking instance.
         # {LinkedString().id: {matched_str: CandidateLink}}
@@ -247,7 +239,7 @@ def link_entities(linkables, annotators):
         # Destroy this driver. Required for QuickUMLS, but good in
         # all cases to ensure we're not keeping unnecessary things
         # in memory.
-        del ann
+        del linker
 
     return linkables
 
@@ -343,13 +335,13 @@ def create_concepts_from_linkings(linkings, existing_concepts):
     return all_concepts
 
 
-def link_concepts(concepts, annotators, schema):
-    ann_names = [ann[1]["name"] for ann in annotators.values()]
-    logging.info(f"Annotators: {ann_names}")
+def link_concepts(concepts, linkers, schema):
+    linker_names = [linker[1]["name"] for linker in linkers.values()]
+    logging.info(f"Entity Linkers: {linker_names}")
     logging.info("LINKING CONCEPTS")
     concept_linkables = get_linkables_from_concepts(concepts, schema)
     logging.info(f"Number of linkables: {len(concept_linkables)}.")
-    linkings = link_entities(concept_linkables, annotators)
+    linkings = link_entities(concept_linkables, linkers)
     logging.info("Creating new concepts from linkings.")
     concepts = create_concepts_from_linkings(linkings, concepts)
     logging.info("COMPLETE")
@@ -364,13 +356,13 @@ if __name__ == "__main__":
     # Load in the Concept instances
     logging.info("Loading Concepts.")
     concepts = Concept.read_jsonl_file(args.concepts_file)
-    # Load the annotators, e.g. MetaMap.
-    annotators = get_annotators(args.annotator_conf, schema)
-    if annotators == []:
-        raise ValueError("No annotators found. Check your schema.")
+    # Load the linkers, e.g. MetaMap.
+    linkers = get_linkers(args.linkers_conf, schema)
+    if linkers == []:
+        raise ValueError("No linkers found. Check your schema.")
     # Link the Concept instances to existing terminologies,
     # and add any relevant attributes.
-    concepts = link_concepts(concepts, annotators, schema)
+    concepts = link_concepts(concepts, linkers, schema)
     # Create Concept instances for the objects of all Relationships
     # belonging to the existing Concepts, and update the Relationship
     # objects accordingly.

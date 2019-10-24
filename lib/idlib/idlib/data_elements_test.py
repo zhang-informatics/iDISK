@@ -1,6 +1,6 @@
 from pprint import pprint
 
-from idlib import Atom, Concept, Attribute, Relationship
+from idlib.data_elements import Atom, Concept, Attribute, Relationship
 from idlib.set_functions import Union
 
 

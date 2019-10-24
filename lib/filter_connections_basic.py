@@ -56,18 +56,17 @@ def filter_connections(connections, concepts, ignore_concept_types):
         if concepts[i].concept_type.upper() in ignore_concept_types:
             continue
 
-        # TODO: Don't hardcode the linking terminologies.
         i_pref_atoms = [a for a in concepts[i].get_atoms()
                         if a.is_preferred is True]
         i_pts = [a.term.lower() for a in i_pref_atoms]
         i_linked_terms = [a.term.lower() for a in i_pref_atoms
-                          if a.src in ["UMLS", "MEDDRA"]]
+                          if "linking_score" in a.attrs.keys()]
 
         j_pref_atoms = [a for a in concepts[j].get_atoms()
                         if a.is_preferred is True]
         j_pts = [a.term.lower() for a in j_pref_atoms]
         j_linked_terms = [a.term.lower() for a in j_pref_atoms
-                          if a.src in ["UMLS", "MEDDRA"]]
+                          if "linking_score" in a.attrs.keys()]
 
         if len(set(i_pts) & set(j_pts)) > 0:
             if len(set(i_linked_terms) & set(j_linked_terms)) > 0:

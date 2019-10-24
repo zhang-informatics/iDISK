@@ -22,7 +22,7 @@ CREATE (p:DSP {preferred_name: "Preferred Name",
 // Pharmacological drug
 CREATE (r:PD {preferred_name: "Preferred Name",
 	      umls_semantic_type: "UMLS Semantic Type",
-	      links_to: "umls.quickumls.pd"})
+	      links_to: "umls.metamap.pd"})
 
 // Disease
 CREATE (d:DIS {preferred_name: "Preferred Name",

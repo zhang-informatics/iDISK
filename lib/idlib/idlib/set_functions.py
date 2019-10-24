@@ -6,7 +6,7 @@ import copy
 from itertools import combinations
 from tqdm import tqdm  # Progress bar
 
-from idlib import Concept
+from idlib.data_elements import Concept
 
 logging.getLogger().setLevel(logging.INFO)
 

@@ -47,7 +47,7 @@ class DataElement(object):
         result.__dict__.update(self.__dict__)
         return result
 
-    # TODO: Figure out how to handle recursive copying with Relationships.
+    # TODO: Handle recursive copying with Relationships.
     def __deepcopy__(self, memo):
         raise NotImplementedError()
         cls = self.__class__
@@ -331,10 +331,6 @@ class Atom(DataElement):
         assert self.src.upper() in SOURCES
         assert isinstance(self.src_id, str)
         assert self.term_type.upper() in TERM_TYPES
-        if self.term_type.upper() == "PN" or self.term_type.upper() == "PT":
-            msg = "Term types PN (preferred name) and PT (preferred term) are \
-                   deprecated. Set is_preffered=True."
-            logging.warning(msg, DeprecationWarning)
         assert isinstance(self.is_preferred, bool)
         assert isinstance(self.ui, (type(None), str))
 
@@ -363,7 +359,6 @@ class Atom(DataElement):
                 **self.attrs}
         return data
 
-    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data):
         """
@@ -702,7 +697,6 @@ class Attribute(DataElement):
         new_atr._prefix = attribute._prefix
         return new_atr
 
-    # TODO: Check for valid JSON
     @classmethod
     def from_dict(cls, data, subject):
         """

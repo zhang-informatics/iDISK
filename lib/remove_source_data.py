@@ -2,7 +2,7 @@ import argparse
 import json
 from tqdm import tqdm
 
-from idlib import Concept
+import idlib
 
 
 """
@@ -14,8 +14,8 @@ are deleted, it is deleted as well.
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--concepts_file", type=str, required=True,
-                        help="The JSON lines file containing the concepts.")
+    parser.add_argument("--kb_dir", type=str, required=True,
+                        help="The directory containing the knowledge base.")
     parser.add_argument("--source_code", type=str, required=True,
                         help="The source code of the data to remove.")
     parser.add_argument("--outfile", type=str, required=True,
@@ -70,12 +70,12 @@ def remove_source(concepts, source_code):
 
 if __name__ == "__main__":
     args = parse_args()
-    print("Loading Concepts...")
-    concepts = Concept.read_jsonl_file(args.concepts_file)
+    print("Loading Knowledge Base...")
+    kb = idlib.load_kb(args.kb_dir)
     print("Done")
     source_code = args.source_code.upper()
-    concepts = remove_source(concepts, source_code)
+    kb = remove_source(kb, source_code)
     with open(args.outfile, 'w') as outF:
-        for concept in concepts:
+        for concept in kb:
             json.dump(concept.to_dict(), outF)
             outF.write('\n')

@@ -3,7 +3,8 @@ import argparse
 import logging
 import datetime
 import py2neo as p2n
-from idlib import Concept
+
+from idlib.data_elements import Concept
 
 logging.getLogger().setLevel(logging.INFO)
 sys.setrecursionlimit(10000)

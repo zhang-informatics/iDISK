@@ -3,7 +3,7 @@ import argparse
 import logging
 import csv
 
-from idlib import Concept
+from idlib.data_elements import Concept
 
 logging.getLogger().setLevel(logging.INFO)
 

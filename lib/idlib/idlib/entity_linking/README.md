@@ -5,11 +5,11 @@ This package contains classes for calling external concept mapping software such
 ### Examples
 
 ```python
->>> from mappers import MetaMapDriver
+>>> from idlib.entity_linking import MetaMapDriver
 >>> mm = MetaMapDriver("path/to/public_mm/bin")
->>> concepts = mm.map(["1|diabetes", "2|cancer"],
+>>> concepts = mm.link(["1|diabetes", "2|cancer"],
 ...  		      keep_semtypes={'1': ["dsyn"], '2': ["neop"]})
->>> print(mm.get_best_mappings(concepts)['1']["diabetes"])
+>>> print(mm.get_best_links(concepts)['1']["diabetes"])
 {"CandidateMatched": "Diabetes",
  "CandidateCUI": "C0011847",
  "CandidateScore": "-1000",
