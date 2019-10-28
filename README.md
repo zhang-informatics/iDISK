@@ -25,8 +25,15 @@ iDISK/                  # Top-level directory containing all iDISK related files
 ```
 lib/
   idlib/                  # The iDISK API library. A Python package. See corresponding documentation for details.
+  config/		  # The iDISK config files.
+    kb.ini		  # Defines basic information about each iDISK version.
+    linkers.conf	  # Instructions on how to instantiate various entity linkers.
+    prodigy.json	  # The prodigy recipe for synonymy annotation.
+    schemas/		  # Where schema versions are stored, as Cypher files.
+    schemas.ini		  # Metadata about schema versions.
   annotation/             # Scripts related to annotation of iDISK concepts and related data.
-  mappers/                # Scripts for mapping iDISK concepts and related data to existing terminologies such as UMLS and MedDRA.
+  check_content.py	  # Checks source data against a schema to ensure consistency.
+  count_data_elements.py  # Script for counting iDISK data elements in a given version.
   filter_connections*.py  # Scripts for determining which concepts to merge.
 
 sources/
@@ -47,6 +54,7 @@ sources/
 versions/
   1.0.0/
     CHANGELOG.md	  # Changelog for this version of iDISK.
+    VERSION_INFO.txt	  # Config log for this verion.
     concepts/		  # Contains the intermediate files generated to build iDISK.
     build/		  # Contains the final iDISK data files.
       Neo4j/		  # The Neo4j files corresponding to this version of iDISK.
