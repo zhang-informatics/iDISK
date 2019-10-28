@@ -71,7 +71,7 @@ def remove_source(concepts, source_code):
 if __name__ == "__main__":
     args = parse_args()
     print("Loading Knowledge Base...")
-    kb = idlib.load_kb(args.kb_dir)
+    kb = load_kb(args.kb_dir)
     print("Done")
     source_code = args.source_code.upper()
     kb = remove_source(kb, source_code)

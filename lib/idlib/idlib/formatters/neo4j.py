@@ -109,18 +109,6 @@ def populate_neo4j_graph(graph, concepts):
             raise RecursionError
 
 
-# TODO: Figure out the best output format.
-def export_to_graphml(graph, outfile):
-    """
-    Export the Neo4j graph to GraphML format.
-
-    :param py2neo.Graph graph: The graph to export.
-    :param str outdir: Where to save the output.
-    """
-    export_kwargs = '{useTypes:true, storeNodeIds:false}'
-    apoc_call = f"CALL apoc.export.cypher.all('{outfile}', {export_kwargs})"
-    graph.run(apoc_call)
-
 
 if __name__ == "__main__":
     args = parse_args()

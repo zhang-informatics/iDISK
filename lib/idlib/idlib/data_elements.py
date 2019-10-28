@@ -3,6 +3,7 @@ import weakref
 import logging
 import json
 import numbers
+import warnings
 import numpy as np
 
 from copy import deepcopy
@@ -586,6 +587,8 @@ class Concept(DataElement):
         :returns: Generator over Concept instances
         :rtype: generator
         """
+        warnings.warn("Concept.read_jsonl_file is deprecated. Use idlib.load_kb instead.",  # noqa
+                      DeprecationWarning)
         concepts = []
         with open(filepath, 'r') as inF:
             for line in inF:
