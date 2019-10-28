@@ -9,13 +9,14 @@ import numpy as np
 from copy import deepcopy
 from collections import OrderedDict, defaultdict
 
+warnings.simplefilter("always", DeprecationWarning)
+warnings.simplefilter("always", UserWarning)
+
 try:
     from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES
 except EnvironmentError:
-    logging.warning("No config specified. Loading defaults.")
+    warnings.warn("No config specified. Loading defaults.", UserWarning)
     SOURCES = TERM_TYPES = CONCEPT_TYPES = None
-
-warnings.simplefilter("always", DeprecationWarning)
 
 
 class DataElement(object):
