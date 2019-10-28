@@ -15,6 +15,8 @@ except EnvironmentError:
     logging.warning("No config specified. Loading defaults.")
     SOURCES = TERM_TYPES = CONCEPT_TYPES = None
 
+warnings.simplefilter("always", DeprecationWarning)
+
 
 class DataElement(object):
 
