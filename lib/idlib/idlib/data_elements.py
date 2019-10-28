@@ -8,7 +8,11 @@ import numpy as np
 from copy import deepcopy
 from collections import OrderedDict, defaultdict
 
-from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES
+try:
+    from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES
+except EnvironmentError:
+    logging.warning("No config specified. Loading defaults.")
+    SOURCES = TERM_TYPES = CONCEPT_TYPES = None
 
 
 class DataElement(object):
@@ -328,11 +332,13 @@ class Atom(DataElement):
 
     def _check_params(self):
         assert isinstance(self.term, str)
-        assert self.src.upper() in SOURCES
         assert isinstance(self.src_id, str)
-        assert self.term_type.upper() in TERM_TYPES
         assert isinstance(self.is_preferred, bool)
         assert isinstance(self.ui, (type(None), str))
+        if SOURCES is not None:
+            assert self.src.upper() in SOURCES
+        if TERM_TYPES is not None:
+            assert self.term_type.upper() in TERM_TYPES
 
     @property
     def attrs(self):
@@ -428,8 +434,9 @@ class Concept(DataElement):
             raise AssertionError("Concept must have at least one Atom.")
         assert all([isinstance(atom, Atom) for atom in self._atoms])
         assert isinstance(self.concept_type, str)
-        assert self.concept_type in CONCEPT_TYPES
         assert isinstance(self.ui, (type(None), str))
+        if CONCEPT_TYPES is not None:
+            assert self.concept_type in CONCEPT_TYPES
 
     @property
     def preferred_atom(self):
@@ -439,6 +446,9 @@ class Concept(DataElement):
         atom["src"] is the closest to the top of the SOURCES list
         and atom["is_preferred"] is True.
 
+        If SOURCES is not define (e.g. if no config has been loaded)
+        then a preferred atom is chosen at random.
+
         :rtype: Atom
         """
         if self._atoms == []:
@@ -447,9 +457,13 @@ class Concept(DataElement):
             atoms = [atom for atom in self._atoms if atom.is_preferred is True]
             if atoms == []:
                 atoms = list(self.get_atoms())
-            atom_rank = [SOURCES.index(atom.src) for atom in atoms]
-            pref = atoms[np.argmin(atom_rank)]
-            self._preferred_atom = pref
+
+            if SOURCES is None:
+                self._preferred_atom = atoms[0]
+            else:
+                atom_rank = [SOURCES.index(atom.src) for atom in atoms]
+                pref = atoms[np.argmin(atom_rank)]
+                self._preferred_atom = pref
         return self._preferred_atom
 
     def to_dict(self):
@@ -782,7 +796,8 @@ class Relationship(DataElement):
         assert isinstance(self.rel_name, str)
         # Object can be a concept or a concept UI.
         assert isinstance(self.object, (Concept, str))
-        assert self.src.upper() in SOURCES
+        if SOURCES is not None:
+            assert self.src.upper() in SOURCES
 
     def to_dict(self, return_subject=False, verbose=False):
         """

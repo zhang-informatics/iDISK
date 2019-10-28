@@ -1,3 +1,4 @@
+import logging
 from pprint import pprint
 
 from idlib.data_elements import Atom, Concept, Attribute, Relationship
@@ -29,14 +30,14 @@ concept2 = Concept(concept_type="SDSI", atoms=atoms[:2])
 print("-> DC0000002: ascorbic acid")
 print(concept2)
 
-rel = Relationship(subject=concept, obj=concept2,
+rel = Relationship(subject=concept, object=concept2,
                    rel_name="same_as", src="NMCD")
 concept.add_elements(rel)
 print("-> DC0000001: ascorbic acid *same_as* DC0000002: ascorbic acid")
 print(rel)
 
 # Note that the obj of a Relationship can be a str.
-rel_str = Relationship(subject=concept, obj="Orange", rel_name="found_in",
+rel_str = Relationship(subject=concept, object="Orange", rel_name="found_in",
                        src="NMCD")
 print("-> DC0000001: ascorbic acid *found_in* Orange")
 print(rel_str)
