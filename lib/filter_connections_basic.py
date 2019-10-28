@@ -2,7 +2,7 @@ import argparse
 import csv
 from tqdm import tqdm
 
-from idlib import Concept
+from idlib.data_elements import Concept
 
 """
 Given a set of candidate connections and the concepts,
