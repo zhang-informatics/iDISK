@@ -2,7 +2,7 @@ import argparse
 import json
 from tqdm import tqdm
 
-import idlib
+from idlib import load_kb
 
 
 """

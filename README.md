@@ -215,14 +215,14 @@ The output of `make merge` is a JSON file in the iDISK format that is perfectly 
 >>> import idlib
 >>> kb = idlib.load_kb("path/to/version/directory")
 >>> 
->>> for rel in kb[0].get_relationships():
+>>> for rel in kb[1].get_relationships():
 ...     print(rel)
 ...     for rel2 in rel.object.get_relationships():
 ...         print(rel2)
 ...         break
 ...     break
-NMCD0001213: 5-HTP 50 mg **has_ingredient** NHPID_DSLD_NMCD_MSKCC0482236: 5-Hydroxytryptophan
-NHPID_DSLD_NMCD_MSKCC0482236: 5-Hydroxytryptophan **interacts_with** NMCD0478448: Tramadol
+DSLD0001355: Met-Rx - Pure Protein Shake Vanilla Cream **has_ingredient** NHPID_DSLD_MSKCC0478268: Vitamin A
+NHPID_DSLD_MSKCC0478268: Vitamin A **interacts_with** MSKCC0481800: Retinoids
 ```
 
 ### Neo4j
