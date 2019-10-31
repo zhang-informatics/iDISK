@@ -6,6 +6,11 @@ This repository contains the source code required for building the knowledge bas
 knowledge base, in both Neo4j and RRF formats, is available for download at <https://doi.org/10.13020/d6bm3v>
 or from the [releases](https://github.com/jvasilakes/idisk/releases).
 
+### Disclaimer
+iDISK is intended to be used for educational purposes only and nothing contained therein should take the place of professional medical advice.
+The information provided in iDISK obtained from secondary resources does not necessarily reflect the views or opinions of those resources.
+You are responsible for checking the accuracy of relevant facts and opinions given in iDISK before entering into any commitment based upon them.
+
 ### Citing iDISK
 Rizvi, Rubina F; Vasilakes, Jake A; Adam, Terrence J; Melton, Genevieve B; Bishop, Jeffrey R; Tao, Cui; Zhang, Rui. (2019). Integrated Dietary Supplement Knowledge Base (iDISK). Retrieved from the Data Repository for the University of Minnesota, https://doi.org/10.13020/d6bm3v.
 
