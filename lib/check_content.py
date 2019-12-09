@@ -55,9 +55,10 @@ def check_attribute(attribute, node):
     value = attribute["atr_value"]
     if attribute["atr_name"] not in node.keys():
         warnings.add(f"Unknown attribute name '{name}'.")
-    if '\n' in value or '\t' in value or '\r' in value:
-        msg = f"Bad whitespace (newline or tab) in '{value}'."
-        warnings.add(msg)
+    if isinstance(value, str):
+        if '\n' in value or '\t' in value or '\r' in value:
+            msg = f"Bad whitespace (newline or tab) in '{value}'."
+            warnings.add(msg)
     return warnings
 
 

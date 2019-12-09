@@ -109,7 +109,6 @@ def populate_neo4j_graph(graph, concepts):
             raise RecursionError
 
 
-
 if __name__ == "__main__":
     args = parse_args()
 
