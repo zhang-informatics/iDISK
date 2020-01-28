@@ -6,7 +6,7 @@ import copy
 from itertools import combinations
 from tqdm import tqdm  # Progress bar
 
-from idlib.data_elements import Concept
+import idlib
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -45,7 +45,7 @@ def read_concepts_files(*infiles):
     """
     all_concepts = []
     for fpath in infiles:
-        concepts = Concept.read_jsonl_file(fpath)
+        concepts = idlib.read_jsonl_file(fpath)
         all_concepts.extend(concepts)
     return all_concepts
 
@@ -173,7 +173,8 @@ class Union(object):
             self.result = self.update_relationships()
 
     def _check_params(self, concepts, connections, ignore_types):
-        assert(all([isinstance(c, Concept) for c in concepts]))
+        assert(all([isinstance(c, idlib.data_elements.Concept)
+                    for c in concepts]))
         assert(isinstance(connections, list))
         if len(connections) > 0:
             assert(all([isinstance(elem, tuple) for elem in connections]))

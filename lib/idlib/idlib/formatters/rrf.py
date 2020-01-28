@@ -3,7 +3,8 @@ import argparse
 import logging
 import csv
 
-from idlib.data_elements import Concept
+# from idlib.data_elements import Concept
+import idlib
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -19,8 +20,10 @@ The files created are
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--concepts_file", type=str, required=True,
-                        help="JSON lines file containing concepts.")
+    # parser.add_argument("--concepts_file", type=str, required=True,
+    #                    help="JSON lines file containing concepts.")
+    parser.add_argument("--idisk_version_dir", type=str, required=True,
+                        help="iDISK version to load")
     parser.add_argument("--outdir", type=str, required=True,
                         help="Where to write the RRF files.")
     args = parser.parse_args()
@@ -100,9 +103,8 @@ def create_metathesaurus_files(concepts, output_dir):
 
 if __name__ == "__main__":
     args = parse_args()
-    msg = f"<rrf> Loading Concept instances from {args.concepts_file}."
-    logging.info(msg)
-    concepts = Concept.read_jsonl_file(args.concepts_file)
+    concepts = idlib.load_kb(args.idisk_version_dir)
+    # concepts = Concept.read_jsonl_file(args.concepts_file)
     logging.info(f"<rrf> Populating Metathesaurus files.")
     create_metathesaurus_files(concepts, args.outdir)
     logging.info("<rrf> Complete")

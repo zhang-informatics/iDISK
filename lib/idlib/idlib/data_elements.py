@@ -12,11 +12,9 @@ from collections import OrderedDict, defaultdict
 warnings.simplefilter("always", DeprecationWarning)
 warnings.simplefilter("always", UserWarning)
 
-try:
-    from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES
-except EnvironmentError:
+from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES
+if SOURCES is None or TERM_TYPES is None or CONCEPT_TYPES is None:
     warnings.warn("No config specified. Loading defaults.", UserWarning)
-    SOURCES = TERM_TYPES = CONCEPT_TYPES = None
 
 
 class DataElement(object):
@@ -587,25 +585,6 @@ class Concept(DataElement):
                 for rel in data["relationships"]]
         concept.add_elements(rels)
         return concept
-
-    @classmethod
-    def read_jsonl_file(cls, filepath):
-        """
-        Creates a concept for each line in the JSON lines file.
-
-        :param str filepath: Path to the JSON lines file containing concepts.
-        :returns: Generator over Concept instances
-        :rtype: generator
-        """
-        warnings.warn("Concept.read_jsonl_file is deprecated. Use idlib.load_kb instead.",  # noqa
-                      DeprecationWarning)
-        concepts = []
-        with open(filepath, 'r') as inF:
-            for line in inF:
-                concept = Concept.from_dict(json.loads(line))
-                concepts.append(concept)
-        cls.resolve_relationships()
-        return concepts
 
     @classmethod
     def resolve_relationships(cls):

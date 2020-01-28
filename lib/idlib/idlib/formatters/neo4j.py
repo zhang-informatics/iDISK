@@ -4,7 +4,7 @@ import logging
 import datetime
 import py2neo as p2n
 
-from idlib.data_elements import Concept
+import idlib
 
 logging.getLogger().setLevel(logging.INFO)
 sys.setrecursionlimit(10000)
@@ -16,8 +16,8 @@ Populate a Neo4j graph with the specified concepts.
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--concepts_file", type=str, required=True,
-                        help="JSON lines file containing concepts.")
+    parser.add_argument("--idisk_version_dir", type=str, required=True,
+                        help="The iDISK version to load.")
     # Neo4j graph access
     parser.add_argument("--uri", type=str, default="localhost",
                         help="URI of the graph to connect to.")
@@ -90,7 +90,7 @@ def populate_neo4j_graph(graph, concepts):
         graph.create(concept_node)
         _create_atom_nodes(concept)
         for rel in concept.get_relationships():
-            if isinstance(rel.object, Concept):
+            if isinstance(rel.object, idlib.data_elements.Concept):
                 obj_node = _add_concepts_to_graph(rel.object)
                 rel_edge = _convert_relationship_to_edge(concept_node,
                                                          rel,
@@ -118,9 +118,7 @@ if __name__ == "__main__":
     graph.begin()
     logging.info("<neo4j>  Success.")
 
-    msg = f"<neo4j> Loading Concept instances from {args.concepts_file}."
-    logging.info(msg)
-    concepts = Concept.read_jsonl_file(args.concepts_file)
+    concepts = idlib.load_kb(args.idisk_version_dir)
 
     logging.info(f"<neo4j> Populating graph.")
     populate_neo4j_graph(graph, concepts)

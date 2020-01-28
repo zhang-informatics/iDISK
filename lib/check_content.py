@@ -5,7 +5,7 @@ import json
 import logging
 from tqdm import tqdm
 
-from idlib import Schema
+import idlib
 
 
 """
@@ -118,6 +118,7 @@ def main(infiles, schema):
 if __name__ == "__main__":
     args = parse_args()
     print("Connecting to schema graph...", end='')
-    schema = Schema(args.schema_uri, args.schema_user, args.schema_password)
+    schema = idlib.Schema(args.schema_uri, args.schema_user,
+                          args.schema_password)
     print("Connected")
     main(args.concept_files, schema)

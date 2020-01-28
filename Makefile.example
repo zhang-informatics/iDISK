@@ -69,8 +69,8 @@ version:
 	@echo
 	@echo "Version info saved to $(VERSION_DIR)/VERSION_INFO.txt"
 	@echo "Fill in the changes for this version in $(VERSION_DIR)/CHANGELOG.md"
-	@echo "PROJECT_VERSION=$(PROJECT_VERSION)" > $(VERSION_DIR)/.config
-	@echo "CONFIG_DIR=$(CONFIG_DIR)" >> $(VERSION_DIR)/.config
+	@echo $(PROJECT_VERSION) > $(VERSION_DIR)/.version
+	@cp -r $(PROJECT_HOME)/lib/config $(VERSION_DIR)/
 
 
 ## Create the iDISK schema as a neo4j graph

@@ -6,8 +6,7 @@ import importlib
 import json
 from collections import defaultdict
 
-from idlib import Schema
-from idlib.data_elements import Atom, Concept, Attribute, Relationship
+import idlib
 
 
 """
@@ -264,9 +263,9 @@ def create_concepts_from_linkings(linkings, existing_concepts):
     """
     max_atom = max([atom._number for concept in existing_concepts
                     for atom in concept.get_atoms()])
-    Atom.init_counter(max_atom)
+    idlib.data_elements.Atom.init_counter(max_atom)
     max_concept = max([concept._number for concept in existing_concepts])
-    Concept.init_counter(max_concept)
+    idlib.data_elements.Concept.init_counter(max_concept)
 
     concept_lookup = {c.ui: c for c in existing_concepts}
 
@@ -290,16 +289,17 @@ def create_concepts_from_linkings(linkings, existing_concepts):
         # For each candidate linking...
         for (i, candidates) in enumerate(linked_str.candidate_links):
             # Create a Concept for this link
-            new_concept = Concept.from_concept(old_concept)
+            new_concept = idlib.data_elements.Concept.from_concept(old_concept)
             # Add data elements corresponding to each linking.
             for cand in candidates:
-                mapped_str_atom = Atom(cand.candidate_term,
-                                       src=cand.candidate_source,
-                                       src_id=cand.candidate_id,
-                                       term_type="SY",
-                                       is_preferred=True,
-                                       linked_string=cand.input_string,
-                                       linking_score=cand.linking_score)
+                mapped_str_atom = idlib.data_elements.Atom(
+                        cand.candidate_term,
+                        src=cand.candidate_source,
+                        src_id=cand.candidate_id,
+                        term_type="SY",
+                        is_preferred=True,
+                        linked_string=cand.input_string,
+                        linking_score=cand.linking_score)
                 new_concept.add_elements(mapped_str_atom)
 
                 # Add any other attributes from the CandidateLink,
@@ -309,10 +309,11 @@ def create_concepts_from_linkings(linkings, existing_concepts):
                         atr_values = [atr_values]
                     for val in atr_values:
                         new_concept.add_elements(
-                                Attribute(subject=new_concept,
-                                          atr_name=atr_name,
-                                          atr_value=val,
-                                          src=link_src)
+                                idlib.data_elements.Attribute(
+                                    subject=new_concept,
+                                    atr_name=atr_name,
+                                    atr_value=val,
+                                    src=link_src)
                                 )
             new_concepts.append(new_concept)
 
@@ -334,7 +335,7 @@ def create_concepts_from_linkings(linkings, existing_concepts):
             except KeyError:
                 continue
             for nc in new_concepts:
-                new_rel = Relationship.from_relationship(rel)
+                new_rel = idlib.data_elements.Relationship.from_relationship(rel)  # noqa
                 new_rel.object = nc
                 to_add.append(new_rel)
             to_rm.append(rel)
@@ -360,11 +361,11 @@ def link_concepts(concepts, linkers, schema, keep_top_n=1):
 if __name__ == "__main__":
     args = parse_args()
     # Load the Neo4j schema
-    schema = Schema(args.uri, args.user, args.password,
-                    cypher_file=args.schema_file)
+    schema = idlib.Schema(args.uri, args.user, args.password,
+                          cypher_file=args.schema_file)
     # Load in the Concept instances
     logging.info("Loading Concepts.")
-    concepts = Concept.read_jsonl_file(args.concepts_file)
+    concepts = idlib.read_jsonl_file(args.concepts_file)
     # Load the linkers, e.g. MetaMap.
     linkers = get_linkers(args.linkers_conf, schema)
     if linkers == []:
