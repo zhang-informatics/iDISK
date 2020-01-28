@@ -2,6 +2,7 @@ import os
 import subprocess
 import re
 import json
+import copy
 import logging
 import urllib
 import urllib.parse
@@ -44,6 +45,9 @@ class CandidateLink(object):
         map_str = f"{self.input_string} -> {self.candidate_term}"
         src_str = f" ({self.candidate_source} {self.candidate_id})"
         return map_str + src_str
+
+    def __repr__(self):
+        return self.__str__()
 
     def __getitem__(self, key):
         """
@@ -169,13 +173,17 @@ class MetaMapDriver(EntityLinker):
     """
 
     def __init__(self, name="metamap", mm_bin="", data_year="2018AB",
-                 data_version="Base", min_score=800, keep_semtypes=None):
+                 data_version="Base", min_score=800,
+                 term_processing=False, relaxed_model=True,
+                 keep_semtypes=None):
         super().__init__(name)
         self.mm_bin = mm_bin
         self.metamap = os.path.join(self.mm_bin, "metamap16")
         self.data_year = data_year
         self.data_version = data_version
         self.min_score = min_score
+        self.term_processing = term_processing
+        self.relaxed_model = relaxed_model
         self.keep_semtypes = keep_semtypes or []
         self._log_parameters()
         self._start()
@@ -188,6 +196,8 @@ class MetaMapDriver(EntityLinker):
         self._log(f"  data_year : {self.data_year}")
         self._log(f"  data_version : {self.data_version}")
         self._log(f"  min_score : {self.min_score}")
+        self._log(f"  term_processing : {self.term_processing}")
+        self._log(f"  relaxed_model : {self.relaxed_model}")
         self._log(f"  keep_semtypes: {self.keep_semtypes}")
 
     def _start(self):
@@ -201,8 +211,7 @@ class MetaMapDriver(EntityLinker):
         self._log("You may want to start the WSD server before continuing.")
         self._log(f"  Run {self.mm_bin}/wsdserverctl start")
 
-    def _get_call(self, indata, term_processing=False,
-                  options=None, relaxed=True):
+    def _get_call(self, indata, options=None):
         """
         Build the command line call to MetaMap.
 
@@ -224,9 +233,9 @@ class MetaMapDriver(EntityLinker):
                 "--silent",  # Don't show logging/version info
                 "--sldiID",  # Single line delimited input with IDs
                 "--JSONn"]  # Output unformatted JSON
-        if term_processing is True:
+        if self.term_processing is True:
             args.extend(term_processing_options)
-        if relaxed is True:
+        if self.relaxed_model is True:
             args.append("--relaxed_model")
         if options is not None:
             args.append(options)
@@ -307,12 +316,15 @@ class MetaMapDriver(EntityLinker):
                                   for c in m["MappingCandidates"]]
 
                     # Filter candidates on semantic types
-                    if keep_semtypes:
-                        if isinstance(keep_semtypes, dict) \
-                           and doc_id in keep_semtypes:
-                            types = set(keep_semtypes[doc_id])
-                        elif isinstance(keep_semtypes, list):
-                            types = set(keep_semtypes)
+                    if self.keep_semtypes:
+                        if isinstance(self.keep_semtypes, dict) \
+                           and doc_id in self.keep_semtypes:
+                            types = set(self.keep_semtypes[doc_id])
+                        elif isinstance(self.keep_semtypes, list):
+                            types = set(self.keep_semtypes)
+                        else:
+                            msg = f"Unsupported type {type(keep_semtypes)} for keep_semtypes"  # noqa
+                            raise TypeError(msg)
                         if types is not None:
                             candidates = [c for c in candidates
                                           if len(types & set(c["SemTypes"])) > 0]  # noqa
@@ -326,8 +338,7 @@ class MetaMapDriver(EntityLinker):
 
         return all_mappings
 
-    def link(self, queries, term_processing=False,
-             call_options=None, keep_semtypes=None):
+    def link(self, queries, call_options=None):
         """
         Link a query or list of queries to UMLS concepts. Outputs a nested
         dictionary of the format
@@ -345,22 +356,14 @@ class MetaMapDriver(EntityLinker):
         :returns: mapping from input to UMLS concepts
         :rtype: dict
         """
-        if keep_semtypes is None:
-            keep_semtypes = self.keep_semtypes
-        if not isinstance(keep_semtypes, (list, dict)):
-            raise ValueError("keep_semtypes must be a list or a dict")
-
         queries = self._prepare_queries(queries)
         formatted_for_metamap = [f"{i}|{query}" for (i, query) in queries]
-        call = self._get_call(formatted_for_metamap,
-                              term_processing=term_processing,
-                              options=call_options)
+        call = self._get_call(formatted_for_metamap, options=call_options)
         output = self._run_call(call)
-        links = self._convert_output_to_candidate_links(output,
-                                                        keep_semtypes)
+        links = self._convert_output_to_candidate_links(output)
         return links
 
-    def get_best_links(self, candidate_links, min_score=0):
+    def get_best_links(self, candidate_links, keep_top_n=1):
         """
         Returns the candidate link with the highest score
         for each input term. The output format is
@@ -371,33 +374,27 @@ class MetaMapDriver(EntityLinker):
         be returned at random.
 
         :param dict mappings: dict of candidate mappings. Output of self.map.
-        :param int min_score: (Optional) minimum candidate mapping score to
-                              accept. If not specified, defaults to
-                              self.min_score.
         :returns: The best candidate mapping for each input term.
         :rtype: dict
         """
         if not isinstance(candidate_links, dict):
             raise ValueError(f"Unsupported type '{type(candidate_links)}.")
 
-        all_concepts = {}
+        candidates_copy = copy.deepcopy(candidate_links)
         for (doc_id, phrases) in candidate_links.items():
-            phrase2candidate = {}
             for (phrase_text, candidates) in phrases.items():
-                best_score = float("-inf")
-                best_candidate = None
-                for c in candidates:
-                    score = abs(int(c.linking_score))
-                    if score > best_score and score > min_score:
-                        best_score = score
-                        best_candidate = c
-                if best_candidate is None:
-                    msg = f"No best candidate for input '{phrase_text}'."
-                    self._log(msg, level="warning")
 
-                phrase2candidate[phrase_text] = best_candidate
-            all_concepts[doc_id] = phrase2candidate
-        return all_concepts
+                candidates_filtered = [c for c in candidates
+                                       if abs(int(c.linking_score)) >= self.min_score]  # noqa
+                if candidates_filtered == []:
+                    msg = f"No best candidate for input '{doc_id}: {phrase_text}'."  # noqa
+                    self._log(msg, level="warning")
+                candidates_sorted = sorted(candidates_filtered,
+                                           key=lambda x: abs(int(x.linking_score)),  # noqa
+                                           reverse=True)
+                top_candidates = candidates_sorted[:keep_top_n]
+                candidates_copy[doc_id][phrase_text] = top_candidates
+        return candidates_copy
 
 
 class QuickUMLSDriver(EntityLinker):
@@ -450,6 +447,7 @@ class QuickUMLSDriver(EntityLinker):
         """
         links = defaultdict(list)
         for phrase in outputs:
+            seen_cuis = set()
             for match in phrase:
                 try:
                     candidate_term = match["preferred_term"]
@@ -457,6 +455,11 @@ class QuickUMLSDriver(EntityLinker):
                         candidate_term = match["term"]
                 except KeyError:
                     candidate_term = match["term"]
+                # QuickUMLS sometimes returns the same CUI more than once.
+                if match["cui"] in seen_cuis:
+                    continue
+                else:
+                    seen_cuis.add(match["cui"])
                 candidate = CandidateLink(input_string=match["ngram"],
                                           candidate_term=candidate_term,
                                           candidate_source="UMLS",
@@ -488,36 +491,31 @@ class QuickUMLSDriver(EntityLinker):
             all_links[qid] = links
         return all_links
 
-    def get_best_links(self, candidate_links):
+    def get_best_links(self, candidate_links, keep_top_n):
         """
         Given a set of candidate links for a set of input
         strings returned by EntityLinker.link(), choose
-        the "best" linking for each input string from among
+        the N "best" linkings for each input string from among
         the candidate links.
 
-            {input_id: {matched_input: CandidateLink}}
+            {input_id: {matched_input: [CandidateLink, [...]]}}
 
         :param dict candidate_links: Dictionary of input strings
                                      to candidate linkings.
-        :returns: candidate_links filtered to include only the "best" links.
+        :returns: candidate_links filtered to include only the N "best" links.
         :rtype: list
         """
-        best_links = {}
         for qid in candidate_links.keys():
-            phrase2candidate = {}
             for (matched_str, candidates) in candidate_links[qid].items():
-                best_score = 0
-                best_candidate = None
                 for c in candidates:
                     if matched_str.lower() == c.candidate_term.lower():
-                        best_candidate = c
-                        break
-                    if c.linking_score > best_score:
-                        best_score = c.linking_score
-                        best_candidate = c
-                phrase2candidate[matched_str] = best_candidate
-            best_links[qid] = phrase2candidate
-        return best_links
+                        c.linking_score = 1.0
+                candidates_sorted = sorted(candidates,
+                                           key=lambda x: x.linking_score,
+                                           reverse=True)
+                candidates_top_n = candidates_sorted[:keep_top_n]
+                candidate_links[qid][matched_str] = candidates_top_n
+        return candidate_links
 
 
 class BioPortalDriver(EntityLinker):
@@ -600,7 +598,7 @@ class BioPortalDriver(EntityLinker):
 
         return all_links
 
-    def get_best_links(self, candidate_links):
+    def get_best_links(self, candidate_links, keep_top_n=1):
         """
         Given a set of candidate links for a set of input
         strings returned by EntityLinker.link(), choose
@@ -611,22 +609,16 @@ class BioPortalDriver(EntityLinker):
 
         :param dict candidate_links: Dictionary of input strings
                                      to candidate linkings.
+        :param int keep_top_n: The number of candidates to keep.
         :returns: candidate_links filtered to include only the "best" links.
         :rtype: list
         """
         msg = "get_best_links() just gets the first candidate."
         self._log(msg, level="warning")
-        best_links = {}
         for qid in candidate_links.keys():
-            phrase2candidate = {}
             for (matched_str, candidates) in candidate_links[qid].items():
-                if not candidates:
-                    best = None
-                else:
-                    best = candidates[0]
-                phrase2candidate[matched_str] = best
-            best_links[qid] = phrase2candidate
-        return best_links
+                candidate_links[qid][matched_str] = candidates[:keep_top_n]
+        return candidate_links
 
 
 class MedDRARuleBased(EntityLinker):
@@ -689,13 +681,10 @@ class MedDRARuleBased(EntityLinker):
             all_candidates[qid] = matches
         return all_candidates
 
-    def get_best_links(self, candidate_links):
+    def get_best_links(self, candidate_links, keep_top_n=1):
         """
         """
-        best_links = {}
         for qid in candidate_links:
-            phrase2candidate = {}
             for (matched_str, candidates) in candidate_links[qid].items():
-                phrase2candidate[matched_str] = candidates[0]
-            best_links[qid] = phrase2candidate
-        return best_links
+                candidate_links[qid][matched_str] = candidates[:keep_top_n]
+        return candidate_links

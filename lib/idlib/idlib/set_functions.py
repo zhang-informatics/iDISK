@@ -323,7 +323,10 @@ class Union(object):
         concepts = [self.concepts[i] for i in set(self.parents)]
         for concept in concepts:
             for rel in concept.get_relationships():
-                object_idx = self.ui2index[rel.object.ui]
+                try:
+                    object_idx = self.ui2index[rel.object.ui]
+                except AttributeError:
+                    continue
                 parent_idx = self.parents[object_idx]
                 parent_concept = self.concepts[parent_idx]
                 rel.object = parent_concept

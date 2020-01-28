@@ -69,7 +69,7 @@ version:
 	@echo
 	@echo "Version info saved to $(VERSION_DIR)/VERSION_INFO.txt"
 	@echo "Fill in the changes for this version in $(VERSION_DIR)/CHANGELOG.md"
-	@echo "PROJECT_VERSION=$(PROJECT_VERSION)" >> $(VERSION_DIR)/.config
+	@echo "PROJECT_VERSION=$(PROJECT_VERSION)" > $(VERSION_DIR)/.config
 	@echo "CONFIG_DIR=$(CONFIG_DIR)" >> $(VERSION_DIR)/.config
 
 
@@ -184,8 +184,14 @@ rrf:
 		--concepts_file $(VERSION_DIR)/concepts/concepts_merged.jsonl \
 		--outdir $(VERSION_DIR)/build/RRF/ \
 		2> $(VERSION_DIR)/build/RRF/build.log
-	zip $(VERSION_DIR)/build/RRF/idisk-rrf-$(PROJECT_VERSION)-$(DATENOW).zip $(VERSION_DIR)/build/RRF/*.RRF
 	@echo "RRF files written to $(VERSION_DIR)/build/RRF/"
+
+
+## Package a full release. Includes the Neo4j, RRF, and raw JSON data files and can be loaded directly by idlib.
+release:
+	cd $(PROJECT_HOME)/versions; \
+		zip -r ../releases/$(PROJECT_VERSION)-$(DATENOW).zip $(shell basename $(VERSION_DIR))/
+	@echo "Packaged release releases/$(PROJECT_VERSION)-$(DATENOW).zip"
 
 
 #################################################################################

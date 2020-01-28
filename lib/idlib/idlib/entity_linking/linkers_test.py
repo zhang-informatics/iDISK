@@ -23,19 +23,12 @@ def parse_args():
     return args
 
 
-def print_all_candidates(all_candidates, log_func):
+def print_candidates(all_candidates, log_func):
     for indoc in all_candidates.keys():
         log_func(str(indoc))
         for (matched_str, candidates) in all_candidates[indoc].items():
             for candidate in candidates:
                 log_func(f" '{matched_str}': {candidate}")
-
-
-def print_best_candidates(best_candidates, log_func):
-    for indoc in best_candidates.keys():
-        log_func(str(indoc))
-        for (matched_str, candidate) in best_candidates[indoc].items():
-            log_func(f" '{matched_str}': {candidate}")
 
 
 def test_metamap():
@@ -62,11 +55,12 @@ def test_metamap():
     _log(str(queries))
     _log("All Candidates")
     all_candidates = mm.link(queries)
-    print_all_candidates(all_candidates, _log)
+    print_candidates(all_candidates, _log)
 
+    _log("\n")
     _log("Best Candidates")
-    best_candidates = mm.get_best_links(all_candidates)
-    print_best_candidates(best_candidates, _log)
+    best_candidates = mm.get_best_links(all_candidates, keep_top_n=2)
+    print_candidates(best_candidates, _log)
 
 
 def test_quickumls():
@@ -94,11 +88,12 @@ def test_quickumls():
     _log(str(queries))
     _log("All Candidates")
     all_candidates = qumls.link(queries)
-    print_all_candidates(all_candidates, _log)
+    print_candidates(all_candidates, _log)
 
+    _log("\n")
     _log("Best Candidates")
-    best_candidates = qumls.get_best_links(all_candidates)
-    print_best_candidates(best_candidates, _log)
+    best_candidates = qumls.get_best_links(all_candidates, keep_top_n=2)
+    print_candidates(best_candidates, _log)
 
 
 def test_bioportal():
@@ -126,11 +121,12 @@ def test_bioportal():
     _log(str(queries))
     _log("All Candidates")
     all_candidates = bioportal.link(queries)
-    print_all_candidates(all_candidates, _log)
+    print_candidates(all_candidates, _log)
 
+    _log("\n")
     _log("Best Candidates")
-    best_candidates = bioportal.get_best_links(all_candidates)
-    print_best_candidates(best_candidates, _log)
+    best_candidates = bioportal.get_best_links(all_candidates, keep_top_n=2)
+    print_candidates(best_candidates, _log)
 
 
 def test_meddra_rulebased():
@@ -150,11 +146,12 @@ def test_meddra_rulebased():
     _log(str(queries))
     _log("All Candidates")
     all_candidates = meddra.link(queries)
-    print_all_candidates(all_candidates, _log)
+    print_candidates(all_candidates, _log)
 
+    _log("\n")
     _log("Best Candidates")
-    best_candidates = meddra.get_best_links(all_candidates)
-    print_best_candidates(best_candidates, _log)
+    best_candidates = meddra.get_best_links(all_candidates, keep_top_n=2)
+    print_candidates(best_candidates, _log)
 
 
 if __name__ == "__main__":

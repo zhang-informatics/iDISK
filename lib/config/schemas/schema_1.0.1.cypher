@@ -51,10 +51,11 @@ CREATE (s:SS {preferred_name: "Preferred Name",
 CREATE (p) -[:HAS_INGREDIENT]-> (i)
 
 // Interacts with
-CREATE (i) -[:INTERACTS_WITH {rating: "Rating", severity: "Severity"}]-> (r)
+CREATE (i) -[:INTERACTS_WITH {interaction_rating: "Rating",
+			      interaction_severity: "Severity"}]-> (r)
 
 // Effects
-CREATE (i) -[:IS_EFFECTIVE_FOR {rating: "Rating"}]-> (d)
+CREATE (i) -[:IS_EFFECTIVE_FOR {effectiveness_rating: "Rating"}]-> (d)
 
 // Has therapeutic class
 CREATE (i) -[:HAS_THERAPEUTIC_CLASS]-> (t)

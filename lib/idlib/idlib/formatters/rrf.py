@@ -76,7 +76,10 @@ def create_metathesaurus_files(concepts, output_dir):
         # MRREL
         for rel in concept.get_relationships():
             rel._prefix = "DR"
-            rel.object._prefix = "DC"
+            try:
+                rel.object._prefix = "DC"
+            except AttributeError:
+                continue
             dsrel_line = [rel.ui, rel.subject.ui, rel.rel_name,
                           rel.object.ui, rel.src]
             dsrel_writer.writerow(dsrel_line)

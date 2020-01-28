@@ -1,6 +1,8 @@
 import argparse
 import csv
+import numpy as np
 from tqdm import tqdm
+from collections import defaultdict
 
 from idlib.data_elements import Concept
 
@@ -50,29 +52,121 @@ def filter_connections(connections, concepts, ignore_concept_types):
     :returns: Filtered connections.
     :rtype: list
     """
+    what_happen = {"no_linked": 0, "linked": 0}
     cnxs = []
     for (i, j) in tqdm(connections):
 
         if concepts[i].concept_type.upper() in ignore_concept_types:
             continue
 
-        i_pref_atoms = [a for a in concepts[i].get_atoms()
-                        if a.is_preferred is True]
-        i_pts = [a.term.lower() for a in i_pref_atoms]
-        i_linked_terms = [a.term.lower() for a in i_pref_atoms
-                          if "linking_score" in a.attrs.keys()]
+        i_terms = []
+        i_pts = []
+        i_linked_terms = []
+        for a in concepts[i].get_atoms():
+            i_terms.append(a.term.lower())
+            if a.is_preferred is True:
+                if "linking_score" in a.attrs.keys():
+                    i_linked_terms.append(a.term.lower())
+                else:
+                    i_pts.append(a.term.lower())
 
-        j_pref_atoms = [a for a in concepts[j].get_atoms()
-                        if a.is_preferred is True]
-        j_pts = [a.term.lower() for a in j_pref_atoms]
-        j_linked_terms = [a.term.lower() for a in j_pref_atoms
-                          if "linking_score" in a.attrs.keys()]
+        j_terms = []
+        j_pts = []
+        j_linked_terms = []
+        for a in concepts[j].get_atoms():
+            j_terms.append(a.term.lower())
+            if a.is_preferred is True:
+                if "linking_score" in a.attrs.keys():
+                    j_linked_terms.append(a.term.lower())
+                else:
+                    j_pts.append(a.term.lower())
 
-        if len(set(i_pts) & set(j_pts)) > 0:
-            if len(set(i_linked_terms) & set(j_linked_terms)) > 0:
+        if len(i_linked_terms) == 0 or len(j_linked_terms) == 0:
+            if len(set(i_terms) & set(j_pts)) > 0 or len(set(j_pts) & set(j_terms)) > 0:  # noqa
+                what_happen["no_linked"] += 1
                 cnxs.append((i, j))
+        else:
+            num_atoms = min([len(set(i_linked_terms)), len(set(j_linked_terms))])  # noqa
+            keep = int(np.ceil(num_atoms * 1.00))
+            if len(set(i_linked_terms) & set(j_linked_terms)) >= keep:
+                what_happen["linked"] += 1
+                cnxs.append((i, j))
+    print(what_happen)
 
     return cnxs
+
+
+def filter_connections_idf(connections, concepts, ignore_concept_types):
+    """
+    Keep connections if the preferred_atom.term for
+    one concept is in the atoms of the other concept.
+
+    :param list connections: List of candidate connections.
+    :param list concepts: List of concepts.
+    :param list ignore_concept_types: List of concept types to exclude.
+    :returns: Filtered connections.
+    :rtype: list
+    """
+    idfs = linked_idf(concepts)
+    idf_range = max(idfs.values()) - min(idfs.values())
+    threshold = min(idfs.values()) + (idf_range / 1.5)
+    print(max(idfs.values()), min(idfs.values()))
+    print(threshold)
+    what_happen = {"no_linked": 0, "linked": 0}
+    cnxs = []
+    for (i, j) in tqdm(connections):
+
+        if concepts[i].concept_type.upper() in ignore_concept_types:
+            continue
+
+        i_terms = []
+        i_pts = []
+        i_linked_terms = []
+        for a in concepts[i].get_atoms():
+            i_terms.append(a.term.lower())
+            if a.is_preferred is True:
+                if "linking_score" in a.attrs.keys():
+                    if idfs[a.src_id] >= threshold:
+                        i_linked_terms.append(a.term.lower())
+                else:
+                    i_pts.append(a.term.lower())
+
+        j_terms = []
+        j_pts = []
+        j_linked_terms = []
+        for a in concepts[j].get_atoms():
+            j_terms.append(a.term.lower())
+            if a.is_preferred is True:
+                if "linking_score" in a.attrs.keys():
+                    if idfs[a.src_id] >= threshold:
+                        j_linked_terms.append(a.term.lower())
+                else:
+                    j_pts.append(a.term.lower())
+
+        if len(i_linked_terms) == 0 or len(j_linked_terms) == 0:
+            #if len(set(i_terms) & set(j_pts)) > 0 or len(set(j_pts) & set(j_terms)) > 0:  # noqa
+            if len(set(i_pts) & set(j_pts)) > 0:
+                what_happen["no_linked"] += 1
+                cnxs.append((i, j))
+        else:
+            num_atoms = min([len(set(i_linked_terms)), len(set(j_linked_terms))])  # noqa
+            if len(set(i_linked_terms) & set(j_linked_terms)) > 1:
+                what_happen["linked"] += 1
+                cnxs.append((i, j))
+    print(what_happen)
+
+    return cnxs
+
+
+def linked_idf(concepts):
+    df = defaultdict(int)
+    for concept in concepts:
+        linked_ids = set([a.src_id for a in concept.get_atoms()
+                          if "linking_score" in a.attrs.keys()])
+        for lid in linked_ids:
+            df[lid] += 1
+    idf = {lid: np.log(len(concepts)/freq) for (lid, freq) in df.items()}
+    return idf
 
 
 def main(connections_file, concepts_file, outfile, ignore_concept_types):

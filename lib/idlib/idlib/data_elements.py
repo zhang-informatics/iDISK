@@ -198,6 +198,13 @@ class DataElement(object):
             raise AttributeError(msg)
         container.discard(element)
 
+    @property
+    def num_atoms(self):
+        if self._atoms is None:
+            msg = f"Atoms not implemented for {type(self).__name__}."
+            raise AttributeError(msg)
+        return len(self._atoms)
+
     def get_atoms(self, atom_name=None, r_type="object"):
         """
         Returns a generator over the atoms of this data element,

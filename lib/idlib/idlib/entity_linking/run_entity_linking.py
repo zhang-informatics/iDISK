@@ -67,14 +67,16 @@ class LinkedString(object):
 def parse_args():
     parser = argparse.ArgumentParser()
     # Input and output files
-    parser.add_argument("--concepts_file", type=str,
+    parser.add_argument("--concepts_file", type=str, required=True,
                         help="""Path to iDISK JSON lines file containing
                                 concepts to map.""")
-    parser.add_argument("--outfile", type=str,
+    parser.add_argument("--outfile", type=str, required=True,
                         help="Where to write the mapped JSON lines file.")
     # Annotator settings
-    parser.add_argument("--linkers_conf", type=str,
+    parser.add_argument("--linkers_conf", type=str, required=True,
                         help="Path to config file for the entity linkers.")
+    parser.add_argument("--keep_top_n", type=int, default=1,
+                        help="Keep the N best links for each candidate.")
     # Schema access
     parser.add_argument("--uri", type=str, default="localhost",
                         help="URI of the graph to connect to.")
@@ -192,7 +194,7 @@ def get_linkables_from_relationships(concepts, schema):
     return list(linkables)
 
 
-def link_entities(linkables, linkers):
+def link_entities(linkables, linkers, keep_top_n):
     """
     Link the Linking.string instances to external terminologies using
     linkers.
@@ -200,10 +202,12 @@ def link_entities(linkables, linkers):
     :param iterable linkings: Linking instances to link.
     :param dict linkers: Dictionary from source database names
                             to EntityLinker instances.
+    :param int keep_top_n: Keep the top N concepts linked.
     :returns: The input Linking instances with their
               candidate_links values populated.
     :rtype: list
     """
+    # Make it so we can look up each LinkedString instance by its ID.
     linkables_by_id = {l.id: l for l in linkables}
 
     # Build the queries to send to each terminology.
@@ -223,19 +227,22 @@ def link_entities(linkables, linkers):
             linker = driver(**params)
         except KeyError:
             continue
+        # candidates is a dictionary of the format
+        # {LinkedString.id: {matched_input: [CandidateLink, [...]]}}
         candidates = linker.link(queries)
-        candidates = linker.get_best_links(candidates)
+        # This just filters the list of CandidateLinks to keep the top N.
+        candidates = linker.get_best_links(candidates, keep_top_n=keep_top_n)
 
         # Add the linked entities to the corresponding Linking instance.
-        # {LinkedString().id: {matched_str: CandidateLink}}
         total = 0
         for lid in candidates.keys():
-            for cand_link in candidates[lid].values():
-                if cand_link is None:
+            for cand_links in candidates[lid].values():
+                # if cand_link is None:
+                if cand_links == []:
                     continue
                 total += 1
                 linkable = linkables_by_id[lid]
-                linkable.candidate_links.append(cand_link)
+                linkable.candidate_links.append(cand_links)
         # Destroy this driver. Required for QuickUMLS, but good in
         # all cases to ensure we're not keeping unnecessary things
         # in memory.
@@ -281,30 +288,32 @@ def create_concepts_from_linkings(linkings, existing_concepts):
         except KeyError:
             continue
         # For each candidate linking...
-        for (i, cand) in enumerate(linked_str.candidate_links):
+        for (i, candidates) in enumerate(linked_str.candidate_links):
             # Create a Concept for this link
             new_concept = Concept.from_concept(old_concept)
-            mapped_str_atom = Atom(cand.candidate_term,
-                                   src=cand.candidate_source,
-                                   src_id=cand.candidate_id,
-                                   term_type="SY",
-                                   is_preferred=True,
-                                   linked_string=cand.input_string,
-                                   linking_score=cand.linking_score)
-            new_concept.add_elements(mapped_str_atom)
+            # Add data elements corresponding to each linking.
+            for cand in candidates:
+                mapped_str_atom = Atom(cand.candidate_term,
+                                       src=cand.candidate_source,
+                                       src_id=cand.candidate_id,
+                                       term_type="SY",
+                                       is_preferred=True,
+                                       linked_string=cand.input_string,
+                                       linking_score=cand.linking_score)
+                new_concept.add_elements(mapped_str_atom)
 
-            # Add any other attributes from the CandidateLink,
-            # such as the UMLS semantic types, etc.
-            for (atr_name, atr_values) in cand.attrs.items():
-                if not isinstance(atr_values, (list, set)):
-                    atr_values = [atr_values]
-                for val in atr_values:
-                    new_concept.add_elements(
-                            Attribute(subject=new_concept,
-                                      atr_name=atr_name,
-                                      atr_value=val,
-                                      src=link_src)
-                            )
+                # Add any other attributes from the CandidateLink,
+                # such as the UMLS semantic types, etc.
+                for (atr_name, atr_values) in cand.attrs.items():
+                    if not isinstance(atr_values, (list, set)):
+                        atr_values = [atr_values]
+                    for val in atr_values:
+                        new_concept.add_elements(
+                                Attribute(subject=new_concept,
+                                          atr_name=atr_name,
+                                          atr_value=val,
+                                          src=link_src)
+                                )
             new_concepts.append(new_concept)
 
             old2new_concepts[old_concept.ui].append(new_concept)
@@ -335,13 +344,13 @@ def create_concepts_from_linkings(linkings, existing_concepts):
     return all_concepts
 
 
-def link_concepts(concepts, linkers, schema):
+def link_concepts(concepts, linkers, schema, keep_top_n=1):
     linker_names = [linker[1]["name"] for linker in linkers.values()]
     logging.info(f"Entity Linkers: {linker_names}")
     logging.info("LINKING CONCEPTS")
     concept_linkables = get_linkables_from_concepts(concepts, schema)
     logging.info(f"Number of linkables: {len(concept_linkables)}.")
-    linkings = link_entities(concept_linkables, linkers)
+    linkings = link_entities(concept_linkables, linkers, keep_top_n)
     logging.info("Creating new concepts from linkings.")
     concepts = create_concepts_from_linkings(linkings, concepts)
     logging.info("COMPLETE")
@@ -362,7 +371,8 @@ if __name__ == "__main__":
         raise ValueError("No linkers found. Check your schema.")
     # Link the Concept instances to existing terminologies,
     # and add any relevant attributes.
-    concepts = link_concepts(concepts, linkers, schema)
+    concepts = link_concepts(concepts, linkers, schema,
+                             keep_top_n=args.keep_top_n)
     # Create Concept instances for the objects of all Relationships
     # belonging to the existing Concepts, and update the Relationship
     # objects accordingly.
