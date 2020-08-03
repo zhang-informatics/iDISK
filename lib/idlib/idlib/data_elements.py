@@ -1,7 +1,6 @@
 import re
 import weakref
 import logging
-import json
 import numbers
 import warnings
 import numpy as np
@@ -12,17 +11,22 @@ from collections import OrderedDict, defaultdict
 warnings.simplefilter("always", DeprecationWarning)
 warnings.simplefilter("always", UserWarning)
 
-from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES
+from idlib.config import SOURCES, TERM_TYPES, CONCEPT_TYPES  # noqa
 if SOURCES is None or TERM_TYPES is None or CONCEPT_TYPES is None:
     warnings.warn("No config specified. Loading defaults.", UserWarning)
 
 
 class DataElement(object):
+    """
+    The base class for all data elements in iDISK.
+
+    :param str ui: The unique identifier for this data element (Optional).
+    """
 
     __refs__ = defaultdict(list)  # Holds all instances of each class
     _prefix = ""
     _counter = 0
-    _ui_template = "{0}{1:07}"  # _prefix, _counter
+    _ui_template = "{0}{1:07}"  # {_prefix}{_counter}
 
     def __init__(self, ui=None):
         # This is distinct from _counter, as it holds the number of this
@@ -327,9 +331,16 @@ class Atom(DataElement):
 
     def __eq__(self, other):
         """
-        Test if this atom is equal to other.
+        Test if this Atom is equal to other.
+        Equivalence is defined as exact matches between the Atoms'
+            * term (not taking capitalization into account)
+            * src
+            * src_id
+            * term_type
+            * Attributes (``self.attrs``)
 
         :param Atom other: The atom to test equivalence to.
+        :rtype: bool
         """
         if not isinstance(other, Atom):
             return False
@@ -351,13 +362,18 @@ class Atom(DataElement):
 
     @property
     def attrs(self):
+        """
+        Returns the Attributes of this Atom.
+
+        :rtype: Attribute
+        """
         return self._attrs
 
     def to_dict(self):
         """
         Return this atom as a dict. The output format is:
 
-        .. code-block:: json
+        .. code-block:: javascript
 
             {"term": str,
              "src": str,
@@ -365,6 +381,8 @@ class Atom(DataElement):
              "term_type": str,
              "is_preferred": bool,
              **attrs}
+
+        :rtype: dict
         """
         data = {"term": self.term,
                 "src": self.src,
@@ -380,7 +398,7 @@ class Atom(DataElement):
         Create an Atom instance from a JSON string.
         The JSON must be formatted:
 
-        .. code-block:: json
+        .. code-block:: javascript
 
             {"term": str,
              "src": str,
@@ -398,11 +416,11 @@ class Atom(DataElement):
 
 class Concept(DataElement):
     """
-    An iDISK concept.
+    An iDISK concept, which is a collection of Atoms.
 
     :param str concept_type: The iDISK type of this concept.
-                             E.g. "SDSI".
-    :param list atoms: List of synonyms for this concept. Each member
+                             E.g. "SDSI". See ``idlib.config``.
+    :param list(Atom) atoms: List of synonyms for this concept. Each member
                        must be an instance of Atom. Optional.
     :param str ui: the iDISK CUI for this concept. Optional.
     """
@@ -450,12 +468,12 @@ class Concept(DataElement):
     @property
     def preferred_atom(self):
         """
-        The preferred term for this concept is the preferred term
+        The preferred term for a concept is the preferred term
         from the highest ranking source. That is, the atom such that
-        atom["src"] is the closest to the top of the SOURCES list
+        atom["src"] is the closest to the lowest index of the SOURCES list
         and atom["is_preferred"] is True.
 
-        If SOURCES is not define (e.g. if no config has been loaded)
+        If SOURCES is not defined (e.g. if no config has been loaded)
         then a preferred atom is chosen at random.
 
         :rtype: Atom
@@ -479,7 +497,7 @@ class Concept(DataElement):
         """
         Return this concept as an OrderedDict in the iDISK JSON format.
 
-        .. code-block:: json
+        .. code-block:: javascript
 
             {"ui": str,
              "concept_type": str,
@@ -516,11 +534,12 @@ class Concept(DataElement):
     def from_concept(cls, concept):
         """
         Create a new Concept instance with the same
-        Atoms, Attributes, and Relationships as this one.
-        Attributes and Relationships are copied and their
-        subjects updated.
+        Atoms, Attributes, and Relationships as this one, but
+        with a new UI.
+        Attributes and Relationships are copied in an analogous
+        manner and their subjects are updated to the new UI.
 
-        :param Concept concept: The concept to copy from.
+        :param Concept concept: The concept to initialize from.
         :returns: New Concept
         """
         if not isinstance(concept, cls):
@@ -546,7 +565,7 @@ class Concept(DataElement):
         Creates a concept from a JSON object. The JSON object must have
         the format:
 
-        .. code-block:: json
+        .. code-block:: javascript
 
             {"ui": str,
              "concept_type": str,
@@ -565,6 +584,12 @@ class Concept(DataElement):
                                                 "atr_value": str,
                                                 "src": str}, {...}]
             }
+
+        Note that if the "relationships" field is not empty, the
+        subject Concepts of the resulting Relationship instances
+        will not be properly linked. In this case, run
+        Concept.resolve_relationships() after all Concepts have
+        been created.
 
         :param dict data: Input JSON data.
         :returns: Concept instance built from data.
@@ -667,9 +692,31 @@ class Attribute(DataElement):
         Output this attribute as a dictionary, optionally with a subject.
         The subject is optional to accord with the iDISK JSON format.
 
-        .. code-block:: json
+        ``return_subject=False``
+
+        .. code-block:: javascript
 
             {"atr_name": str,
+             "atr_value": str,
+             "src": str}
+
+
+        ``return_subject=True``
+
+        .. code-block:: javascript
+
+            {"subject": subject.ui,
+             "atr_name": str,
+             "atr_value": str,
+             "src": str}
+
+
+        ``return_subject=True, verbose_subject=True``
+
+        .. code-block:: javascript
+
+            {"subject": str(subject),
+             "atr_name": str,
              "atr_value": str,
              "src": str}
 
@@ -696,6 +743,12 @@ class Attribute(DataElement):
 
     @classmethod
     def from_attribute(cls, attribute):
+        """
+        Initialize a new Attribute from the provided with the same
+        subject Concept, atr_name, atr_value, and src, but with a new UI.
+
+        :param Attribute attribute: The Attribute instances to initialize from.
+        """
         new_atr = cls(subject=attribute.subject,
                       atr_name=attribute.atr_name,
                       atr_value=attribute.atr_value,
@@ -709,7 +762,7 @@ class Attribute(DataElement):
         Create an Attribute instance from data.
         data must be a dict with the following format:
 
-        .. code-block:: json
+        .. code-block:: javascript
 
             {"atr_name": str,
              "atr_value": str,
@@ -735,7 +788,7 @@ class Relationship(DataElement):
     :param str rel_name: The relation. E.g. "ingredient_of".
     :param Concept/str object: The object of this relationship. Can be a
                                     Concept instance or a concept UI.
-    :param str src: The source code of where this relationship was found.
+    :param str src: The source of this relationship, e.g. "UMLS".
     :param list(Attribute) attributes: Any attributes of this relationship.
     """
 
@@ -796,19 +849,53 @@ class Relationship(DataElement):
         Output this relationship as a dictionary, optionally with a subject.
         The subject is optional to accord with the iDISK JSON format.
 
-        .. code-block:: json
+        ``return_subject=False``
+
+        .. code-block:: javascript
 
             {"rel_name": str,
-             "object": str,
+             "object": str(object.ui),
              "src": str,
-             "attributes": list}
+             "attributes": [{"atr_name": str,
+                             "atr_value": str,
+                             "src": str}, {...}]
+            }
+
+
+        ``return_subject=True``
+
+        .. code-block:: javascript
+
+            {"subject": str(subject.ui),
+             "rel_name": str,
+             "object": str(object.ui),
+             "src": str,
+             "attributes": [{"atr_name": str,
+                             "atr_value": str,
+                             "src": str}, {...}]
+            }
+
+
+        ``return_subject=True, verbose=True``
+
+        .. code-block:: javascript
+
+            {"subject": str(subject),
+             "rel_name": str,
+             "object": str(object),
+             "src": str,
+             "attributes": [{"atr_name": str,
+                             "atr_value": str,
+                             "src": str}, {...}]
+            }
+
 
         :param bool return_subject: If True, the returned dict contains
                                     a "subject" key.
-        :param bool verbose_subject: If True and return_subject is True,
-                                     the value of the "subject" key includes
-                                     the ui, name, and source, instead of
-                                     just the ui.
+        :param bool verbose: If True and return_subject is True,
+                                     the values of the "subject" and "object"
+                                     keys include the ui, name, and source,
+                                     instead of just the ui.
         :returns: dictionary representation of this attribute.
         :rtype: dict
         """
@@ -853,6 +940,14 @@ class Relationship(DataElement):
 
     @classmethod
     def from_relationship(cls, relationship):
+        """
+        Create a new Relationship instance initialized from the provided
+        with the same subject, rel_name, object, and src, but with a new UI.
+
+        :param Relationshp relationship: The Relationship to initialize from.
+        :returns: The new Relationship.
+        :rtype: Relationship
+        """
         new_rel = cls(subject=relationship.subject,
                       rel_name=relationship.rel_name,
                       object=relationship.object,
@@ -872,7 +967,7 @@ class Relationship(DataElement):
         Create an Relationship instance from data.
         data must be a dict with the following format:
 
-        .. code-block:: json
+        .. code-block:: javascript
 
             {"rel_name": str,
              "object": str,

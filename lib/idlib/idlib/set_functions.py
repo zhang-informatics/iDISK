@@ -128,19 +128,28 @@ def _get_prefix(concept1, concept2):
 
 class Union(object):
     """
-    An implementation of the union-find datastructure specific for
+    An implementation of the union-find data structure specific for
     iDISK Concepts.
 
     The routine starts by finding connections between pairs of concepts
-    in the input. It then merges the connected concepts, always mergin the
-    concept with fewer number of atoms into the concept with the greater.
+    in the input using ``Union.find_connections()``. It then merges the
+    connected concepts, always merging the concept with fewer of atoms
+    into the concept with more atoms.
 
     This class can be used to generate a list of candidate connections,
     which can then be filtered, by passing ``run_union=False`` and then
     getting the ``connections`` attribute. Once filtered, they can be passed
     back in as the ``connections`` argument with ``run_union=True``.
+    For example
 
-    See the idlib README for example usage.
+    .. code-block:: python
+
+        cnxs = Union(concepts, run_union=False).connections
+        cnxs_filtered = filter_connections(concepts, cnxs)
+        union = Union(concepts, connections=cnxs_filtered, run_union=True).result
+
+
+    See the idlib README for more example usage.
 
     :param list concepts: One or more lists of Concept instances.
     :param list connections: A list of int tuples specifying connections
@@ -151,6 +160,8 @@ class Union(object):
                              they share one or more atom terms.
     :param bool run_union: If True (default) run union-find on the input.
                            Otherwise, just run find_connections.
+    :param list(str) ignore_concept_types: Optional. Don't include Concepts
+                                           with type belonging to this list.
     """
     def __init__(self, concepts, connections=None, run_union=True,
                  ignore_concept_types=None):
@@ -168,9 +179,11 @@ class Union(object):
         if self.connections == []:
             logging.info("Finding connections...")
             self.connections = self.find_connections()
+            """The result of ``self.find_connections()``"""
         if run_union is True:
             self.union_find()
             self.result = self.update_relationships()
+            """The result of ``self.union_find()``"""
 
     def _check_params(self, concepts, connections, ignore_types):
         assert(all([isinstance(c, idlib.data_elements.Concept)
@@ -318,6 +331,14 @@ class Union(object):
             self._union(i, j)
 
     def update_relationships(self):
+        """
+        For each Concept that was merged into another by ``self.union_find``
+        update the subject of its Relationships to be the Concept it was 
+        merged into.
+
+        :returns: Concepts with updated Relationships.
+        :rtype: list(Concept)
+        """
         # Make sure we find the parent of any concepts we did not
         # update in _union.
         _ = [self._find(i) for i in range(len(self.concepts))]
@@ -351,6 +372,7 @@ class Intersection(Union):
         super().__init__(concepts, connections, run_union=True)
         parent_idxs = [c for (i, c) in enumerate(self.parents) if i != c]
         self.result = [self.concepts[i] for i in set(parent_idxs)]
+        """The result of the intersection operation."""
 
 
 class Difference(Union):
@@ -376,6 +398,7 @@ class Difference(Union):
         # and which have no parent
         parent_idxs = [k for k in parent_idxs if k == self.parents[k]]
         self.result = [self.concepts[i] for i in parent_idxs]
+        """The result of the difference operation."""
 
 
 if __name__ == "__main__":
