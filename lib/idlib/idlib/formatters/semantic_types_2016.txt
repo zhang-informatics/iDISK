@@ -1,0 +1,129 @@
+Acquired Abnormality
+Activity
+Age Group
+Amino Acid, Peptide, or Protein
+Amino Acid Sequence
+Amphibian
+Anatomical Abnormality
+Anatomical Structure
+Animal
+Antibiotic
+Archaeon
+Bacterium
+Behavior
+Biologically Active Substance
+Biologic Function
+Biomedical Occupation or Discipline
+Biomedical or Dental Material
+Bird
+Body Location or Region
+Body Part, Organ, or Organ Component
+Body Space or Junction
+Body Substance
+Body System
+Carbohydrate Sequence
+Cell
+Cell Component
+Cell Function
+Cell or Molecular Dysfunction
+Chemical
+Chemical Viewed Functionally
+Chemical Viewed Structurally
+Classification
+Clinical Attribute
+Clinical Drug
+Conceptual Entity
+Congenital Abnormality
+Daily or Recreational Activity
+Diagnostic Procedure
+Disease or Syndrome
+Drug Delivery Device
+Educational Activity
+Element, Ion, or Isotope
+Embryonic Structure
+Entity
+Environmental Effect of Humans
+Enzyme
+Eukaryote
+Event
+Experimental Model of Disease
+Family Group
+Finding
+Fish
+Food
+Fully Formed Anatomical Structure
+Functional Concept
+Fungus
+Gene or Gene Product
+Gene or Genome
+Genetic Function
+Geographic Area
+Governmental or Regulatory Activity
+Group
+Group Attribute
+Hazardous or Poisonous Substance
+Health Care Activity
+Health Care Related Organization
+Hormone
+Human
+Human-caused Phenomenon or Process
+Idea or Concept
+Immunologic Factor
+Indicator, Reagent, or Diagnostic Aid
+Individual Behavior
+Injury or Poisoning
+Inorganic Chemical
+Intellectual Product
+Laboratory or Test Result
+Laboratory Procedure
+Language
+Machine Activity
+Mammal
+Manufactured Object
+Medical Device
+Mental or Behavioral Dysfunction
+Mental Process
+Molecular Biology Research Technique
+Molecular Function
+Molecular Sequence
+Natural Phenomenon or Process
+Neoplastic Process
+Nucleic Acid, Nucleoside, or Nucleotide
+Nucleotide Sequence
+Object
+Occupational Activity
+Occupation or Discipline
+Organic Chemical
+Organism
+Organism Attribute
+Organism Function
+Organization
+Organ or Tissue Function
+Pathologic Function
+Patient or Disabled Group
+Pharmacologic Substance
+Phenomenon or Process
+Physical Object
+Physiologic Function
+Plant
+Population Group
+Professional or Occupational Group
+Professional Society
+Qualitative Concept
+Quantitative Concept
+Receptor
+Regulation or Law
+Reptile
+Research Activity
+Research Device
+Self-help or Relief Organization
+Sign or Symptom
+Social Behavior
+Spatial Concept
+Substance
+Temporal Concept
+Therapeutic or Preventive Procedure
+Tissue
+Vertebrate
+Virus
+Vitamin
