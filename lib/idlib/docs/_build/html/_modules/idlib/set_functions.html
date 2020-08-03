@@ -155,7 +155,7 @@
 <span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">combinations</span>
 <span class="kn">from</span> <span class="nn">tqdm</span> <span class="k">import</span> <span class="n">tqdm</span>  <span class="c1"># Progress bar</span>
 
-<span class="kn">from</span> <span class="nn">idlib</span> <span class="k">import</span> <span class="n">Concept</span>
+<span class="kn">import</span> <span class="nn">idlib</span>
 
 <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
 
@@ -194,7 +194,7 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">all_concepts</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">fpath</span> <span class="ow">in</span> <span class="n">infiles</span><span class="p">:</span>
-        <span class="n">concepts</span> <span class="o">=</span> <span class="n">Concept</span><span class="o">.</span><span class="n">read_jsonl_file</span><span class="p">(</span><span class="n">fpath</span><span class="p">)</span>
+        <span class="n">concepts</span> <span class="o">=</span> <span class="n">idlib</span><span class="o">.</span><span class="n">read_jsonl_file</span><span class="p">(</span><span class="n">fpath</span><span class="p">)</span>
         <span class="n">all_concepts</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">concepts</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">all_concepts</span>
 
@@ -277,19 +277,28 @@
 
 <div class="viewcode-block" id="Union"><a class="viewcode-back" href="../../source/set_functions.html#idlib.set_functions.Union">[docs]</a><span class="k">class</span> <span class="nc">Union</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    An implementation of the union-find datastructure specific for</span>
+<span class="sd">    An implementation of the union-find data structure specific for</span>
 <span class="sd">    iDISK Concepts.</span>
 
 <span class="sd">    The routine starts by finding connections between pairs of concepts</span>
-<span class="sd">    in the input. It then merges the connected concepts, always mergin the</span>
-<span class="sd">    concept with fewer number of atoms into the concept with the greater.</span>
+<span class="sd">    in the input using ``Union.find_connections()``. It then merges the</span>
+<span class="sd">    connected concepts, always merging the concept with fewer of atoms</span>
+<span class="sd">    into the concept with more atoms.</span>
 
 <span class="sd">    This class can be used to generate a list of candidate connections,</span>
 <span class="sd">    which can then be filtered, by passing ``run_union=False`` and then</span>
 <span class="sd">    getting the ``connections`` attribute. Once filtered, they can be passed</span>
 <span class="sd">    back in as the ``connections`` argument with ``run_union=True``.</span>
+<span class="sd">    For example</span>
 
-<span class="sd">    See the idlib README for example usage.</span>
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        cnxs = Union(concepts, run_union=False).connections</span>
+<span class="sd">        cnxs_filtered = filter_connections(concepts, cnxs)</span>
+<span class="sd">        union = Union(concepts, connections=cnxs_filtered, run_union=True).result</span>
+
+
+<span class="sd">    See the idlib README for more example usage.</span>
 
 <span class="sd">    :param list concepts: One or more lists of Concept instances.</span>
 <span class="sd">    :param list connections: A list of int tuples specifying connections</span>
@@ -300,6 +309,8 @@
 <span class="sd">                             they share one or more atom terms.</span>
 <span class="sd">    :param bool run_union: If True (default) run union-find on the input.</span>
 <span class="sd">                           Otherwise, just run find_connections.</span>
+<span class="sd">    :param list(str) ignore_concept_types: Optional. Don&#39;t include Concepts</span>
+<span class="sd">                                           with type belonging to this list.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">run_union</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                  <span class="n">ignore_concept_types</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
@@ -317,12 +328,15 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">connections</span> <span class="o">==</span> <span class="p">[]:</span>
             <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Finding connections...&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">connections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_connections</span><span class="p">()</span>
+            <span class="sd">&quot;&quot;&quot;The result of ``self.find_connections()``&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">run_union</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">union_find</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_relationships</span><span class="p">()</span>
+            <span class="sd">&quot;&quot;&quot;The result of ``self.union_find()``&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="p">,</span> <span class="n">ignore_types</span><span class="p">):</span>
-        <span class="k">assert</span><span class="p">(</span><span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">Concept</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">concepts</span><span class="p">]))</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">idlib</span><span class="o">.</span><span class="n">data_elements</span><span class="o">.</span><span class="n">Concept</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">concepts</span><span class="p">]))</span>
         <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">connections</span><span class="p">,</span> <span class="nb">list</span><span class="p">))</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">connections</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">assert</span><span class="p">(</span><span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">connections</span><span class="p">]))</span>
@@ -465,18 +479,29 @@
         <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_union</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">update_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="Union.update_relationships"><a class="viewcode-back" href="../../source/set_functions.html#idlib.set_functions.Union.update_relationships">[docs]</a>    <span class="k">def</span> <span class="nf">update_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        For each Concept that was merged into another by ``self.union_find``</span>
+<span class="sd">        update the subject of its Relationships to be the Concept it was </span>
+<span class="sd">        merged into.</span>
+
+<span class="sd">        :returns: Concepts with updated Relationships.</span>
+<span class="sd">        :rtype: list(Concept)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Make sure we find the parent of any concepts we did not</span>
         <span class="c1"># update in _union.</span>
         <span class="n">_</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_find</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">))]</span>
         <span class="n">concepts</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parents</span><span class="p">)]</span>
         <span class="k">for</span> <span class="n">concept</span> <span class="ow">in</span> <span class="n">concepts</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">concept</span><span class="o">.</span><span class="n">get_relationships</span><span class="p">():</span>
-                <span class="n">object_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui2index</span><span class="p">[</span><span class="n">rel</span><span class="o">.</span><span class="n">object</span><span class="o">.</span><span class="n">ui</span><span class="p">]</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">object_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ui2index</span><span class="p">[</span><span class="n">rel</span><span class="o">.</span><span class="n">object</span><span class="o">.</span><span class="n">ui</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                    <span class="k">continue</span>
                 <span class="n">parent_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="n">object_idx</span><span class="p">]</span>
                 <span class="n">parent_concept</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">[</span><span class="n">parent_idx</span><span class="p">]</span>
                 <span class="n">rel</span><span class="o">.</span><span class="n">object</span> <span class="o">=</span> <span class="n">parent_concept</span>
-        <span class="k">return</span> <span class="n">concepts</span></div>
+        <span class="k">return</span> <span class="n">concepts</span></div></div>
 
 
 <div class="viewcode-block" id="Intersection"><a class="viewcode-back" href="../../source/set_functions.html#idlib.set_functions.Intersection">[docs]</a><span class="k">class</span> <span class="nc">Intersection</span><span class="p">(</span><span class="n">Union</span><span class="p">):</span>
@@ -495,7 +520,8 @@
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="o">=</span><span class="p">[]):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">concepts</span><span class="p">,</span> <span class="n">connections</span><span class="p">,</span> <span class="n">run_union</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">parent_idxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parents</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="n">c</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">parent_idxs</span><span class="p">)]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">parent_idxs</span><span class="p">)]</span>
+        <span class="sd">&quot;&quot;&quot;The result of the intersection operation.&quot;&quot;&quot;</span></div>
 
 
 <div class="viewcode-block" id="Difference"><a class="viewcode-back" href="../../source/set_functions.html#idlib.set_functions.Difference">[docs]</a><span class="k">class</span> <span class="nc">Difference</span><span class="p">(</span><span class="n">Union</span><span class="p">):</span>
@@ -520,7 +546,8 @@
         <span class="n">parent_idxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">idx_counts</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">v</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
         <span class="c1"># and which have no parent</span>
         <span class="n">parent_idxs</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">parent_idxs</span> <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="n">k</span><span class="p">]]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">parent_idxs</span><span class="p">]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">concepts</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">parent_idxs</span><span class="p">]</span>
+        <span class="sd">&quot;&quot;&quot;The result of the difference operation.&quot;&quot;&quot;</span></div>
 
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>

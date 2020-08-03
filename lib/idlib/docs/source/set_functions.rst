@@ -12,10 +12,10 @@ It may also be necessary to determine which concepts are singletons. ``Differenc
 Union
 -----
 
+.. currentmodule:: idlib.set_functions
 .. autoclass:: idlib.set_functions.Union
     :members:
-    :show-inheritance:
-
+    :undoc-members:
 
 Intersection
 ------------

@@ -8,13 +8,11 @@ or from the [releases](https://github.com/jvasilakes/idisk/releases).
 
 ### Disclaimer
 iDISK is intended to be used for educational purposes only and nothing contained therein should take the place of professional medical advice.
-The information provided in iDISK obtained from secondary resources does not necessarily reflect the views or opinions of those resources.
+The information provided in iDISK is obtained from secondary resources and does not necessarily reflect the views or opinions of those resources.
 You are responsible for checking the accuracy of relevant facts and opinions given in iDISK before entering into any commitment based upon them.
 
 ### Citing iDISK
-Rizvi, Rubina F; Vasilakes, Jake A; Adam, Terrence J; Melton, Genevieve B; Bishop, Jeffrey R; Tao, Cui; Zhang, Rui. (2019). Integrated Dietary Supplement Knowledge Base (iDISK). Retrieved from the Data Repository for the University of Minnesota, https://doi.org/10.13020/d6bm3v.
-
-A corresponding journal article is forthcoming.
+Rizvi RF, Vasilakes J, Adam TJ, Melton GB, Bishop JR, Bian J, Tao C, Zhang R. iDISK: the integrated DIetary Supplements Knowledge base. Journal of the American Medical Informatics Association. 2020 Apr;27(4):539-48.
 
 
 ## Directory Structure
@@ -72,6 +70,8 @@ versions/
 
 After cloning this repository, install `idlib`, the iDISK API library.
 `idlib` is bundled with iDISK. Go to `lib/idlib` and follow the instructions in the README.
+The API documentation is available at `lib/idlib/docs/_build/html/index.html`.
+
 Before getting started, run
 
 ```
@@ -87,15 +87,17 @@ Then run,
 make version
 ```
 
-**N.B.** If this is not the first ever version of the database, you are encouraged to fill out the changelog location at `${IDISK_HOME}/versions/${VERSION_DIR}/CHANGELOG.md` with any changes or additions over the previous version.
+which will set up a new project folder at `$(PROJECT_HOME)/versions/$(PROJECT_VERSION)` as specified in your Makefile.
+
+**N.B.** If this is not the first ever version of the database, you are encouraged to fill out the changelog location at `${PROJECT_HOME}/versions/${PROJECT_VERSION}/CHANGELOG.md` with any changes or additions over the previous version.
 
 
 ## The iDISK Schema
 
 iDISK is built using Neo4j, so the first step is to install the latest version of [Neo4j](https://neo4j.com/download/).
 Neo4j is used both to define the iDISK schema as well as to hold the final database. Here, we discuss creating and using
-a schema. Neo4j graphs are specified using a query language called Cypher and we've supplied a Cypher script for the
-current iDISK schema at `lib/schemas/schema_1.0.0.cypher`.
+a schema. Neo4j graphs are specified using a query language called Cypher and we've supplied Cypher scripts for the
+available iDISK versions at `lib/config/schemas/schema_${SCHEMA_VERSION}.cypher`.
 
 **N.B.** Schema versions are specified using semantic versioning (major.minor.patch). The schema versions are distinct
 from the iDISK versions. That is, if iDISK updates to a new version, the schema will not necessarily require updating.
@@ -142,7 +144,7 @@ and write any issues to a a log file at `${source_file}.error`.
 ## Entity Linking
 
 Any concept or relationship object that we want to link to an existing terminology must have
-a `links_to` attribute in the schema, the value of which is an entry in `lib/config/linkers.conf`.
+a `links_to` attribute as part of its corresponding type in the schema, the value of which is an key in `lib/config/linkers.conf`.
 Each entry in `linkers.conf` specifies the required parameters to instantiate an
 `idlib.entity_linking.linkers.EntityLinker`, the name of which is given by the `"class_name"` attribute.
 For example, in schema 1.0.0 the `links_to` attribute of the PD (pharmaceutical drug) concepts is
@@ -158,7 +160,7 @@ make link_entities
 ```
 
 This will likely take a few mintues. Check the progress in the log file at
-`$(VERSION_DIR)/concepts/concepts_linked.jsonl.log`.
+`$(PROJECT_VERSION)/concepts/concepts_linked.jsonl.log`.
 
 
 ## Merging Synonymous Concepts
@@ -173,7 +175,7 @@ make connections
 
 Note that if there are any concept types that you do not want to consider matching, this can
 be specified in the Makefile via the `--ignore_concept_types` option in the `connections` recipe.
-Currently, supplement products (concept type DSP) are ignored.
+Currently, only dietary supplement products (concept type DSP) are ignored.
 
 These connections can be used directly, but it is advisable to filter them to improve precision.
 Two methods of filtering connections are implemented: The first removes connections based on some simple rules
@@ -186,6 +188,8 @@ To run the first method:
 make filter_connections
 ```
 
+See below for filtering according to human annotation.
+
 --------------------------
 
 ### Annotating Synonyms
@@ -197,7 +201,7 @@ iDISK implements the Prodigy annotation tool for classifying connected pairs as 
 * Parent-Child (i.e. the first concept is a hypernym of the second)
 * Child-Parent (i.e. the first concept is a hyponym of the second)
 
-If you are qualified to use Prodigy (it's not free) and have it installed (in the `idisk` virtual environment),
+If you are qualified to use Prodigy (it's not free) and have it installed in the `idisk` virtual environment,
 you can run the annotation task with:
 
 ```
@@ -228,7 +232,8 @@ The output of `make merge` is a JSON file in the iDISK format that is perfectly 
 >>> import idlib
 >>> kb = idlib.load_kb("path/to/version/directory")
 >>> 
->>> for rel in kb[1].get_relationships():
+>>> # Print the first relationship of the first Concept and the first relationship of its object Concept.
+... for rel in kb[1].get_relationships():
 ...     print(rel)
 ...     for rel2 in rel.object.get_relationships():
 ...         print(rel2)
@@ -250,14 +255,18 @@ make neo4j
 This command will populate the graph with the iDISK data elements. It will take a few minutes. Once the database is populated it can be exported by running
 
 ```
-bin/neo4j-admin dump --database=graph.db --to=/absolute/path/to/destination/idisk-neo4j-<version>-<year>-<month>-<date>.dump
+bin/neo4j-admin dump --database=graph.db \
+  --to=/absolute/path/to/destination/idisk-neo4j-<version>-<year>-<month>-<date>.dump
 ```
 
 In the Neo4j Terminal tab.
 
+We have provided example Neo4j queries at `doc/iDISK_Neo4j_example_queries.pdf`. 
+
+
 ### RRF
 
-The  RRF data file format is alternative output format for iDISK. Used by the Unified Medical Language System (UMLS), it consists of a set of pipe-delimited
+The RRF data file format is alternative output format for iDISK. Used by the Unified Medical Language System (UMLS), it consists of a set of pipe-delimited
 flat files: `MRSTY.RRF` (the types of the concepts), `MRCONSO.RRF` (the atoms for each concept), `MRSAT.RRF` (the attributes), and `MRREL.RRF` (the relationships).
 Create these files by running
 
@@ -265,6 +274,18 @@ Create these files by running
 make rrf
 ```
 
-This command will also create a date-stamped zip file containing the RRF files.
+
+### UMLS
+
+While the resulting files of the `make rrf` command are technically of the same format as the files used by the UMLS, they are not strictly compatible. It is possible
+to extend the UMLS Metathesaurus files with the iDISK terminology (in a very crude fashion). While there is no Makefile recipe for this yet, it can be done by running
+
+```
+python lib/idlib/idlib/formatters/umls.py --idisk_version_dir versions/$(PROJECT_VERSION) \
+					  --outdir versions/$(PROJECT_VERSION)/build/UMLS/$(METATHESAURUS_VERSION)/ \
+					  --umls_mth_dir /path/to/umls/rrf/files \
+					  --use_semtypes lib/idlib/idlib/formatters/semantic_types_2016.txt
+```
+
 
 -------------------------

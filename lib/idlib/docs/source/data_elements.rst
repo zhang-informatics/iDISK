@@ -1,12 +1,20 @@
 idlib.data_elements
 ===================
 
+DataElement
+-----------
+
+.. autoclass:: idlib.data_elements.DataElement
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Atom
 ----
 
 .. autoclass:: idlib.data_elements.Atom
     :members:
+    :undoc-members:
     :show-inheritance:
 
 

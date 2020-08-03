@@ -150,22 +150,32 @@
 <span></span><span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">weakref</span>
 <span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">numbers</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">deepcopy</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">defaultdict</span>
 
-<span class="kn">from</span> <span class="nn">idlib.config</span> <span class="k">import</span> <span class="n">SOURCES</span><span class="p">,</span> <span class="n">TERM_TYPES</span><span class="p">,</span> <span class="n">CONCEPT_TYPES</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;always&quot;</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">simplefilter</span><span class="p">(</span><span class="s2">&quot;always&quot;</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">idlib.config</span> <span class="k">import</span> <span class="n">SOURCES</span><span class="p">,</span> <span class="n">TERM_TYPES</span><span class="p">,</span> <span class="n">CONCEPT_TYPES</span>  <span class="c1"># noqa</span>
+<span class="k">if</span> <span class="n">SOURCES</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">TERM_TYPES</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">CONCEPT_TYPES</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;No config specified. Loading defaults.&quot;</span><span class="p">,</span> <span class="ne">UserWarning</span><span class="p">)</span>
 
 
-<span class="k">class</span> <span class="nc">DataElement</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="DataElement"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.DataElement">[docs]</a><span class="k">class</span> <span class="nc">DataElement</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The base class for all data elements in iDISK.</span>
+
+<span class="sd">    :param str ui: The unique identifier for this data element (Optional).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">__refs__</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>  <span class="c1"># Holds all instances of each class</span>
     <span class="n">_prefix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="n">_counter</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="n">_ui_template</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{0}{1:07}</span><span class="s2">&quot;</span>  <span class="c1"># _prefix, _counter</span>
+    <span class="n">_ui_template</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{0}{1:07}</span><span class="s2">&quot;</span>  <span class="c1"># {_prefix}{_counter}</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ui</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="c1"># This is distinct from _counter, as it holds the number of this</span>
@@ -196,7 +206,7 @@
         <span class="n">result</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">result</span>
 
-    <span class="c1"># TODO: Figure out how to handle recursive copying with Relationships.</span>
+    <span class="c1"># TODO: Handle recursive copying with Relationships.</span>
     <span class="k">def</span> <span class="nf">__deepcopy__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">memo</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
         <span class="bp">cls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span>
@@ -206,7 +216,7 @@
             <span class="nb">setattr</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">memo</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">result</span>
 
-    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="DataElement.get_instances"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.DataElement.get_instances">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_instances</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get all instances of the Concept class.</span>
@@ -217,25 +227,25 @@
         <span class="k">for</span> <span class="n">inst_ref</span> <span class="ow">in</span> <span class="bp">cls</span><span class="o">.</span><span class="n">__refs__</span><span class="p">[</span><span class="bp">cls</span><span class="p">]:</span>
             <span class="n">inst</span> <span class="o">=</span> <span class="n">inst_ref</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">inst</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">inst</span>
+                <span class="k">yield</span> <span class="n">inst</span></div>
 
-    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="DataElement.set_ui_prefix"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.DataElement.set_ui_prefix">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">set_ui_prefix</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">prefix</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Set the string to prepend to the UI of each instance.</span>
 
 <span class="sd">        :param str prefix: The prefix to set.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">prefix</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">prefix</span></div>
 
-    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="DataElement.init_counter"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.DataElement.init_counter">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">init_counter</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize the unique identifier counter with the given number.</span>
 
 <span class="sd">        :param int num: The number to initialize with.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">=</span> <span class="n">num</span>
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_counter</span> <span class="o">=</span> <span class="n">num</span></div>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">_increment_counter</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
@@ -267,7 +277,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_number</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="o">-</span><span class="mi">7</span><span class="p">:])</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">value</span><span class="p">[:</span><span class="o">-</span><span class="mi">7</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">add_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">):</span>
+<div class="viewcode-block" id="DataElement.add_elements"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.DataElement.add_elements">[docs]</a>    <span class="k">def</span> <span class="nf">add_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Add a collection of elements to this data element if it does not</span>
 <span class="sd">        already belong to it. Each element must be an Atom, Attribute,</span>
@@ -278,9 +288,9 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="s2">&quot;__iter__&quot;</span><span class="p">):</span>
             <span class="n">elements</span> <span class="o">=</span> <span class="p">[</span><span class="n">elements</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_add_single_element</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_add_single_element</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">rm_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">):</span>
+<div class="viewcode-block" id="DataElement.rm_elements"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.DataElement.rm_elements">[docs]</a>    <span class="k">def</span> <span class="nf">rm_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">elements</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Remove a collection of elements from this data element.</span>
 <span class="sd">        Each element must be an Atom, Attribute, or Relationship.</span>
@@ -290,7 +300,7 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="s2">&quot;__iter__&quot;</span><span class="p">):</span>
             <span class="n">elements</span> <span class="o">=</span> <span class="p">[</span><span class="n">elements</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">elements</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_rm_single_element</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rm_single_element</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></div>
 
     <span class="k">def</span> <span class="nf">_add_single_element</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">element</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -339,7 +349,14 @@
             <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
         <span class="n">container</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">get_atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">num_atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;Atoms not implemented for {type(self).__name__}.&quot;</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DataElement.get_atoms"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.DataElement.get_atoms">[docs]</a>    <span class="k">def</span> <span class="nf">get_atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atom_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a generator over the atoms of this data element,</span>
 <span class="sd">        if implemented.</span>
@@ -363,9 +380,9 @@
             <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
                 <span class="k">yield</span> <span class="n">atom</span>
             <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">atom</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+                <span class="k">yield</span> <span class="n">atom</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span></div>
 
-    <span class="k">def</span> <span class="nf">get_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atr_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="DataElement.get_attributes"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.DataElement.get_attributes">[docs]</a>    <span class="k">def</span> <span class="nf">get_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atr_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a generator over the attributes of this data element,</span>
 <span class="sd">        if implemented.</span>
@@ -391,9 +408,9 @@
             <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
                 <span class="k">yield</span> <span class="n">atr</span>
             <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">atr</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+                <span class="k">yield</span> <span class="n">atr</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span></div>
 
-    <span class="k">def</span> <span class="nf">get_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rel_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
+<div class="viewcode-block" id="DataElement.get_relationships"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.DataElement.get_relationships">[docs]</a>    <span class="k">def</span> <span class="nf">get_relationships</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rel_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">r_type</span><span class="o">=</span><span class="s2">&quot;object&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a generator over the relationships of this concept.</span>
 
@@ -415,7 +432,7 @@
             <span class="k">if</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;object&quot;</span><span class="p">:</span>
                 <span class="k">yield</span> <span class="n">rel</span>
             <span class="k">elif</span> <span class="n">r_type</span> <span class="o">==</span> <span class="s2">&quot;dict&quot;</span><span class="p">:</span>
-                <span class="k">yield</span> <span class="n">rel</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+                <span class="k">yield</span> <span class="n">rel</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span></div></div>
 
 
 <div class="viewcode-block" id="Atom"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Atom">[docs]</a><span class="k">class</span> <span class="nc">Atom</span><span class="p">(</span><span class="n">DataElement</span><span class="p">):</span>
@@ -463,9 +480,16 @@
 
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Test if this atom is equal to other.</span>
+<span class="sd">        Test if this Atom is equal to other.</span>
+<span class="sd">        Equivalence is defined as exact matches between the Atoms&#39;</span>
+<span class="sd">            * term (not taking capitalization into account)</span>
+<span class="sd">            * src</span>
+<span class="sd">            * src_id</span>
+<span class="sd">            * term_type</span>
+<span class="sd">            * Attributes (``self.attrs``)</span>
 
 <span class="sd">        :param Atom other: The atom to test equivalence to.</span>
+<span class="sd">        :rtype: bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Atom</span><span class="p">):</span>
             <span class="k">return</span> <span class="kc">False</span>
@@ -477,25 +501,28 @@
 
     <span class="k">def</span> <span class="nf">_check_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">term</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SOURCES</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">src_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">TERM_TYPES</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;PN&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;PT&quot;</span><span class="p">:</span>
-            <span class="n">msg</span> <span class="o">=</span> <span class="s2">&quot;Term types PN (preferred name) and PT (preferred term) are </span><span class="se">\</span>
-<span class="s2">                   deprecated. Set is_preffered=True.&quot;</span>
-            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">)</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_preferred</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="p">,</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="nb">str</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">SOURCES</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SOURCES</span>
+        <span class="k">if</span> <span class="n">TERM_TYPES</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_type</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">TERM_TYPES</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">attrs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the Attributes of this Atom.</span>
+
+<span class="sd">        :rtype: Attribute</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span>
 
 <div class="viewcode-block" id="Atom.to_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Atom.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return this atom as a dict. The output format is:</span>
 
-<span class="sd">        .. code-block:: json</span>
+<span class="sd">        .. code-block:: javascript</span>
 
 <span class="sd">            {&quot;term&quot;: str,</span>
 <span class="sd">             &quot;src&quot;: str,</span>
@@ -503,6 +530,8 @@
 <span class="sd">             &quot;term_type&quot;: str,</span>
 <span class="sd">             &quot;is_preferred&quot;: bool,</span>
 <span class="sd">             **attrs}</span>
+
+<span class="sd">        :rtype: dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;term&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">term</span><span class="p">,</span>
                 <span class="s2">&quot;src&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="p">,</span>
@@ -512,14 +541,13 @@
                 <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">attrs</span><span class="p">}</span>
         <span class="k">return</span> <span class="n">data</span></div>
 
-    <span class="c1"># TODO: Check for valid JSON</span>
 <div class="viewcode-block" id="Atom.from_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Atom.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create an Atom instance from a JSON string.</span>
 <span class="sd">        The JSON must be formatted:</span>
 
-<span class="sd">        .. code-block:: json</span>
+<span class="sd">        .. code-block:: javascript</span>
 
 <span class="sd">            {&quot;term&quot;: str,</span>
 <span class="sd">             &quot;src&quot;: str,</span>
@@ -537,11 +565,11 @@
 
 <div class="viewcode-block" id="Concept"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept">[docs]</a><span class="k">class</span> <span class="nc">Concept</span><span class="p">(</span><span class="n">DataElement</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    An iDISK concept.</span>
+<span class="sd">    An iDISK concept, which is a collection of Atoms.</span>
 
 <span class="sd">    :param str concept_type: The iDISK type of this concept.</span>
-<span class="sd">                             E.g. &quot;SDSI&quot;.</span>
-<span class="sd">    :param list atoms: List of synonyms for this concept. Each member</span>
+<span class="sd">                             E.g. &quot;SDSI&quot;. See ``idlib.config``.</span>
+<span class="sd">    :param list(Atom) atoms: List of synonyms for this concept. Each member</span>
 <span class="sd">                       must be an instance of Atom. Optional.</span>
 <span class="sd">    :param str ui: the iDISK CUI for this concept. Optional.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -582,16 +610,20 @@
             <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s2">&quot;Concept must have at least one Atom.&quot;</span><span class="p">)</span>
         <span class="k">assert</span> <span class="nb">all</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">atom</span><span class="p">,</span> <span class="n">Atom</span><span class="p">)</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span><span class="p">])</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">concept_type</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_type</span> <span class="ow">in</span> <span class="n">CONCEPT_TYPES</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ui</span><span class="p">,</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="kc">None</span><span class="p">),</span> <span class="nb">str</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">CONCEPT_TYPES</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">concept_type</span> <span class="ow">in</span> <span class="n">CONCEPT_TYPES</span>
 
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">preferred_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        The preferred term for this concept is the preferred term</span>
+<span class="sd">        The preferred term for a concept is the preferred term</span>
 <span class="sd">        from the highest ranking source. That is, the atom such that</span>
-<span class="sd">        atom[&quot;src&quot;] is the closest to the top of the SOURCES list</span>
+<span class="sd">        atom[&quot;src&quot;] is the closest to the lowest index of the SOURCES list</span>
 <span class="sd">        and atom[&quot;is_preferred&quot;] is True.</span>
+
+<span class="sd">        If SOURCES is not defined (e.g. if no config has been loaded)</span>
+<span class="sd">        then a preferred atom is chosen at random.</span>
 
 <span class="sd">        :rtype: Atom</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -601,16 +633,20 @@
             <span class="n">atoms</span> <span class="o">=</span> <span class="p">[</span><span class="n">atom</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_atoms</span> <span class="k">if</span> <span class="n">atom</span><span class="o">.</span><span class="n">is_preferred</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">atoms</span> <span class="o">==</span> <span class="p">[]:</span>
                 <span class="n">atoms</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_atoms</span><span class="p">())</span>
-            <span class="n">atom_rank</span> <span class="o">=</span> <span class="p">[</span><span class="n">SOURCES</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">atom</span><span class="o">.</span><span class="n">src</span><span class="p">)</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">atoms</span><span class="p">]</span>
-            <span class="n">pref</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">atom_rank</span><span class="p">)]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_preferred_atom</span> <span class="o">=</span> <span class="n">pref</span>
+
+            <span class="k">if</span> <span class="n">SOURCES</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_preferred_atom</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">atom_rank</span> <span class="o">=</span> <span class="p">[</span><span class="n">SOURCES</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">atom</span><span class="o">.</span><span class="n">src</span><span class="p">)</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">atoms</span><span class="p">]</span>
+                <span class="n">pref</span> <span class="o">=</span> <span class="n">atoms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">atom_rank</span><span class="p">)]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_preferred_atom</span> <span class="o">=</span> <span class="n">pref</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preferred_atom</span>
 
 <div class="viewcode-block" id="Concept.to_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return this concept as an OrderedDict in the iDISK JSON format.</span>
 
-<span class="sd">        .. code-block:: json</span>
+<span class="sd">        .. code-block:: javascript</span>
 
 <span class="sd">            {&quot;ui&quot;: str,</span>
 <span class="sd">             &quot;concept_type&quot;: str,</span>
@@ -647,11 +683,12 @@
     <span class="k">def</span> <span class="nf">from_concept</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">concept</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a new Concept instance with the same</span>
-<span class="sd">        Atoms, Attributes, and Relationships as this one.</span>
-<span class="sd">        Attributes and Relationships are copied and their</span>
-<span class="sd">        subjects updated.</span>
+<span class="sd">        Atoms, Attributes, and Relationships as this one, but</span>
+<span class="sd">        with a new UI.</span>
+<span class="sd">        Attributes and Relationships are copied in an analogous</span>
+<span class="sd">        manner and their subjects are updated to the new UI.</span>
 
-<span class="sd">        :param Concept concept: The concept to copy from.</span>
+<span class="sd">        :param Concept concept: The concept to initialize from.</span>
 <span class="sd">        :returns: New Concept</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">concept</span><span class="p">,</span> <span class="bp">cls</span><span class="p">):</span>
@@ -677,7 +714,7 @@
 <span class="sd">        Creates a concept from a JSON object. The JSON object must have</span>
 <span class="sd">        the format:</span>
 
-<span class="sd">        .. code-block:: json</span>
+<span class="sd">        .. code-block:: javascript</span>
 
 <span class="sd">            {&quot;ui&quot;: str,</span>
 <span class="sd">             &quot;concept_type&quot;: str,</span>
@@ -696,6 +733,12 @@
 <span class="sd">                                                &quot;atr_value&quot;: str,</span>
 <span class="sd">                                                &quot;src&quot;: str}, {...}]</span>
 <span class="sd">            }</span>
+
+<span class="sd">        Note that if the &quot;relationships&quot; field is not empty, the</span>
+<span class="sd">        subject Concepts of the resulting Relationship instances</span>
+<span class="sd">        will not be properly linked. In this case, run</span>
+<span class="sd">        Concept.resolve_relationships() after all Concepts have</span>
+<span class="sd">        been created.</span>
 
 <span class="sd">        :param dict data: Input JSON data.</span>
 <span class="sd">        :returns: Concept instance built from data.</span>
@@ -716,23 +759,6 @@
                 <span class="k">for</span> <span class="n">rel</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;relationships&quot;</span><span class="p">]]</span>
         <span class="n">concept</span><span class="o">.</span><span class="n">add_elements</span><span class="p">(</span><span class="n">rels</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">concept</span></div>
-
-<div class="viewcode-block" id="Concept.read_jsonl_file"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept.read_jsonl_file">[docs]</a>    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">read_jsonl_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filepath</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Creates a concept for each line in the JSON lines file.</span>
-
-<span class="sd">        :param str filepath: Path to the JSON lines file containing concepts.</span>
-<span class="sd">        :returns: Generator over Concept instances</span>
-<span class="sd">        :rtype: generator</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">concepts</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">inF</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">inF</span><span class="p">:</span>
-                <span class="n">concept</span> <span class="o">=</span> <span class="n">Concept</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
-                <span class="n">concepts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">concept</span><span class="p">)</span>
-        <span class="bp">cls</span><span class="o">.</span><span class="n">resolve_relationships</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">concepts</span></div>
 
 <div class="viewcode-block" id="Concept.resolve_relationships"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Concept.resolve_relationships">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">resolve_relationships</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
@@ -815,9 +841,31 @@
 <span class="sd">        Output this attribute as a dictionary, optionally with a subject.</span>
 <span class="sd">        The subject is optional to accord with the iDISK JSON format.</span>
 
-<span class="sd">        .. code-block:: json</span>
+<span class="sd">        ``return_subject=False``</span>
+
+<span class="sd">        .. code-block:: javascript</span>
 
 <span class="sd">            {&quot;atr_name&quot;: str,</span>
+<span class="sd">             &quot;atr_value&quot;: str,</span>
+<span class="sd">             &quot;src&quot;: str}</span>
+
+
+<span class="sd">        ``return_subject=True``</span>
+
+<span class="sd">        .. code-block:: javascript</span>
+
+<span class="sd">            {&quot;subject&quot;: subject.ui,</span>
+<span class="sd">             &quot;atr_name&quot;: str,</span>
+<span class="sd">             &quot;atr_value&quot;: str,</span>
+<span class="sd">             &quot;src&quot;: str}</span>
+
+
+<span class="sd">        ``return_subject=True, verbose_subject=True``</span>
+
+<span class="sd">        .. code-block:: javascript</span>
+
+<span class="sd">            {&quot;subject&quot;: str(subject),</span>
+<span class="sd">             &quot;atr_name&quot;: str,</span>
 <span class="sd">             &quot;atr_value&quot;: str,</span>
 <span class="sd">             &quot;src&quot;: str}</span>
 
@@ -844,6 +892,12 @@
 
 <div class="viewcode-block" id="Attribute.from_attribute"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Attribute.from_attribute">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_attribute</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">attribute</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a new Attribute from the provided with the same</span>
+<span class="sd">        subject Concept, atr_name, atr_value, and src, but with a new UI.</span>
+
+<span class="sd">        :param Attribute attribute: The Attribute instances to initialize from.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">new_atr</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">subject</span><span class="o">=</span><span class="n">attribute</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span>
                       <span class="n">atr_name</span><span class="o">=</span><span class="n">attribute</span><span class="o">.</span><span class="n">atr_name</span><span class="p">,</span>
                       <span class="n">atr_value</span><span class="o">=</span><span class="n">attribute</span><span class="o">.</span><span class="n">atr_value</span><span class="p">,</span>
@@ -851,14 +905,13 @@
         <span class="n">new_atr</span><span class="o">.</span><span class="n">_prefix</span> <span class="o">=</span> <span class="n">attribute</span><span class="o">.</span><span class="n">_prefix</span>
         <span class="k">return</span> <span class="n">new_atr</span></div>
 
-    <span class="c1"># TODO: Check for valid JSON</span>
 <div class="viewcode-block" id="Attribute.from_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Attribute.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">subject</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create an Attribute instance from data.</span>
 <span class="sd">        data must be a dict with the following format:</span>
 
-<span class="sd">        .. code-block:: json</span>
+<span class="sd">        .. code-block:: javascript</span>
 
 <span class="sd">            {&quot;atr_name&quot;: str,</span>
 <span class="sd">             &quot;atr_value&quot;: str,</span>
@@ -884,7 +937,7 @@
 <span class="sd">    :param str rel_name: The relation. E.g. &quot;ingredient_of&quot;.</span>
 <span class="sd">    :param Concept/str object: The object of this relationship. Can be a</span>
 <span class="sd">                                    Concept instance or a concept UI.</span>
-<span class="sd">    :param str src: The source code of where this relationship was found.</span>
+<span class="sd">    :param str src: The source of this relationship, e.g. &quot;UMLS&quot;.</span>
 <span class="sd">    :param list(Attribute) attributes: Any attributes of this relationship.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -937,26 +990,61 @@
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rel_name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
         <span class="c1"># Object can be a concept or a concept UI.</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object</span><span class="p">,</span> <span class="p">(</span><span class="n">Concept</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
-        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SOURCES</span>
+        <span class="k">if</span> <span class="n">SOURCES</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">in</span> <span class="n">SOURCES</span>
 
 <div class="viewcode-block" id="Relationship.to_dict"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Relationship.to_dict">[docs]</a>    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_subject</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Output this relationship as a dictionary, optionally with a subject.</span>
 <span class="sd">        The subject is optional to accord with the iDISK JSON format.</span>
 
-<span class="sd">        .. code-block:: json</span>
+<span class="sd">        ``return_subject=False``</span>
+
+<span class="sd">        .. code-block:: javascript</span>
 
 <span class="sd">            {&quot;rel_name&quot;: str,</span>
-<span class="sd">             &quot;object&quot;: str,</span>
+<span class="sd">             &quot;object&quot;: str(object.ui),</span>
 <span class="sd">             &quot;src&quot;: str,</span>
-<span class="sd">             &quot;attributes&quot;: list}</span>
+<span class="sd">             &quot;attributes&quot;: [{&quot;atr_name&quot;: str,</span>
+<span class="sd">                             &quot;atr_value&quot;: str,</span>
+<span class="sd">                             &quot;src&quot;: str}, {...}]</span>
+<span class="sd">            }</span>
+
+
+<span class="sd">        ``return_subject=True``</span>
+
+<span class="sd">        .. code-block:: javascript</span>
+
+<span class="sd">            {&quot;subject&quot;: str(subject.ui),</span>
+<span class="sd">             &quot;rel_name&quot;: str,</span>
+<span class="sd">             &quot;object&quot;: str(object.ui),</span>
+<span class="sd">             &quot;src&quot;: str,</span>
+<span class="sd">             &quot;attributes&quot;: [{&quot;atr_name&quot;: str,</span>
+<span class="sd">                             &quot;atr_value&quot;: str,</span>
+<span class="sd">                             &quot;src&quot;: str}, {...}]</span>
+<span class="sd">            }</span>
+
+
+<span class="sd">        ``return_subject=True, verbose=True``</span>
+
+<span class="sd">        .. code-block:: javascript</span>
+
+<span class="sd">            {&quot;subject&quot;: str(subject),</span>
+<span class="sd">             &quot;rel_name&quot;: str,</span>
+<span class="sd">             &quot;object&quot;: str(object),</span>
+<span class="sd">             &quot;src&quot;: str,</span>
+<span class="sd">             &quot;attributes&quot;: [{&quot;atr_name&quot;: str,</span>
+<span class="sd">                             &quot;atr_value&quot;: str,</span>
+<span class="sd">                             &quot;src&quot;: str}, {...}]</span>
+<span class="sd">            }</span>
+
 
 <span class="sd">        :param bool return_subject: If True, the returned dict contains</span>
 <span class="sd">                                    a &quot;subject&quot; key.</span>
-<span class="sd">        :param bool verbose_subject: If True and return_subject is True,</span>
-<span class="sd">                                     the value of the &quot;subject&quot; key includes</span>
-<span class="sd">                                     the ui, name, and source, instead of</span>
-<span class="sd">                                     just the ui.</span>
+<span class="sd">        :param bool verbose: If True and return_subject is True,</span>
+<span class="sd">                                     the values of the &quot;subject&quot; and &quot;object&quot;</span>
+<span class="sd">                                     keys include the ui, name, and source,</span>
+<span class="sd">                                     instead of just the ui.</span>
 <span class="sd">        :returns: dictionary representation of this attribute.</span>
 <span class="sd">        :rtype: dict</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -1001,6 +1089,14 @@
 
 <div class="viewcode-block" id="Relationship.from_relationship"><a class="viewcode-back" href="../../source/data_elements.html#idlib.data_elements.Relationship.from_relationship">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_relationship</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">relationship</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new Relationship instance initialized from the provided</span>
+<span class="sd">        with the same subject, rel_name, object, and src, but with a new UI.</span>
+
+<span class="sd">        :param Relationshp relationship: The Relationship to initialize from.</span>
+<span class="sd">        :returns: The new Relationship.</span>
+<span class="sd">        :rtype: Relationship</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">new_rel</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">subject</span><span class="o">=</span><span class="n">relationship</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span>
                       <span class="n">rel_name</span><span class="o">=</span><span class="n">relationship</span><span class="o">.</span><span class="n">rel_name</span><span class="p">,</span>
                       <span class="nb">object</span><span class="o">=</span><span class="n">relationship</span><span class="o">.</span><span class="n">object</span><span class="p">,</span>
@@ -1020,7 +1116,7 @@
 <span class="sd">        Create an Relationship instance from data.</span>
 <span class="sd">        data must be a dict with the following format:</span>
 
-<span class="sd">        .. code-block:: json</span>
+<span class="sd">        .. code-block:: javascript</span>
 
 <span class="sd">            {&quot;rel_name&quot;: str,</span>
 <span class="sd">             &quot;object&quot;: str,</span>

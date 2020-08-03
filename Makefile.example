@@ -6,6 +6,7 @@
 
 PROJECT_NAME = idisk
 # Your preferred Python.
+# It's best to use the Python specific to the idisk virtual environment.
 PYTHON_INTERPRETER = /path/to/virtual_environment/python
 PYTHON_VERSION := $(shell $(PYTHON_INTERPRETER) -V)
 # Where iDISK is located.
@@ -18,7 +19,7 @@ SOURCE_FILES := $(PROJECT_HOME)/sources/DSLD/10_22_2018/import/concepts.jsonl \
 
 # These need to be available to a variety of scripts, so we declare them as 
 # environment variables.
-export PROJECT_VERSION = test
+export PROJECT_VERSION = example
 # This directory should contain the following files
 #   kb.ini
 #   linkers.conf
@@ -69,8 +70,8 @@ version:
 	@echo
 	@echo "Version info saved to $(VERSION_DIR)/VERSION_INFO.txt"
 	@echo "Fill in the changes for this version in $(VERSION_DIR)/CHANGELOG.md"
-	@echo $(PROJECT_VERSION) > $(VERSION_DIR)/.version
-	@cp -r $(PROJECT_HOME)/lib/config $(VERSION_DIR)/
+	@echo "PROJECT_VERSION=$(PROJECT_VERSION)" >> $(VERSION_DIR)/.config
+	@echo "CONFIG_DIR=$(CONFIG_DIR)" >> $(VERSION_DIR)/.config
 
 
 ## Create the iDISK schema as a neo4j graph
@@ -169,9 +170,9 @@ merge:
 ## Populate the Neo4j graph
 neo4j:
 	$(PYTHON_INTERPRETER) $(PROJECT_HOME)/lib/idlib/idlib/formatters/neo4j.py \
-		--concepts_file $(VERSION_DIR)/concepts/concepts_merged.jsonl \
+		--idisk_version_dir $(VERSION_DIR) \
 		--uri localhost --user neo4j --password password \
-		2> $(VERSION_DIR)/build/Neo4j/build.log &
+		> $(VERSION_DIR)/build/Neo4j/build.log 2>&1 &
 	@echo "Populating the Neo4j graph at localhost:7687."
 	@echo "Check progress in the log file at $(VERSION_DIR)/build/Neo4j/build.log"
 	@echo "Export the graph to a binary file using the following command from within the Neo4j terminal:"
@@ -183,7 +184,7 @@ rrf:
 	$(PYTHON_INTERPRETER) $(PROJECT_HOME)/lib/idlib/idlib/formatters/rrf.py \
 		--concepts_file $(VERSION_DIR)/concepts/concepts_merged.jsonl \
 		--outdir $(VERSION_DIR)/build/RRF/ \
-		2> $(VERSION_DIR)/build/RRF/build.log
+		> $(VERSION_DIR)/build/RRF/build.log 2>&1
 	@echo "RRF files written to $(VERSION_DIR)/build/RRF/"
 
 
